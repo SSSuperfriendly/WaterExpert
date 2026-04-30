@@ -1,0 +1,11 @@
+numpy
+pandas
+pyarrow
+PyYAML
+scikit-learn
+matplotlib
+torch
+tigramite
+openpyxl
+xlrd
+python-pptx

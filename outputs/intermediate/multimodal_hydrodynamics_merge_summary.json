@@ -1,0 +1,40 @@
+{
+  "base_dataset": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\multimodal_daily_dataset.csv",
+  "hydrodynamics_dataset": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
+  "output_dataset": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\multimodal_daily_dataset_with_hydrodynamics.csv",
+  "rows": 891,
+  "date_range": {
+    "start": "2022-01-01",
+    "end": "2024-12-31"
+  },
+  "added_hydrodynamic_columns": [
+    "songpu_flow_m3s",
+    "songpu_water_level_m",
+    "huangdu_flow_m3s",
+    "huangdu_water_level_m",
+    "huangdu_flow_m3s_abs",
+    "huangdu_flow_m3s_reverse_flag",
+    "huangdu_flow_m3s_3d_mean",
+    "huangdu_flow_m3s_7d_mean",
+    "songpu_flow_m3s_abs",
+    "songpu_flow_m3s_reverse_flag",
+    "songpu_flow_m3s_3d_mean",
+    "songpu_flow_m3s_7d_mean",
+    "huangdu_water_level_m_1d_diff",
+    "huangdu_water_level_m_3d_mean",
+    "songpu_water_level_m_1d_diff",
+    "songpu_water_level_m_3d_mean",
+    "songpu_flow_level_coupling",
+    "huangdu_flow_level_coupling"
+  ],
+  "added_cross_features": [
+    "turbidity_songpu_flow_interaction",
+    "turbidity_songpu_level_jump_interaction",
+    "conductivity_backflow_interaction"
+  ],
+  "notes": {
+    "merge_key": "date",
+    "merge_type": "inner",
+    "reason": "Only the overlapping period is kept so the dataset is immediately trainable."
+  }
+}

@@ -1,0 +1,9 @@
+﻿direction,domain,domain_label,score
+driver,flow,水动力过程,0.3858877866966158
+driver,runoff,径流输入,0.1657723400528835
+driver,rainfall,降雨过程,0.1586418860114087
+driver,sediment,泥沙再悬浮,0.1036809974033056
+driver,wind,风场扰动,0.050403276476612
+driver,nutrients,营养盐负荷,0.0428978490197788
+driver,self_purification,自净沉降,0.0421798131948257
+driver,water_quality,水质本底,0.0409093661118

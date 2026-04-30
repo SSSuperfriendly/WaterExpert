@@ -1,0 +1,399 @@
+{
+  "relationships_path": "G:\\AI4S\\rag_project\\graph_people_demo\\ragtest\\inputs\\artifacts\\create_final_relationships.parquet",
+  "relationship_rows": 18157,
+  "relationship_rows_with_domain_evidence": 8927,
+  "feature_count": 56,
+  "feature_to_domains": {
+    "water_temp": [
+      "water_quality"
+    ],
+    "ph": [
+      "water_quality"
+    ],
+    "dissolved_oxygen": [
+      "water_quality",
+      "self_purification"
+    ],
+    "conductivity": [
+      "flow",
+      "water_quality"
+    ],
+    "turbidity": [
+      "turbidity",
+      "sediment"
+    ],
+    "codmn": [
+      "water_quality",
+      "self_purification"
+    ],
+    "nh3_n": [
+      "nutrients"
+    ],
+    "tp": [
+      "nutrients"
+    ],
+    "tn": [
+      "nutrients"
+    ],
+    "pressure": [
+      "flow"
+    ],
+    "air_temp": [
+      "rainfall"
+    ],
+    "humidity": [
+      "rainfall"
+    ],
+    "precipitation": [
+      "rainfall"
+    ],
+    "wind_speed": [
+      "wind"
+    ],
+    "wind_dir_sin": [
+      "wind"
+    ],
+    "wind_dir_cos": [
+      "wind"
+    ],
+    "precipitation_3d": [
+      "rainfall",
+      "runoff"
+    ],
+    "precipitation_7d": [
+      "rainfall",
+      "runoff"
+    ],
+    "pressure_drop": [
+      "rainfall",
+      "flow"
+    ],
+    "resuspension_index": [
+      "sediment",
+      "wind"
+    ],
+    "runoff_proxy": [
+      "runoff",
+      "rainfall"
+    ],
+    "nutrient_risk_index": [
+      "nutrients",
+      "agriculture"
+    ],
+    "self_purification_index": [
+      "self_purification",
+      "water_quality"
+    ],
+    "mixing_proxy": [
+      "wind",
+      "flow"
+    ],
+    "settling_index": [
+      "self_purification",
+      "sediment"
+    ],
+    "hydrodynamic_intensity": [
+      "flow",
+      "wind"
+    ],
+    "conductivity_anomaly": [
+      "flow",
+      "water_quality"
+    ],
+    "water_air_temp_gap": [
+      "water_quality"
+    ],
+    "dayofyear_sin": [
+      "rainfall"
+    ],
+    "dayofyear_cos": [
+      "rainfall"
+    ],
+    "songpu_flow_m3s": [
+      "flow",
+      "sediment"
+    ],
+    "songpu_water_level_m": [
+      "flow"
+    ],
+    "huangdu_flow_m3s": [
+      "flow",
+      "runoff"
+    ],
+    "huangdu_water_level_m": [
+      "flow"
+    ],
+    "songpu_flow_m3s_abs": [
+      "flow",
+      "sediment"
+    ],
+    "songpu_flow_m3s_reverse_flag": [
+      "flow"
+    ],
+    "songpu_flow_m3s_3d_mean": [
+      "flow",
+      "runoff"
+    ],
+    "songpu_flow_m3s_7d_mean": [
+      "flow",
+      "self_purification"
+    ],
+    "huangdu_flow_m3s_abs": [
+      "flow",
+      "runoff"
+    ],
+    "huangdu_flow_m3s_reverse_flag": [
+      "flow"
+    ],
+    "huangdu_flow_m3s_3d_mean": [
+      "flow",
+      "runoff"
+    ],
+    "huangdu_flow_m3s_7d_mean": [
+      "flow",
+      "runoff"
+    ],
+    "songpu_water_level_m_1d_diff": [
+      "flow",
+      "sediment"
+    ],
+    "songpu_water_level_m_3d_mean": [
+      "flow"
+    ],
+    "huangdu_water_level_m_1d_diff": [
+      "flow",
+      "runoff"
+    ],
+    "huangdu_water_level_m_3d_mean": [
+      "flow"
+    ],
+    "songpu_flow_level_coupling": [
+      "flow",
+      "sediment"
+    ],
+    "huangdu_flow_level_coupling": [
+      "flow",
+      "runoff"
+    ],
+    "songpu_flow_m3s_1d_diff": [
+      "flow",
+      "sediment"
+    ],
+    "huangdu_flow_m3s_1d_diff": [
+      "flow",
+      "runoff"
+    ],
+    "songpu_flow_rise_flag": [
+      "flow"
+    ],
+    "huangdu_flow_rise_flag": [
+      "flow",
+      "runoff"
+    ],
+    "songpu_tidal_pumping_proxy": [
+      "flow",
+      "sediment"
+    ],
+    "songpu_resuspension_potential": [
+      "flow",
+      "sediment"
+    ],
+    "songpu_flushing_potential": [
+      "flow",
+      "self_purification"
+    ],
+    "runoff_sediment_pulse": [
+      "runoff",
+      "sediment"
+    ]
+  },
+  "pcmci_summary": {
+    "enabled": true,
+    "selected_features": [
+      "turbidity",
+      "conductivity",
+      "dissolved_oxygen",
+      "nh3_n",
+      "tp",
+      "tn",
+      "precipitation",
+      "precipitation_3d",
+      "precipitation_7d",
+      "wind_speed",
+      "pressure",
+      "runoff_proxy",
+      "resuspension_index",
+      "hydrodynamic_intensity",
+      "songpu_flow_m3s_abs",
+      "songpu_flow_m3s_1d_diff",
+      "songpu_water_level_m_1d_diff",
+      "songpu_tidal_pumping_proxy",
+      "songpu_resuspension_potential",
+      "songpu_flushing_potential",
+      "runoff_sediment_pulse"
+    ],
+    "tau_max": 3,
+    "pc_alpha": 0.2,
+    "alpha_level": 0.05,
+    "discovered_edge_count": 143,
+    "output_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\pcmci_discovered_edges.csv",
+    "top_turbidity_parents": [
+      {
+        "source_feature": "conductivity",
+        "target_feature": "turbidity",
+        "lag_days": 2,
+        "effect_strength": 0.14099552827175485,
+        "p_value": 0.0005156891041861591
+      },
+      {
+        "source_feature": "songpu_flow_m3s_1d_diff",
+        "target_feature": "turbidity",
+        "lag_days": 3,
+        "effect_strength": 0.12600990943974005,
+        "p_value": 0.001950486672243388
+      },
+      {
+        "source_feature": "songpu_flow_m3s_abs",
+        "target_feature": "turbidity",
+        "lag_days": 1,
+        "effect_strength": 0.12533975792226582,
+        "p_value": 0.002153605699539933
+      },
+      {
+        "source_feature": "nh3_n",
+        "target_feature": "turbidity",
+        "lag_days": 1,
+        "effect_strength": 0.10802055321199544,
+        "p_value": 0.008039595335244204
+      },
+      {
+        "source_feature": "pressure",
+        "target_feature": "turbidity",
+        "lag_days": 2,
+        "effect_strength": 0.10769218445210518,
+        "p_value": 0.00828840377333809
+      },
+      {
+        "source_feature": "songpu_water_level_m_1d_diff",
+        "target_feature": "turbidity",
+        "lag_days": 3,
+        "effect_strength": 0.09516522550633877,
+        "p_value": 0.020038062197424093
+      },
+      {
+        "source_feature": "wind_speed",
+        "target_feature": "turbidity",
+        "lag_days": 3,
+        "effect_strength": 0.09004747200196689,
+        "p_value": 0.02690063623110365
+      }
+    ],
+    "top_hydrodynamics_edges": [
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "resuspension_index",
+        "lag_days": 1,
+        "effect_strength": 0.48378751281489646,
+        "p_value": 4.76403510606502e-37
+      },
+      {
+        "source_feature": "runoff_proxy",
+        "target_feature": "runoff_sediment_pulse",
+        "lag_days": 1,
+        "effect_strength": 0.4802215570441753,
+        "p_value": 3.612389834253059e-36
+      },
+      {
+        "source_feature": "songpu_flow_m3s_abs",
+        "target_feature": "songpu_flow_m3s_1d_diff",
+        "lag_days": 1,
+        "effect_strength": 0.3315032436013893,
+        "p_value": 7.417558146171228e-17
+      },
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "precipitation_3d",
+        "lag_days": 1,
+        "effect_strength": 0.26896591705295025,
+        "p_value": 1.6113649687354838e-11
+      },
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "hydrodynamic_intensity",
+        "lag_days": 1,
+        "effect_strength": 0.26664585851173256,
+        "p_value": 2.3458753725316968e-11
+      },
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "precipitation",
+        "lag_days": 1,
+        "effect_strength": 0.26075343524519246,
+        "p_value": 5.918375693956346e-11
+      },
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "runoff_sediment_pulse",
+        "lag_days": 3,
+        "effect_strength": 0.25730162400223144,
+        "p_value": 1.2362047339496695e-10
+      },
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "runoff_proxy",
+        "lag_days": 1,
+        "effect_strength": 0.23295971241780875,
+        "p_value": 6.704577713228886e-09
+      },
+      {
+        "source_feature": "songpu_tidal_pumping_proxy",
+        "target_feature": "precipitation_7d",
+        "lag_days": 1,
+        "effect_strength": 0.22851581837522347,
+        "p_value": 1.2762011541054449e-08
+      },
+      {
+        "source_feature": "songpu_flushing_potential",
+        "target_feature": "tp",
+        "lag_days": 1,
+        "effect_strength": 0.2067602165977275,
+        "p_value": 3.021038159729705e-07
+      },
+      {
+        "source_feature": "songpu_flushing_potential",
+        "target_feature": "dissolved_oxygen",
+        "lag_days": 3,
+        "effect_strength": 0.18598897137217316,
+        "p_value": 4.510481959589823e-06
+      },
+      {
+        "source_feature": "songpu_flow_m3s_abs",
+        "target_feature": "dissolved_oxygen",
+        "lag_days": 2,
+        "effect_strength": 0.1666727161500176,
+        "p_value": 4.3954135014309106e-05
+      },
+      {
+        "source_feature": "songpu_flushing_potential",
+        "target_feature": "pressure",
+        "lag_days": 1,
+        "effect_strength": 0.1621257109400511,
+        "p_value": 6.261702510747917e-05
+      },
+      {
+        "source_feature": "hydrodynamic_intensity",
+        "target_feature": "resuspension_index",
+        "lag_days": 3,
+        "effect_strength": 0.15697279596504618,
+        "p_value": 0.00010432249121916157
+      },
+      {
+        "source_feature": "hydrodynamic_intensity",
+        "target_feature": "songpu_water_level_m_1d_diff",
+        "lag_days": 1,
+        "effect_strength": 0.15533041349063828,
+        "p_value": 0.00013169160553636202
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+﻿station_code,station_name,province,city,basin,river,longitude,latitude,raw_rows,daily_rows,start_date,end_date,source_file,inclusion_status,exclusion_reason,zip_member_size_bytes
+3787,明星路桥（撤销）,上海市,上海市,太湖流域,面杖港,121.571838,30.924535,1,1,2021-08-02,2021-08-02,水质数据/2020-2025年上海市重点流域断面水质数据/上海市_上海市_太湖流域_面杖港_明星路桥（撤销）_3787.csv,excluded,withdrawn_station,506
+3788,青草沙进水口,上海市,上海市,长江流域,长江,121.678427,31.299897,1,1,2022-08-31,2022-08-31,水质数据/2020-2025年上海市重点流域断面水质数据/上海市_上海市_长江流域_长江_青草沙进水口_3788.csv,excluded,too_few_observations,495
+6377,闵行西界,上海市,闵行区,太湖流域,黄浦江,,,7,2,2023-03-02,2023-03-03,水质数据/2020-2025年上海市重点流域断面水质数据/上海市_闵行区_太湖流域_黄浦江_闵行西界_6377.csv,excluded,too_few_observations,1447

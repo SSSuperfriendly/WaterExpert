@@ -1,0 +1,11 @@
+﻿feature,feature_label,driver_score
+dayofyear_sin,年周期正弦分量,0.08536492558398645
+huangdu_water_level_m,黄渡水位,0.052961635712088756
+huangdu_flow_m3s_7d_mean,黄渡流量7日均值,0.051474825203236485
+songpu_flow_rise_flag,松浦大桥流量上涨标记,0.03205130224207251
+songpu_flow_m3s_1d_diff,松浦大桥流量日变化,0.029253051340714074
+huangdu_flow_m3s_3d_mean,黄渡流量3日均值,0.026677009882405366
+songpu_resuspension_potential,松浦大桥再悬浮潜力,0.022474765905391637
+nh3_n,氨氮,0.022160043528698267
+air_temp,气温,0.022065321018959812
+songpu_flow_m3s_7d_mean,松浦大桥流量7日均值,0.01984850492368895

@@ -1,0 +1,11 @@
+{
+  "best_test_turbidity_model": "mscim",
+  "best_test_clearness_model": "mscim",
+  "mscim_diagnosis_outputs": {
+    "detail_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_details.csv",
+    "summary_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.csv",
+    "domain_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\diagnosis\\mscim_turbidity_domain_diagnosis.csv",
+    "summary_md": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.md",
+    "summary_json": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.json"
+  }
+}

@@ -1,0 +1,39 @@
+data_root: "G:\\AI4S"
+water_pattern: "*2586.csv"
+weather_filename: "daily_version_A_keep_missing.csv"
+rag_artifacts_dir: "G:\\AI4S\\rag_project\\graph_people_demo\\ragtest\\inputs\\artifacts"
+output_dir: "G:\\AI4S\\mscim_cmfbe_prototype\\outputs"
+hydrodynamics:
+  enabled: true
+  source_path: "G:\\AI4S\\上海水域环境发展有限公司资料提供.xls"
+  wide_path: "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv"
+  output_dir: "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed"
+ndti:
+  enabled: false
+  source_dir: "G:\\AI4S\\turbidity"
+  output_dir: "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\ndti_preprocessed"
+causal_discovery:
+  enabled: true
+  tau_max: 3
+  pc_alpha: 0.2
+  alpha_level: 0.05
+history_days: 21
+horizon_days: 1
+train_ratio: 0.70
+val_ratio: 0.15
+batch_size: 32
+epochs: 45
+learning_rate: 0.0007
+weight_decay: 0.0001
+random_seed: 42
+device: "auto"
+loss:
+  clearness_weight: 0.6
+  physics_weight: 0.35
+  change_weight: 0.35
+  mechanism_weight: 0.18
+model:
+  hidden_dim: 64
+  transformer_layers: 2
+  num_heads: 4
+  dropout: 0.10

@@ -1,0 +1,820 @@
+{
+  "data": {
+    "dataset_summary": {
+      "water_source_path": "G:\\AI4S\\上海市_宝山区_太湖流域_黄浦江_吴淞口_2586.csv",
+      "weather_source_path": "G:\\AI4S\\daily_version_A_keep_missing.csv",
+      "hydrodynamics_enabled": true,
+      "hydrodynamics": {
+        "source_xls": "G:\\AI4S\\上海水域环境发展有限公司资料提供.xls",
+        "preprocessed_long_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_long.csv",
+        "preprocessed_wide_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
+        "long_rows": 4384,
+        "wide_rows": 1096,
+        "date_range": {
+          "start": "2022-01-01",
+          "end": "2024-12-31"
+        },
+        "stations": [
+          "松浦大桥",
+          "黄渡"
+        ],
+        "variables": [
+          "flow",
+          "water_level"
+        ],
+        "negative_flow_counts": {
+          "松浦大桥": 9,
+          "黄渡": 72
+        },
+        "recommended_primary_station_for_current_model": "松浦大桥",
+        "recommended_reason": "当前已有水质站点为黄浦江吴淞口，松浦大桥水动力与其河道关联性更强。",
+        "merge_summary": {
+          "rows_before_hydrodynamics_merge": 1550,
+          "rows_after_hydrodynamics_merge": 891,
+          "natural_overlap_days": 1096,
+          "matched_overlap_days": 891,
+          "coverage_ratio": 0.813,
+          "merge_key": "date",
+          "merge_type": "inner"
+        }
+      },
+      "water_station": {
+        "province": "上海市",
+        "city": "宝山区",
+        "basin": "太湖流域",
+        "river": "黄浦江",
+        "station_name": "吴淞口",
+        "longitude": 121.522058,
+        "latitude": 31.392691,
+        "raw_rows": 7789,
+        "daily_rows": 1550,
+        "start_date": "2020-12-17",
+        "end_date": "2025-10-31"
+      },
+      "selected_weather_station": {
+        "station_id": 58362,
+        "weather_station_name": "宝山",
+        "district": "宝山区",
+        "city": "上海市",
+        "overlap_days": 1550,
+        "distance_km": 15.109246817721608,
+        "all_candidates": [
+          {
+            "station_id": 58362,
+            "weather_station_name": "宝山",
+            "district": "宝山区",
+            "city": "上海市",
+            "overlap_days": 1550,
+            "distance_km": 15.109246817721608
+          },
+          {
+            "station_id": 58370,
+            "weather_station_name": "浦东",
+            "district": "浦东新区",
+            "city": "上海市",
+            "overlap_days": 1550,
+            "distance_km": 19.212883574393125
+          },
+          {
+            "station_id": 58367,
+            "weather_station_name": "徐家汇国家气象观测站",
+            "district": "徐汇区",
+            "city": "上海市",
+            "overlap_days": 1550,
+            "distance_km": 23.889715395667473
+          },
+          {
+            "station_id": 58366,
+            "weather_station_name": "崇明",
+            "district": "崇明区",
+            "city": "上海市",
+            "overlap_days": 1550,
+            "distance_km": 30.56112218999657
+          },
+          {
+            "station_id": 58365,
+            "weather_station_name": "嘉定",
+            "district": "嘉定区",
+            "city": "上海市",
+            "overlap_days": 1550,
+            "distance_km": 30.677972737017733
+          }
+        ]
+      },
+      "rows_after_merge": 891,
+      "date_range": {
+        "start": "2022-01-01",
+        "end": "2024-12-31"
+      },
+      "clearness_transform": {
+        "log_turbidity_min": 0.5556077665378839,
+        "log_turbidity_max": 6.447146578857826
+      },
+      "feature_columns": [
+        "water_temp",
+        "ph",
+        "dissolved_oxygen",
+        "conductivity",
+        "turbidity",
+        "codmn",
+        "nh3_n",
+        "tp",
+        "tn",
+        "pressure",
+        "air_temp",
+        "humidity",
+        "precipitation",
+        "wind_speed",
+        "wind_dir_sin",
+        "wind_dir_cos",
+        "precipitation_3d",
+        "precipitation_7d",
+        "pressure_drop",
+        "resuspension_index",
+        "runoff_proxy",
+        "nutrient_risk_index",
+        "self_purification_index",
+        "mixing_proxy",
+        "settling_index",
+        "hydrodynamic_intensity",
+        "conductivity_anomaly",
+        "water_air_temp_gap",
+        "dayofyear_sin",
+        "dayofyear_cos",
+        "songpu_flow_m3s",
+        "songpu_water_level_m",
+        "huangdu_flow_m3s",
+        "huangdu_water_level_m",
+        "songpu_flow_m3s_abs",
+        "songpu_flow_m3s_reverse_flag",
+        "songpu_flow_m3s_3d_mean",
+        "songpu_flow_m3s_7d_mean",
+        "huangdu_flow_m3s_abs",
+        "huangdu_flow_m3s_reverse_flag",
+        "huangdu_flow_m3s_3d_mean",
+        "huangdu_flow_m3s_7d_mean",
+        "songpu_water_level_m_1d_diff",
+        "songpu_water_level_m_3d_mean",
+        "huangdu_water_level_m_1d_diff",
+        "huangdu_water_level_m_3d_mean",
+        "songpu_flow_level_coupling",
+        "huangdu_flow_level_coupling",
+        "songpu_flow_m3s_1d_diff",
+        "huangdu_flow_m3s_1d_diff",
+        "songpu_flow_rise_flag",
+        "huangdu_flow_rise_flag",
+        "songpu_tidal_pumping_proxy",
+        "songpu_resuspension_potential",
+        "songpu_flushing_potential",
+        "runoff_sediment_pulse"
+      ],
+      "dropped_high_missing_columns": [
+        "toc",
+        "chlorophyll_a",
+        "algae_density"
+      ],
+      "targets": [
+        "turbidity",
+        "clearness_proxy"
+      ],
+      "notes": {
+        "current_scope": "single-station multimodal daily prototype",
+        "boundary_detection_head": "reserved only, no raster training data available",
+        "spatial_graph": "implemented as a feature factor graph because only one numeric water-quality station is currently available"
+      }
+    },
+    "graph_summary": {
+      "relationships_path": "G:\\AI4S\\rag_project\\graph_people_demo\\ragtest\\inputs\\artifacts\\create_final_relationships.parquet",
+      "relationship_rows": 18157,
+      "relationship_rows_with_domain_evidence": 8927,
+      "feature_count": 56,
+      "feature_to_domains": {
+        "water_temp": [
+          "water_quality"
+        ],
+        "ph": [
+          "water_quality"
+        ],
+        "dissolved_oxygen": [
+          "water_quality",
+          "self_purification"
+        ],
+        "conductivity": [
+          "flow",
+          "water_quality"
+        ],
+        "turbidity": [
+          "turbidity",
+          "sediment"
+        ],
+        "codmn": [
+          "water_quality",
+          "self_purification"
+        ],
+        "nh3_n": [
+          "nutrients"
+        ],
+        "tp": [
+          "nutrients"
+        ],
+        "tn": [
+          "nutrients"
+        ],
+        "pressure": [
+          "flow"
+        ],
+        "air_temp": [
+          "rainfall"
+        ],
+        "humidity": [
+          "rainfall"
+        ],
+        "precipitation": [
+          "rainfall"
+        ],
+        "wind_speed": [
+          "wind"
+        ],
+        "wind_dir_sin": [
+          "wind"
+        ],
+        "wind_dir_cos": [
+          "wind"
+        ],
+        "precipitation_3d": [
+          "rainfall",
+          "runoff"
+        ],
+        "precipitation_7d": [
+          "rainfall",
+          "runoff"
+        ],
+        "pressure_drop": [
+          "rainfall",
+          "flow"
+        ],
+        "resuspension_index": [
+          "sediment",
+          "wind"
+        ],
+        "runoff_proxy": [
+          "runoff",
+          "rainfall"
+        ],
+        "nutrient_risk_index": [
+          "nutrients",
+          "agriculture"
+        ],
+        "self_purification_index": [
+          "self_purification",
+          "water_quality"
+        ],
+        "mixing_proxy": [
+          "wind",
+          "flow"
+        ],
+        "settling_index": [
+          "self_purification",
+          "sediment"
+        ],
+        "hydrodynamic_intensity": [
+          "flow",
+          "wind"
+        ],
+        "conductivity_anomaly": [
+          "flow",
+          "water_quality"
+        ],
+        "water_air_temp_gap": [
+          "water_quality"
+        ],
+        "dayofyear_sin": [
+          "rainfall"
+        ],
+        "dayofyear_cos": [
+          "rainfall"
+        ],
+        "songpu_flow_m3s": [
+          "flow",
+          "sediment"
+        ],
+        "songpu_water_level_m": [
+          "flow"
+        ],
+        "huangdu_flow_m3s": [
+          "flow",
+          "runoff"
+        ],
+        "huangdu_water_level_m": [
+          "flow"
+        ],
+        "songpu_flow_m3s_abs": [
+          "flow",
+          "sediment"
+        ],
+        "songpu_flow_m3s_reverse_flag": [
+          "flow"
+        ],
+        "songpu_flow_m3s_3d_mean": [
+          "flow",
+          "runoff"
+        ],
+        "songpu_flow_m3s_7d_mean": [
+          "flow",
+          "self_purification"
+        ],
+        "huangdu_flow_m3s_abs": [
+          "flow",
+          "runoff"
+        ],
+        "huangdu_flow_m3s_reverse_flag": [
+          "flow"
+        ],
+        "huangdu_flow_m3s_3d_mean": [
+          "flow",
+          "runoff"
+        ],
+        "huangdu_flow_m3s_7d_mean": [
+          "flow",
+          "runoff"
+        ],
+        "songpu_water_level_m_1d_diff": [
+          "flow",
+          "sediment"
+        ],
+        "songpu_water_level_m_3d_mean": [
+          "flow"
+        ],
+        "huangdu_water_level_m_1d_diff": [
+          "flow",
+          "runoff"
+        ],
+        "huangdu_water_level_m_3d_mean": [
+          "flow"
+        ],
+        "songpu_flow_level_coupling": [
+          "flow",
+          "sediment"
+        ],
+        "huangdu_flow_level_coupling": [
+          "flow",
+          "runoff"
+        ],
+        "songpu_flow_m3s_1d_diff": [
+          "flow",
+          "sediment"
+        ],
+        "huangdu_flow_m3s_1d_diff": [
+          "flow",
+          "runoff"
+        ],
+        "songpu_flow_rise_flag": [
+          "flow"
+        ],
+        "huangdu_flow_rise_flag": [
+          "flow",
+          "runoff"
+        ],
+        "songpu_tidal_pumping_proxy": [
+          "flow",
+          "sediment"
+        ],
+        "songpu_resuspension_potential": [
+          "flow",
+          "sediment"
+        ],
+        "songpu_flushing_potential": [
+          "flow",
+          "self_purification"
+        ],
+        "runoff_sediment_pulse": [
+          "runoff",
+          "sediment"
+        ]
+      },
+      "pcmci_summary": {
+        "enabled": true,
+        "selected_features": [
+          "turbidity",
+          "conductivity",
+          "dissolved_oxygen",
+          "nh3_n",
+          "tp",
+          "tn",
+          "precipitation",
+          "precipitation_3d",
+          "precipitation_7d",
+          "wind_speed",
+          "pressure",
+          "runoff_proxy",
+          "resuspension_index",
+          "hydrodynamic_intensity",
+          "songpu_flow_m3s_abs",
+          "songpu_flow_m3s_1d_diff",
+          "songpu_water_level_m_1d_diff",
+          "songpu_tidal_pumping_proxy",
+          "songpu_resuspension_potential",
+          "songpu_flushing_potential",
+          "runoff_sediment_pulse"
+        ],
+        "tau_max": 3,
+        "pc_alpha": 0.2,
+        "alpha_level": 0.05,
+        "discovered_edge_count": 143,
+        "output_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\pcmci_discovered_edges.csv",
+        "top_turbidity_parents": [
+          {
+            "source_feature": "conductivity",
+            "target_feature": "turbidity",
+            "lag_days": 2,
+            "effect_strength": 0.14099552827175485,
+            "p_value": 0.0005156891041861591
+          },
+          {
+            "source_feature": "songpu_flow_m3s_1d_diff",
+            "target_feature": "turbidity",
+            "lag_days": 3,
+            "effect_strength": 0.12600990943974005,
+            "p_value": 0.001950486672243388
+          },
+          {
+            "source_feature": "songpu_flow_m3s_abs",
+            "target_feature": "turbidity",
+            "lag_days": 1,
+            "effect_strength": 0.12533975792226582,
+            "p_value": 0.002153605699539933
+          },
+          {
+            "source_feature": "nh3_n",
+            "target_feature": "turbidity",
+            "lag_days": 1,
+            "effect_strength": 0.10802055321199544,
+            "p_value": 0.008039595335244204
+          },
+          {
+            "source_feature": "pressure",
+            "target_feature": "turbidity",
+            "lag_days": 2,
+            "effect_strength": 0.10769218445210518,
+            "p_value": 0.00828840377333809
+          },
+          {
+            "source_feature": "songpu_water_level_m_1d_diff",
+            "target_feature": "turbidity",
+            "lag_days": 3,
+            "effect_strength": 0.09516522550633877,
+            "p_value": 0.020038062197424093
+          },
+          {
+            "source_feature": "wind_speed",
+            "target_feature": "turbidity",
+            "lag_days": 3,
+            "effect_strength": 0.09004747200196689,
+            "p_value": 0.02690063623110365
+          }
+        ],
+        "top_hydrodynamics_edges": [
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "resuspension_index",
+            "lag_days": 1,
+            "effect_strength": 0.48378751281489646,
+            "p_value": 4.76403510606502e-37
+          },
+          {
+            "source_feature": "runoff_proxy",
+            "target_feature": "runoff_sediment_pulse",
+            "lag_days": 1,
+            "effect_strength": 0.4802215570441753,
+            "p_value": 3.612389834253059e-36
+          },
+          {
+            "source_feature": "songpu_flow_m3s_abs",
+            "target_feature": "songpu_flow_m3s_1d_diff",
+            "lag_days": 1,
+            "effect_strength": 0.3315032436013893,
+            "p_value": 7.417558146171228e-17
+          },
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "precipitation_3d",
+            "lag_days": 1,
+            "effect_strength": 0.26896591705295025,
+            "p_value": 1.6113649687354838e-11
+          },
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "hydrodynamic_intensity",
+            "lag_days": 1,
+            "effect_strength": 0.26664585851173256,
+            "p_value": 2.3458753725316968e-11
+          },
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "precipitation",
+            "lag_days": 1,
+            "effect_strength": 0.26075343524519246,
+            "p_value": 5.918375693956346e-11
+          },
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "runoff_sediment_pulse",
+            "lag_days": 3,
+            "effect_strength": 0.25730162400223144,
+            "p_value": 1.2362047339496695e-10
+          },
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "runoff_proxy",
+            "lag_days": 1,
+            "effect_strength": 0.23295971241780875,
+            "p_value": 6.704577713228886e-09
+          },
+          {
+            "source_feature": "songpu_tidal_pumping_proxy",
+            "target_feature": "precipitation_7d",
+            "lag_days": 1,
+            "effect_strength": 0.22851581837522347,
+            "p_value": 1.2762011541054449e-08
+          },
+          {
+            "source_feature": "songpu_flushing_potential",
+            "target_feature": "tp",
+            "lag_days": 1,
+            "effect_strength": 0.2067602165977275,
+            "p_value": 3.021038159729705e-07
+          },
+          {
+            "source_feature": "songpu_flushing_potential",
+            "target_feature": "dissolved_oxygen",
+            "lag_days": 3,
+            "effect_strength": 0.18598897137217316,
+            "p_value": 4.510481959589823e-06
+          },
+          {
+            "source_feature": "songpu_flow_m3s_abs",
+            "target_feature": "dissolved_oxygen",
+            "lag_days": 2,
+            "effect_strength": 0.1666727161500176,
+            "p_value": 4.3954135014309106e-05
+          },
+          {
+            "source_feature": "songpu_flushing_potential",
+            "target_feature": "pressure",
+            "lag_days": 1,
+            "effect_strength": 0.1621257109400511,
+            "p_value": 6.261702510747917e-05
+          },
+          {
+            "source_feature": "hydrodynamic_intensity",
+            "target_feature": "resuspension_index",
+            "lag_days": 3,
+            "effect_strength": 0.15697279596504618,
+            "p_value": 0.00010432249121916157
+          },
+          {
+            "source_feature": "hydrodynamic_intensity",
+            "target_feature": "songpu_water_level_m_1d_diff",
+            "lag_days": 1,
+            "effect_strength": 0.15533041349063828,
+            "p_value": 0.00013169160553636202
+          }
+        ]
+      }
+    },
+    "split_summary": {
+      "train_rows": 623,
+      "val_rows": 134,
+      "test_rows": 134,
+      "train_windows": 468,
+      "val_windows": 113,
+      "test_windows": 92,
+      "train_start": "2022-01-01",
+      "train_end": "2024-04-04",
+      "val_start": "2024-04-05",
+      "val_end": "2024-08-16",
+      "test_start": "2024-08-17",
+      "test_end": "2024-12-31"
+    }
+  },
+  "mscim": {
+    "test": {
+      "turbidity": {
+        "mae": 15.2216622311136,
+        "rmse": 25.10643404447418,
+        "r2": 0.781184230636838,
+        "mape": 13.745740202782454
+      },
+      "clearness": {
+        "mae": 0.023275762796401978,
+        "rmse": 0.03824971110291783,
+        "r2": 0.7434394656587808,
+        "mape": 8.35428335072429
+      }
+    },
+    "train": {
+      "turbidity": {
+        "mae": 14.47055583135185,
+        "rmse": 24.864263061272258,
+        "r2": 0.8920070091713123,
+        "mape": 35.42179831768911
+      },
+      "clearness": {
+        "mae": 0.018358930800126023,
+        "rmse": 0.04359448052365837,
+        "r2": 0.7423021235380924,
+        "mape": 8.842285806201172
+      }
+    },
+    "val": {
+      "turbidity": {
+        "mae": 7.4795475850063085,
+        "rmse": 10.04950310638692,
+        "r2": 0.8534972766578826,
+        "mape": 10.113458173895449
+      },
+      "clearness": {
+        "mae": 0.0165307110389777,
+        "rmse": 0.02271720644726956,
+        "r2": 0.8404655514583503,
+        "mape": 4.611941190453424
+      }
+    }
+  },
+  "mscim_no_kg": {
+    "test": {
+      "turbidity": {
+        "mae": 18.94857696864916,
+        "rmse": 27.391849306284676,
+        "r2": 0.7395338689221981,
+        "mape": 16.98165452700337
+      },
+      "clearness": {
+        "mae": 0.030533429073250812,
+        "rmse": 0.043587426877374345,
+        "r2": 0.666837588891801,
+        "mape": 10.88437574244002
+      }
+    },
+    "train": {
+      "turbidity": {
+        "mae": 14.578680381943018,
+        "rmse": 23.950885238684464,
+        "r2": 0.8997954309152663,
+        "mape": 31.870152167002562
+      },
+      "clearness": {
+        "mae": 0.019185109730634805,
+        "rmse": 0.04295025086050209,
+        "r2": 0.749862252050475,
+        "mape": 8.303652164141633
+      }
+    },
+    "val": {
+      "turbidity": {
+        "mae": 6.984059966770949,
+        "rmse": 9.657474205182583,
+        "r2": 0.8647044121430221,
+        "mape": 9.294002011980314
+      },
+      "clearness": {
+        "mae": 0.015323227485724254,
+        "rmse": 0.02205047608170808,
+        "r2": 0.8496925292215549,
+        "mape": 4.311125760579977
+      }
+    }
+  },
+  "cmfbe_stgcn": {
+    "test": {
+      "turbidity": {
+        "mae": 17.036914327870246,
+        "rmse": 27.43863140973687,
+        "r2": 0.7386434172576639,
+        "mape": 17.046579394779084
+      },
+      "clearness": {
+        "mae": 0.02571049753738486,
+        "rmse": 0.0406897462072409,
+        "r2": 0.7096622580117654,
+        "mape": 8.644551105746423
+      }
+    },
+    "train": {
+      "turbidity": {
+        "mae": 7.934276815280955,
+        "rmse": 11.863730634261827,
+        "r2": 0.9754140530565448,
+        "mape": 13.086719893635305
+      },
+      "clearness": {
+        "mae": 0.010897014586605195,
+        "rmse": 0.028390116125391607,
+        "r2": 0.8907095626675763,
+        "mape": 4.252889251008949
+      }
+    },
+    "val": {
+      "turbidity": {
+        "mae": 9.363558372565075,
+        "rmse": 12.497357467509925,
+        "r2": 0.773434955902348,
+        "mape": 12.972623067271178
+      },
+      "clearness": {
+        "mae": 0.020262434419277494,
+        "rmse": 0.027252454760667455,
+        "r2": 0.7704084602489294,
+        "mape": 5.573305986673775
+      }
+    }
+  },
+  "ridge_window_baseline": {
+    "test": {
+      "turbidity": {
+        "mae": 49.47705492766007,
+        "rmse": 67.33386784392,
+        "r2": -0.5738947116220294,
+        "mape": 53.084186023388746
+      },
+      "clearness": {
+        "mae": 0.08744706828957019,
+        "rmse": 0.11438281864856693,
+        "r2": -1.294325972355154,
+        "mape": 30.37221932906931
+      }
+    },
+    "train": {
+      "turbidity": {
+        "mae": 18.55874494011076,
+        "rmse": 23.5205381673271,
+        "r2": 0.9033640113569812,
+        "mape": 18.347059419978983
+      },
+      "clearness": {
+        "mae": 0.015196867297108993,
+        "rmse": 0.021857626928341048,
+        "r2": 0.9352180757386993,
+        "mape": 6.422843565492584
+      }
+    },
+    "val": {
+      "turbidity": {
+        "mae": 33.28991361634921,
+        "rmse": 42.401887799423854,
+        "r2": -1.6081160115723074,
+        "mape": 45.64194079406686
+      },
+      "clearness": {
+        "mae": 0.05435335636138916,
+        "rmse": 0.06931240065701948,
+        "r2": -0.4851369655284432,
+        "mape": 15.714243903293296
+      }
+    }
+  },
+  "persistence_baseline": {
+    "test": {
+      "turbidity": {
+        "mae": 20.83214054936948,
+        "rmse": 29.976930436394582,
+        "r2": 0.688051521448753,
+        "mape": 19.59921839804
+      },
+      "clearness": {
+        "mae": 0.031470614444950355,
+        "rmse": 0.04453021931974343,
+        "r2": 0.6522691668937299,
+        "mape": 10.940600614377106
+      }
+    },
+    "train": {
+      "turbidity": {
+        "mae": 20.609389786282158,
+        "rmse": 31.3371590745543,
+        "r2": 0.8284607015978678,
+        "mape": 34.068400409927605
+      },
+      "clearness": {
+        "mae": 0.02709910503994578,
+        "rmse": 0.05155500222364919,
+        "r2": 0.6395961299863573,
+        "mape": 11.61857161436523
+      }
+    },
+    "val": {
+      "turbidity": {
+        "mae": 10.040375802369244,
+        "rmse": 12.676565991422288,
+        "r2": 0.7668906123439846,
+        "mape": 13.586543432131492
+      },
+      "clearness": {
+        "mae": 0.022593188074837744,
+        "rmse": 0.02944649887817507,
+        "r2": 0.731952379048911,
+        "mape": 6.293613853157852
+      }
+    }
+  }
+}

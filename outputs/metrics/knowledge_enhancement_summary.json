@@ -1,0 +1,16 @@
+{
+  "kg_ablation_test_delta": {
+    "turbidity_r2_gain": 0.04165036171463987,
+    "clearness_r2_gain": 0.07660187676697983,
+    "turbidity_rmse_change": -2.2854152618104955,
+    "clearness_rmse_change": -0.005337715774456513
+  },
+  "vs_ridge_test_delta": {
+    "turbidity_r2_gain": 1.3550789422588674,
+    "clearness_r2_gain": 2.0377654380139347
+  },
+  "vs_persistence_test_delta": {
+    "turbidity_r2_gain": 0.09313270918808492,
+    "clearness_r2_gain": 0.0911702987650509
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "water_source_path": "G:\\AI4S\\上海市_宝山区_太湖流域_黄浦江_吴淞口_2586.csv",
+  "weather_source_path": "G:\\AI4S\\daily_version_A_keep_missing.csv",
+  "hydrodynamics_enabled": true,
+  "hydrodynamics": {
+    "source_xls": "G:\\AI4S\\上海水域环境发展有限公司资料提供.xls",
+    "preprocessed_long_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_long.csv",
+    "preprocessed_wide_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
+    "long_rows": 4384,
+    "wide_rows": 1096,
+    "date_range": {
+      "start": "2022-01-01",
+      "end": "2024-12-31"
+    },
+    "stations": [
+      "松浦大桥",
+      "黄渡"
+    ],
+    "variables": [
+      "flow",
+      "water_level"
+    ],
+    "negative_flow_counts": {
+      "松浦大桥": 9,
+      "黄渡": 72
+    },
+    "recommended_primary_station_for_current_model": "松浦大桥",
+    "recommended_reason": "当前已有水质站点为黄浦江吴淞口，松浦大桥水动力与其河道关联性更强。",
+    "merge_summary": {
+      "rows_before_hydrodynamics_merge": 1550,
+      "rows_after_hydrodynamics_merge": 891,
+      "natural_overlap_days": 1096,
+      "matched_overlap_days": 891,
+      "coverage_ratio": 0.813,
+      "merge_key": "date",
+      "merge_type": "inner"
+    }
+  },
+  "water_station": {
+    "province": "上海市",
+    "city": "宝山区",
+    "basin": "太湖流域",
+    "river": "黄浦江",
+    "station_name": "吴淞口",
+    "longitude": 121.522058,
+    "latitude": 31.392691,
+    "raw_rows": 7789,
+    "daily_rows": 1550,
+    "start_date": "2020-12-17",
+    "end_date": "2025-10-31"
+  },
+  "selected_weather_station": {
+    "station_id": 58362,
+    "weather_station_name": "宝山",
+    "district": "宝山区",
+    "city": "上海市",
+    "overlap_days": 1550,
+    "distance_km": 15.109246817721608,
+    "all_candidates": [
+      {
+        "station_id": 58362,
+        "weather_station_name": "宝山",
+        "district": "宝山区",
+        "city": "上海市",
+        "overlap_days": 1550,
+        "distance_km": 15.109246817721608
+      },
+      {
+        "station_id": 58370,
+        "weather_station_name": "浦东",
+        "district": "浦东新区",
+        "city": "上海市",
+        "overlap_days": 1550,
+        "distance_km": 19.212883574393125
+      },
+      {
+        "station_id": 58367,
+        "weather_station_name": "徐家汇国家气象观测站",
+        "district": "徐汇区",
+        "city": "上海市",
+        "overlap_days": 1550,
+        "distance_km": 23.889715395667473
+      },
+      {
+        "station_id": 58366,
+        "weather_station_name": "崇明",
+        "district": "崇明区",
+        "city": "上海市",
+        "overlap_days": 1550,
+        "distance_km": 30.56112218999657
+      },
+      {
+        "station_id": 58365,
+        "weather_station_name": "嘉定",
+        "district": "嘉定区",
+        "city": "上海市",
+        "overlap_days": 1550,
+        "distance_km": 30.677972737017733
+      }
+    ]
+  },
+  "rows_after_merge": 891,
+  "date_range": {
+    "start": "2022-01-01",
+    "end": "2024-12-31"
+  },
+  "clearness_transform": {
+    "log_turbidity_min": 0.5556077665378839,
+    "log_turbidity_max": 6.447146578857826
+  },
+  "feature_columns": [
+    "water_temp",
+    "ph",
+    "dissolved_oxygen",
+    "conductivity",
+    "turbidity",
+    "codmn",
+    "nh3_n",
+    "tp",
+    "tn",
+    "pressure",
+    "air_temp",
+    "humidity",
+    "precipitation",
+    "wind_speed",
+    "wind_dir_sin",
+    "wind_dir_cos",
+    "precipitation_3d",
+    "precipitation_7d",
+    "pressure_drop",
+    "resuspension_index",
+    "runoff_proxy",
+    "nutrient_risk_index",
+    "self_purification_index",
+    "mixing_proxy",
+    "settling_index",
+    "hydrodynamic_intensity",
+    "conductivity_anomaly",
+    "water_air_temp_gap",
+    "dayofyear_sin",
+    "dayofyear_cos",
+    "songpu_flow_m3s",
+    "songpu_water_level_m",
+    "huangdu_flow_m3s",
+    "huangdu_water_level_m",
+    "songpu_flow_m3s_abs",
+    "songpu_flow_m3s_reverse_flag",
+    "songpu_flow_m3s_3d_mean",
+    "songpu_flow_m3s_7d_mean",
+    "huangdu_flow_m3s_abs",
+    "huangdu_flow_m3s_reverse_flag",
+    "huangdu_flow_m3s_3d_mean",
+    "huangdu_flow_m3s_7d_mean",
+    "songpu_water_level_m_1d_diff",
+    "songpu_water_level_m_3d_mean",
+    "huangdu_water_level_m_1d_diff",
+    "huangdu_water_level_m_3d_mean",
+    "songpu_flow_level_coupling",
+    "huangdu_flow_level_coupling",
+    "songpu_flow_m3s_1d_diff",
+    "huangdu_flow_m3s_1d_diff",
+    "songpu_flow_rise_flag",
+    "huangdu_flow_rise_flag",
+    "songpu_tidal_pumping_proxy",
+    "songpu_resuspension_potential",
+    "songpu_flushing_potential",
+    "runoff_sediment_pulse"
+  ],
+  "dropped_high_missing_columns": [
+    "toc",
+    "chlorophyll_a",
+    "algae_density"
+  ],
+  "targets": [
+    "turbidity",
+    "clearness_proxy"
+  ],
+  "notes": {
+    "current_scope": "single-station multimodal daily prototype",
+    "boundary_detection_head": "reserved only, no raster training data available",
+    "spatial_graph": "implemented as a feature factor graph because only one numeric water-quality station is currently available"
+  }
+}
