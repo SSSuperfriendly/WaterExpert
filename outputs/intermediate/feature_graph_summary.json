@@ -1,5 +1,5 @@
 {
-  "relationships_path": "G:\\AI4S\\rag_project\\graph_people_demo\\ragtest\\inputs\\artifacts\\create_final_relationships.parquet",
+  "relationships_path": "data\\knowledge_graph\\create_final_relationships.parquet",
   "relationship_rows": 18157,
   "relationship_rows_with_domain_evidence": 8927,
   "feature_count": 56,
@@ -236,7 +236,7 @@
     "pc_alpha": 0.2,
     "alpha_level": 0.05,
     "discovered_edge_count": 143,
-    "output_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\pcmci_discovered_edges.csv",
+    "output_csv": "outputs\\intermediate\\pcmci_discovered_edges.csv",
     "top_turbidity_parents": [
       {
         "source_feature": "conductivity",

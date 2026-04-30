@@ -1,36 +1,45 @@
 # Project Audit 2026-04-30
 
-## 1. Cleanup Decision
+## Cleanup Decision
 
-The original `G:\AI4S` workspace is a mixed working directory containing raw data, crawler outputs, PPT files, model prototypes, database deliveries, and historical archives. For GitHub handoff, the safe approach is not to delete the workspace, but to create a clean repository with only reproducible code, necessary lightweight data, current model outputs, and documentation.
+The original `G:\AI4S` workspace mixed raw data, crawler outputs, PPT files, model prototypes, database deliveries, reference PDFs, and historical archives. The handoff target is now the clean `WaterExpert` repository only.
 
-## 2. Included In Repository
+The repository keeps reproducible code, portable configs, minimum raw inputs, lightweight knowledge-prior artifacts, current model outputs, processed all-station reference tables, and documentation. Old workspace artifacts are excluded and should not be treated as dependencies.
+
+## Included In Repository
 
 - Core model code: `src/water_ai/`
-- Training and analysis scripts: `scripts/`
-- Portable config: `configs/prototype_repo.yaml`
-- Minimal raw inputs for current Wusongkou prototype: `data/raw/`
+- Active scripts: `scripts/run_full_pipeline.py`, `scripts/analyze_cmfbe_thresholds.py`, `scripts/export_mscim_driver_overview.py`, `scripts/plot_cmfbe_process_decomposition.py`, `scripts/preprocess_shanghai_hydrodynamics.py`
+- Portable configs: `configs/prototype_repo.yaml`, `configs/prototype.yaml`
+- Minimal raw inputs for the current Wusongkou prototype: `data/raw/`
 - Lightweight knowledge graph relationship artifact: `data/knowledge_graph/create_final_relationships.parquet`
 - All-station processed database tables: `data/full_station_database/`
 - Current model outputs: `outputs/`
-- Handoff documentation: `docs/`
+- Portable run summary: `outputs/run_summary.md`
+- Handoff documentation: `README.md`, `docs/`, `docs/HANDOFF_FOR_AGENT_MODEL.md`
 
-## 3. Excluded From Repository
+## Removed From Handoff Scope
 
-- `rag_project/` full artifacts: too large, especially LanceDB embedding files.
-- `AIforScience/` crawler/raw-material folders: not needed for model handoff.
-- historical zip archives and PPT working files.
-- ad-hoc historical model output snapshots.
+- `rag_project/` full GraphRAG artifacts and LanceDB embeddings.
+- `AIforScience/` crawler/raw-material folders.
+- Historical prototype folder `mscim_cmfbe_prototype/`.
+- Historical database delivery folders and zip archives.
+- PPT working copies, old standalone root CSV/XLS duplicates, and ad-hoc extracted text.
+- Obsolete experiment configs `prototype_h3.yaml`, `prototype_h7.yaml`, and `prototype_ndti_baseline.yaml`.
+- PPT/database builder scripts that depended on the old absolute `G:\AI4S` workspace layout.
 
-## 4. New Work Added
+## Current Reproducible Path
 
-- Added `scripts/analyze_cmfbe_thresholds.py`.
-- Added CMFBE threshold outputs under `outputs/thresholds/`.
-- Added `outputs/plots/cmfbe_threshold_response_20260430.png`.
-- Added portable repository config `configs/prototype_repo.yaml`.
-- Updated `requirements.txt` with `tigramite`, `openpyxl`, and `xlrd`.
+```powershell
+python scripts\run_full_pipeline.py
+python scripts\plot_cmfbe_process_decomposition.py
+python scripts\export_mscim_driver_overview.py
+python scripts\analyze_cmfbe_thresholds.py
+```
 
-## 5. Remaining Gaps
+`scripts/run_full_pipeline.py` now defaults to `configs/prototype_repo.yaml`, so a collaborator can run the pipeline from a cloned repository without editing local paths.
+
+## Remaining Gaps
 
 - The current model is a Wusongkou single-station enhanced prototype, not a full 20-station enhanced hydrodynamic model.
 - CMFBE-ST-GCN thresholds are empirical daily-model thresholds, not physical thresholds from calibrated 2D hydrodynamics.

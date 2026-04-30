@@ -1,13 +1,13 @@
 {
   "data": {
     "dataset_summary": {
-      "water_source_path": "G:\\AI4S\\上海市_宝山区_太湖流域_黄浦江_吴淞口_2586.csv",
-      "weather_source_path": "G:\\AI4S\\daily_version_A_keep_missing.csv",
+      "water_source_path": "data\\raw\\wusongkou_water_quality_2586.csv",
+      "weather_source_path": "data\\raw\\shanghai_weather_daily.csv",
       "hydrodynamics_enabled": true,
       "hydrodynamics": {
-        "source_xls": "G:\\AI4S\\上海水域环境发展有限公司资料提供.xls",
-        "preprocessed_long_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_long.csv",
-        "preprocessed_wide_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
+        "source_xls": "data\\raw\\shanghai_hydrodynamics.xls",
+        "preprocessed_long_path": "outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_long.csv",
+        "preprocessed_wide_path": "outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
         "long_rows": 4384,
         "wide_rows": 1096,
         "date_range": {
@@ -38,6 +38,8 @@
           "merge_type": "inner"
         }
       },
+      "ndti_enabled": false,
+      "ndti": null,
       "water_station": {
         "province": "上海市",
         "city": "宝山区",
@@ -184,7 +186,7 @@
       }
     },
     "graph_summary": {
-      "relationships_path": "G:\\AI4S\\rag_project\\graph_people_demo\\ragtest\\inputs\\artifacts\\create_final_relationships.parquet",
+      "relationships_path": "data\\knowledge_graph\\create_final_relationships.parquet",
       "relationship_rows": 18157,
       "relationship_rows_with_domain_evidence": 8927,
       "feature_count": 56,
@@ -421,7 +423,7 @@
         "pc_alpha": 0.2,
         "alpha_level": 0.05,
         "discovered_edge_count": 143,
-        "output_csv": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\pcmci_discovered_edges.csv",
+        "output_csv": "outputs\\intermediate\\pcmci_discovered_edges.csv",
         "top_turbidity_parents": [
           {
             "source_feature": "conductivity",

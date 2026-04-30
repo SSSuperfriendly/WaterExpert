@@ -2,7 +2,7 @@
 
 ## 1. 先说结论
 
-按照 `G:\AI4S\key notes-4.15(1).pdf` 的最新口径来看，我们当前的工作**已经覆盖了“MSCIM 原型预测 + 致浊因子诊断 + CMFBE 过程分解原型”这条主线**，但还**没有完全达到指南里“空间边界、空间热力图、不确定性、二维机理方程标定、Sobol/反事实阈值分析”这些更完整目标**。
+按照 `docs\key_notes_4.15(1)_对照与更新_20260419.md` 的最新口径来看，我们当前的工作**已经覆盖了“MSCIM 原型预测 + 致浊因子诊断 + CMFBE 过程分解原型”这条主线**，但还**没有完全达到指南里“空间边界、空间热力图、不确定性、二维机理方程标定、Sobol/反事实阈值分析”这些更完整目标**。
 
 因此，当前最稳妥的汇报口径应该是：
 
@@ -45,11 +45,11 @@
 ### 4.1 MSCIM 致浊因子展示图
 
 - 图文件：
-  `G:\AI4S\mscim_cmfbe_prototype\outputs\plots\mscim_turbidity_driver_overview_20260419.png`
+  `outputs\plots\mscim_turbidity_driver_overview_20260419.png`
 - 域级因子表：
-  `G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\mscim_turbidity_top_driver_domains.csv`
+  `outputs\diagnosis\mscim_turbidity_top_driver_domains.csv`
 - 特征级因子表：
-  `G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\mscim_turbidity_top_driver_features.csv`
+  `outputs\diagnosis\mscim_turbidity_top_driver_features.csv`
 
 图里已经能直接展示：
 
@@ -60,7 +60,7 @@
 
 我已经整理成单独文档：
 
-- `G:\AI4S\当前工作文档\MSCIM致浊因子展示与单站样例_20260419.md`
+- `docs\MSCIM致浊因子展示与单站样例_20260419.md`
 
 当前最适合展示的例子是：
 
@@ -116,15 +116,15 @@
 
 直接用：
 
-- 图：`G:\AI4S\mscim_cmfbe_prototype\outputs\plots\mscim_turbidity_driver_overview_20260419.png`
-- 表：`G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\mscim_turbidity_top_driver_domains.csv`
-- 表：`G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\mscim_turbidity_top_driver_features.csv`
+- 图：`outputs\plots\mscim_turbidity_driver_overview_20260419.png`
+- 表：`outputs\diagnosis\mscim_turbidity_top_driver_domains.csv`
+- 表：`outputs\diagnosis\mscim_turbidity_top_driver_features.csv`
 
 ### 6.2 第一个模型做一个例子
 
 直接用：
 
-- 文档：`G:\AI4S\当前工作文档\MSCIM致浊因子展示与单站样例_20260419.md`
+- 文档：`docs\MSCIM致浊因子展示与单站样例_20260419.md`
 
 最简口头版：
 

@@ -151,5 +151,5 @@
 - `wind_dir`：度（0-360）
 
 ## 11. 数据来源
-- 水质数据：`G:\AI4S\水质数据.zip`
-- 气象数据：`G:\AI4S\daily_version_A_keep_missing.csv`
+- 水质数据：原始压缩包已清理；当前交付使用 `data/full_station_database/` 内的处理后表。
+- 气象数据：当前交付使用 `data/raw/shanghai_weather_daily.csv`。

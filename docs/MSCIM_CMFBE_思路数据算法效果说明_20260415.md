@@ -84,7 +84,7 @@
 
 我已经做出的全站数据库位于：
 
-- `G:\AI4S\全站水质综合数据库_20260415_完整版`
+- `data\full_station_database`
 
 这套库的统计口径是：
 
@@ -131,7 +131,7 @@
 
 原始文件：
 
-- `G:\AI4S\上海市_宝山区_太湖流域_黄浦江_吴淞口_2586.csv`
+- `data\raw\wusongkou_water_quality_2586.csv`
 
 数据情况：
 
@@ -144,7 +144,7 @@
 
 原始文件：
 
-- `G:\AI4S\daily_version_A_keep_missing.csv`
+- `data\raw\shanghai_weather_daily.csv`
 
 匹配结果：
 
@@ -156,7 +156,7 @@
 
 原始文件：
 
-- `G:\AI4S\上海水域环境发展有限公司资料提供.xls`
+- `data\raw\shanghai_hydrodynamics.xls`
 
 其中包含 4 个分表：
 
@@ -167,8 +167,8 @@
 
 预处理后得到：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\hydrodynamics_preprocessed\shanghai_hydrodynamics_daily_long.csv`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\hydrodynamics_preprocessed\shanghai_hydrodynamics_daily_wide.csv`
+- `outputs\hydrodynamics_preprocessed\shanghai_hydrodynamics_daily_long.csv`
+- `outputs\hydrodynamics_preprocessed\shanghai_hydrodynamics_daily_wide.csv`
 
 水动力数据情况：
 
@@ -181,7 +181,7 @@
 
 我把水质、天气、水动力按 `date` 做 `inner join` 后，形成了当前真正可直接训练的数据集：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\intermediate\multimodal_daily_dataset_with_hydrodynamics.csv`
+- `outputs\intermediate\multimodal_daily_dataset_with_hydrodynamics.csv`
 
 融合后的关键口径是：
 
@@ -306,7 +306,7 @@
 
 配置文件中使用的知识工件目录是：
 
-- `G:\AI4S\rag_project\graph_people_demo\ragtest\inputs\artifacts`
+- `data\knowledge_graph`
 
 程序会读取关系表，把领域关系转成因子图先验。
 
@@ -332,7 +332,7 @@
 
 输出文件：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\intermediate\pcmci_discovered_edges.csv`
+- `outputs\intermediate\pcmci_discovered_edges.csv`
 
 最终把：
 
@@ -346,7 +346,7 @@
 
 `MSCIM` 的源码在：
 
-- `G:\AI4S\mscim_cmfbe_prototype\src\water_ai\models\mscim.py`
+- `src\water_ai\models\mscim.py`
 
 核心结构包括：
 
@@ -391,7 +391,7 @@
 
 `CMFBE-ST-GCN` 的源码在：
 
-- `G:\AI4S\mscim_cmfbe_prototype\src\water_ai\models\cmfbe_stgcn.py`
+- `src\water_ai\models\cmfbe_stgcn.py`
 
 它不是从零单独起模型，而是建立在 `MSCIM backbone` 之上，再加入显式机理过程项。
 
@@ -448,7 +448,7 @@
 
 对应导出的参数文件为：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\physics\physics_coefficients.json`
+- `outputs\physics\physics_coefficients.json`
 
 ## 4.5 基线与训练设置
 
@@ -461,7 +461,7 @@
 
 训练设置来自：
 
-- `G:\AI4S\mscim_cmfbe_prototype\configs\prototype.yaml`
+- `configs\prototype_repo.yaml`
 
 主要超参数为：
 
@@ -493,7 +493,7 @@
 
 指标文件：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\metrics\model_comparison.csv`
+- `outputs\metrics\model_comparison.csv`
 
 测试集结果如下：
 
@@ -515,7 +515,7 @@
 
 知识增强效果文件：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\metrics\knowledge_enhancement_summary.json`
+- `outputs\metrics\knowledge_enhancement_summary.json`
 
 与 `MSCIM-NoKG` 相比，`MSCIM` 在测试集上提升为：
 
@@ -539,7 +539,7 @@
 
 诊断文件：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\mscim_turbidity_factor_diagnosis_summary.md`
+- `outputs\diagnosis\mscim_turbidity_factor_diagnosis_summary.md`
 
 当前 `MSCIM` 给出的平均主导致浊因子 Top10 中，排名靠前的包括：
 
@@ -566,8 +566,8 @@
 
 过程分解文件：
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\cmfbe_process_decomposition_summary.csv`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\plots\cmfbe_process_decomposition.png`
+- `outputs\diagnosis\cmfbe_process_decomposition_summary.csv`
+- `outputs\plots\cmfbe_process_decomposition.png`
 
 当前测试集平均过程贡献为：
 
@@ -640,36 +640,36 @@
 
 ### 数据库
 
-- `G:\AI4S\全站水质综合数据库_20260415_完整版`
+- `data\full_station_database`
 
 ### 中间数据
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\intermediate\multimodal_daily_dataset_with_hydrodynamics.csv`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\intermediate\multimodal_hydrodynamics_merge_summary.json`
+- `outputs\intermediate\multimodal_daily_dataset_with_hydrodynamics.csv`
+- `outputs\intermediate\multimodal_hydrodynamics_merge_summary.json`
 
 ### 指标
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\metrics\metrics.json`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\metrics\model_comparison.csv`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\metrics\knowledge_enhancement_summary.json`
+- `outputs\metrics\metrics.json`
+- `outputs\metrics\model_comparison.csv`
+- `outputs\metrics\knowledge_enhancement_summary.json`
 
 ### 预测与解释
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\predictions\predictions.csv`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\interpretability\feature_importance.csv`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\mscim_turbidity_factor_diagnosis_summary.md`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\diagnosis\cmfbe_process_decomposition_summary.csv`
+- `outputs\predictions\predictions.csv`
+- `outputs\interpretability\feature_importance.csv`
+- `outputs\diagnosis\mscim_turbidity_factor_diagnosis_summary.md`
+- `outputs\diagnosis\cmfbe_process_decomposition_summary.csv`
 
 ### 图
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\plots\mscim_logic_diagram_20260415_v2.png`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\plots\cmfbe_framework_diagram_20260415_v2.png`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\plots\cmfbe_process_decomposition.png`
+- `outputs\plots\mscim_logic_diagram_20260415_v2.png`
+- `outputs\plots\cmfbe_framework_diagram_20260415_v2.png`
+- `outputs\plots\cmfbe_process_decomposition.png`
 
 ### 机理说明
 
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\physics\physics_equations.md`
-- `G:\AI4S\mscim_cmfbe_prototype\outputs\physics\physics_coefficients.json`
+- `outputs\physics\physics_equations.md`
+- `outputs\physics\physics_coefficients.json`
 
 ---
 

@@ -1,7 +1,7 @@
 {
-  "base_dataset": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\multimodal_daily_dataset.csv",
-  "hydrodynamics_dataset": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
-  "output_dataset": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\intermediate\\multimodal_daily_dataset_with_hydrodynamics.csv",
+  "base_dataset": "outputs\\intermediate\\multimodal_daily_dataset.csv",
+  "hydrodynamics_dataset": "outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
+  "output_dataset": "outputs\\intermediate\\multimodal_daily_dataset_with_hydrodynamics.csv",
   "rows": 891,
   "date_range": {
     "start": "2022-01-01",

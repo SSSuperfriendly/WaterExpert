@@ -19,6 +19,7 @@ DEFAULT_XLS_FILENAME = (
 DEFAULT_LONG_FILENAME = "shanghai_hydrodynamics_daily_long.csv"
 DEFAULT_WIDE_FILENAME = "shanghai_hydrodynamics_daily_wide.csv"
 DEFAULT_SUMMARY_FILENAME = "summary.json"
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 FLOW_SHEET_SPECS = [
     {
@@ -82,6 +83,24 @@ def resolve_hydrodynamics_xls(
         f"Found multiple .xls files under {data_root}: {matches}. "
         "Provide hydrodynamics_source_path explicitly."
     )
+
+
+def _portable_path(path: str | Path | None) -> str | None:
+    if path is None:
+        return None
+    path_obj = Path(path)
+    try:
+        return str(path_obj.resolve().relative_to(REPO_ROOT))
+    except (OSError, ValueError):
+        return str(path_obj)
+
+
+def _make_summary_paths_portable(summary: dict[str, Any]) -> dict[str, Any]:
+    portable = dict(summary)
+    for key in ["source_xls", "preprocessed_long_path", "preprocessed_wide_path"]:
+        if key in portable:
+            portable[key] = _portable_path(portable[key])
+    return portable
 
 
 def parse_flow_sheet(xls_path: str | Path, spec: dict[str, str]) -> pd.DataFrame:
@@ -190,9 +209,9 @@ def build_hydrodynamics_summary(
 ) -> dict[str, Any]:
     stations = sorted(long_df["station_name"].dropna().unique().tolist())
     return {
-        "source_xls": str(xls_path),
-        "preprocessed_long_path": str(long_path) if long_path else None,
-        "preprocessed_wide_path": str(wide_path) if wide_path else None,
+        "source_xls": _portable_path(xls_path),
+        "preprocessed_long_path": _portable_path(long_path),
+        "preprocessed_wide_path": _portable_path(wide_path),
         "long_rows": int(len(long_df)),
         "wide_rows": int(len(wide_df)),
         "date_range": {
@@ -282,14 +301,15 @@ def load_or_build_hydrodynamics_daily(
             summary = json.loads(summary_path.read_text(encoding="utf-8"))
         else:
             summary = {
-                "preprocessed_wide_path": str(candidate),
+                "preprocessed_wide_path": _portable_path(candidate),
                 "wide_rows": int(len(hydro_df)),
                 "date_range": {
                     "start": str(hydro_df["date"].min().date()),
                     "end": str(hydro_df["date"].max().date()),
                 },
             }
-        summary["preprocessed_wide_path"] = str(candidate)
+        summary = _make_summary_paths_portable(summary)
+        summary["preprocessed_wide_path"] = _portable_path(candidate)
         return hydro_df, summary
 
     xls_path = resolve_hydrodynamics_xls(data_root=data_root, source_path=source_path)

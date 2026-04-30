@@ -1,7 +1,7 @@
 {
-  "source_xls": "G:\\AI4S\\上海水域环境发展有限公司资料提供.xls",
-  "preprocessed_long_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_long.csv",
-  "preprocessed_wide_path": "G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
+  "source_xls": "data\\raw\\shanghai_hydrodynamics.xls",
+  "preprocessed_long_path": "outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_long.csv",
+  "preprocessed_wide_path": "outputs\\hydrodynamics_preprocessed\\shanghai_hydrodynamics_daily_wide.csv",
   "long_rows": 4384,
   "wide_rows": 1096,
   "date_range": {

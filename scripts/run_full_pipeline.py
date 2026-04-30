@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default=str(PROJECT_ROOT / "configs" / "prototype.yaml"),
+        default=str(PROJECT_ROOT / "configs" / "prototype_repo.yaml"),
         help="Path to the YAML config file.",
     )
     return parser.parse_args()
@@ -579,47 +579,58 @@ def write_run_summary(
             )
         )
 
-    content = f"""# 前两项任务工程原型运行总结
+    test_metrics = {
+        model_name: {
+            "turbidity_r2": round(float(model_metrics["test"]["turbidity"]["r2"]), 4),
+            "clearness_r2": round(float(model_metrics["test"]["clearness"]["r2"]), 4),
+            "turbidity_rmse": round(float(model_metrics["test"]["turbidity"]["rmse"]), 4),
+            "clearness_rmse": round(float(model_metrics["test"]["clearness"]["rmse"]), 4),
+        }
+        for model_name, model_metrics in metrics.items()
+        if model_name != "data" and "test" in model_metrics
+    }
 
-## 1. 当前完成内容
+    content = f"""# WaterExpert Pipeline Run Summary
 
-- 已构建吴淞口单站点日尺度多模态数据集，可直接用于 MSCIM / CMFBE 原型训练
-- 已将 GraphRAG 关系表转成因子图先验，用于模型中的知识增强传播
-- 已训练 `MSCIM`、`MSCIM-NoKG`、`CMFBE-ST-GCN` 以及传统窗口基线模型
-- 已导出预测结果、评价指标、特征重要性、致浊因子诊断、机理方程说明和汇报材料
+## 1. Completed Outputs
 
-## 2. 数据范围
+- Built the Wusongkou daily multimodal dataset for MSCIM and CMFBE-ST-GCN prototype training.
+- Converted the lightweight GraphRAG relationship table into feature-graph priors.
+- Trained `MSCIM`, `MSCIM-NoKG`, `CMFBE-ST-GCN`, and window baselines.
+- Exported predictions, metrics, feature importance, turbidity-driver diagnosis, physics notes, plots, and checkpoints.
 
-- 水质站点：{dataset_summary["water_station"]["station_name"]}
-- 日尺度融合样本数：{dataset_summary["rows_after_merge"]}
-- 日期范围：{dataset_summary["date_range"]["start"]} 至 {dataset_summary["date_range"]["end"]}
-- 选用气象站：{dataset_summary["selected_weather_station"]["weather_station_name"]}（{dataset_summary["selected_weather_station"]["district"]}）
-- 可训练特征数：{len(dataset_summary["feature_columns"])}
+## 2. Data Scope
 
-## 3. 数据切分
+- Water-quality station: Wusongkou / station 2586
+- Daily merged rows: {dataset_summary["rows_after_merge"]}
+- Date range: {dataset_summary["date_range"]["start"]} to {dataset_summary["date_range"]["end"]}
+- Selected weather station: Baoshan
+- Hydrodynamic references: Songpu Bridge and Huangdu
+- Trainable feature count: {len(dataset_summary["feature_columns"])}
 
-- 训练集：{split_summary["train_rows"]} 行，{split_summary["train_windows"]} 个窗口
-- 验证集：{split_summary["val_rows"]} 行，{split_summary["val_windows"]} 个窗口
-- 测试集：{split_summary["test_rows"]} 行，{split_summary["test_windows"]} 个窗口
+## 3. Data Splits
 
-## 4. 指标摘要
+- Train: {split_summary["train_rows"]} rows, {split_summary["train_windows"]} windows
+- Validation: {split_summary["val_rows"]} rows, {split_summary["val_windows"]} windows
+- Test: {split_summary["test_rows"]} rows, {split_summary["test_windows"]} windows
+
+## 4. Metrics Snapshot
 
 ```json
-{json.dumps(metrics, ensure_ascii=False, indent=2)}
+{json.dumps(test_metrics, ensure_ascii=True, indent=2)}
 ```
 
-## 5. 主要驱动因子
+## 5. Main Driver Features
 
 {chr(10).join(top_rows)}
 
-## 6. 诚实边界
+## 6. Current Boundaries
 
-- 重点治理区边界自动识别目前仅保留接口，尚无遥感 / UAV 栅格标签支撑训练
-- 当前“空间图”是单站点条件下的因子图，不是多断面河网图
-- 机理约束是可运行的 source-sink surrogate，尚未进入二维水动力标定阶段
+- The boundary-detection head is reserved but not supervised by raster or UAV labels yet.
+- The current graph is a single-station feature graph, not a multi-section river-network graph.
+- The physics component is a runnable source-sink surrogate, not a calibrated 2D hydrodynamic solver.
 """
     (output_dir / "run_summary.md").write_text(content, encoding="utf-8")
-    (output_dir / "key_notes前两项_实现说明.md").write_text(content, encoding="utf-8")
 
 
 def main() -> None:

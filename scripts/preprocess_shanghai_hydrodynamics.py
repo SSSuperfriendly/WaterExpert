@@ -23,19 +23,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input",
         type=str,
-        default=str(Path("G:/AI4S") / DEFAULT_XLS_FILENAME),
-        help="Source xls path. If missing, the script will try to resolve it under G:/AI4S.",
+        default=str(PROJECT_ROOT / "data" / "raw" / DEFAULT_XLS_FILENAME),
+        help="Source xls path. Defaults to the repository-local raw hydrodynamics file.",
     )
     parser.add_argument(
         "--data-root",
         type=str,
-        default="G:\\AI4S",
+        default=str(PROJECT_ROOT / "data" / "raw"),
         help="Directory used for fallback xls discovery.",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="G:\\AI4S\\mscim_cmfbe_prototype\\outputs\\hydrodynamics_preprocessed",
+        default=str(PROJECT_ROOT / "outputs" / "hydrodynamics_preprocessed"),
         help="Directory to save cleaned outputs.",
     )
     return parser.parse_args()
