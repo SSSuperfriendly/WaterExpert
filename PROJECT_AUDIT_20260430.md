@@ -2,7 +2,7 @@
 
 ## Cleanup Decision
 
-The original `G:\AI4S` workspace mixed raw data, crawler outputs, PPT files, model prototypes, database deliveries, reference PDFs, and historical archives. The handoff target is now the clean `WaterExpert` repository only.
+The original local workspace mixed raw data, crawler outputs, presentation working files, model prototypes, database deliveries, reference PDFs, and historical archives. The handoff target is now the clean `WaterExpert` repository only.
 
 The repository keeps reproducible code, portable configs, minimum raw inputs, lightweight knowledge-prior artifacts, current model outputs, processed all-station reference tables, and documentation. Old workspace artifacts are excluded and should not be treated as dependencies.
 
@@ -16,7 +16,7 @@ The repository keeps reproducible code, portable configs, minimum raw inputs, li
 - All-station processed database tables: `data/full_station_database/`
 - Current model outputs: `outputs/`
 - Portable run summary: `outputs/run_summary.md`
-- Handoff documentation: `README.md`, `docs/`, `docs/HANDOFF_FOR_AGENT_MODEL.md`
+- Handoff documentation: `README.md`, `docs/TECHNICAL_OVERVIEW.md`, `docs/HANDOFF_FOR_AGENT_MODEL.md`
 
 ## Removed From Handoff Scope
 
@@ -24,9 +24,9 @@ The repository keeps reproducible code, portable configs, minimum raw inputs, li
 - `AIforScience/` crawler/raw-material folders.
 - Historical prototype folder `mscim_cmfbe_prototype/`.
 - Historical database delivery folders and zip archives.
-- PPT working copies, old standalone root CSV/XLS duplicates, and ad-hoc extracted text.
+- Presentation working copies, old standalone root CSV/XLS duplicates, and ad-hoc extracted text.
 - Obsolete experiment configs `prototype_h3.yaml`, `prototype_h7.yaml`, and `prototype_ndti_baseline.yaml`.
-- PPT/database builder scripts that depended on the old absolute `G:\AI4S` workspace layout.
+- Presentation/database builder scripts that depended on the old local workspace layout.
 
 ## Current Reproducible Path
 

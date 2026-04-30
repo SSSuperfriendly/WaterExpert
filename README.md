@@ -16,7 +16,7 @@ Clean handoff repository for the water clarity diagnosis prototype. The repo con
 - `data/knowledge_graph/`: lightweight GraphRAG relationship artifact used as the knowledge prior.
 - `data/full_station_database/`: processed all-station database tables for collaborator reference.
 - `outputs/`: current trained checkpoints, predictions, metrics, diagnosis, physics notes, plots, and threshold reports.
-- `docs/`: reporting notes plus `HANDOFF_FOR_AGENT_MODEL.md` for collaborator onboarding.
+- `docs/`: public technical overview plus `HANDOFF_FOR_AGENT_MODEL.md` for collaborator onboarding.
 
 ## Current Scope
 
@@ -94,7 +94,7 @@ All active scripts use repository-relative paths. Outputs are written to `output
 2. Run `python -m compileall src scripts`.
 3. Run `python scripts\analyze_cmfbe_thresholds.py` to confirm the committed predictions and threshold outputs are readable.
 4. Run `python scripts\run_full_pipeline.py` if retraining from the included raw inputs is required.
-5. Read `docs/HANDOFF_FOR_AGENT_MODEL.md` before extending this into an agent model.
+5. Read `docs/TECHNICAL_OVERVIEW.md` and `docs/HANDOFF_FOR_AGENT_MODEL.md` before extending this into an agent model.
 
 ## Technical Boundaries
 
@@ -104,4 +104,4 @@ All active scripts use repository-relative paths. Outputs are written to `output
 
 ## Excluded From This Repo
 
-The original workspace had crawler artifacts, full GraphRAG/LanceDB embeddings, historical prototype folders, PPT working copies, ad-hoc zip archives, and reference PDFs. They were intentionally excluded from the handoff repository because the current reproducible model path only depends on the files above.
+The original workspace had crawler artifacts, full GraphRAG/LanceDB embeddings, historical prototype folders, presentation working copies, ad-hoc zip archives, and reference PDFs. They were intentionally excluded from the handoff repository because the current reproducible model path only depends on the files above.
