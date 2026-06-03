@@ -64,6 +64,7 @@ def compute_loss(
     physics_weight: float,
     change_weight: float,
     mechanism_weight: float,
+    risk_weight: float,
     include_physics: bool,
 ) -> torch.Tensor:
     loss = F.smooth_l1_loss(outputs["log_turbidity_pred"], batch["y_log_turbidity"])
@@ -78,6 +79,19 @@ def compute_loss(
         outputs["clearness_pred"] - batch["last_clearness"],
         batch["y_clearness"] - batch["last_clearness"],
     )
+    if risk_weight > 0.0:
+        loss = loss + risk_weight * F.binary_cross_entropy_with_logits(
+            outputs["self_purification_failure_logit"],
+            batch["y_self_purification_failure"],
+        )
+        loss = loss + risk_weight * F.binary_cross_entropy_with_logits(
+            outputs["turbidity_surge_logit"],
+            batch["y_turbidity_surge"],
+        )
+        loss = loss + risk_weight * F.binary_cross_entropy_with_logits(
+            outputs["critical_transition_logit"],
+            batch["y_critical_transition"],
+        )
     if include_physics and "physics_turbidity_pred" in outputs:
         physics_log_turbidity_pred = outputs.get(
             "physics_log_turbidity_pred", torch.log1p(outputs["physics_turbidity_pred"])
@@ -101,6 +115,7 @@ def run_epoch(
     physics_weight: float,
     change_weight: float,
     mechanism_weight: float,
+    risk_weight: float,
     include_physics: bool,
 ) -> float:
     model.train() if optimizer is not None else model.eval()
@@ -119,6 +134,7 @@ def run_epoch(
                 physics_weight=physics_weight,
                 change_weight=change_weight,
                 mechanism_weight=mechanism_weight,
+                risk_weight=risk_weight,
                 include_physics=include_physics,
             )
             if optimizer is not None:
@@ -140,6 +156,7 @@ def train_model(
     physics_weight: float,
     change_weight: float,
     mechanism_weight: float,
+    risk_weight: float,
     include_physics: bool,
 ) -> tuple[torch.nn.Module, list[dict[str, float]]]:
     optimizer = torch.optim.AdamW(
@@ -159,6 +176,7 @@ def train_model(
             physics_weight=physics_weight,
             change_weight=change_weight,
             mechanism_weight=mechanism_weight,
+            risk_weight=risk_weight,
             include_physics=include_physics,
         )
         val_loss = run_epoch(
@@ -170,6 +188,7 @@ def train_model(
             physics_weight=physics_weight,
             change_weight=change_weight,
             mechanism_weight=mechanism_weight,
+            risk_weight=risk_weight,
             include_physics=include_physics,
         )
         score = val_loss if not np.isnan(val_loss) else train_loss
@@ -212,6 +231,30 @@ def collect_predictions(
                     "predicted_turbidity": float(pred_turbidity[index]),
                     "actual_clearness": float(actual_clearness[index]),
                     "predicted_clearness": float(pred_clearness[index]),
+                    "actual_turbidity_delta": float(
+                        batch["y_turbidity_delta"].detach().cpu().numpy()[index]
+                    ),
+                    "actual_clearness_delta": float(
+                        batch["y_clearness_delta"].detach().cpu().numpy()[index]
+                    ),
+                    "actual_self_purification_failure": float(
+                        batch["y_self_purification_failure"].detach().cpu().numpy()[index]
+                    ),
+                    "actual_turbidity_surge": float(
+                        batch["y_turbidity_surge"].detach().cpu().numpy()[index]
+                    ),
+                    "actual_critical_transition": float(
+                        batch["y_critical_transition"].detach().cpu().numpy()[index]
+                    ),
+                    "predicted_self_purification_failure_prob": float(
+                        outputs["self_purification_failure_prob"].detach().cpu().numpy()[index]
+                    ),
+                    "predicted_turbidity_surge_prob": float(
+                        outputs["turbidity_surge_prob"].detach().cpu().numpy()[index]
+                    ),
+                    "predicted_critical_transition_prob": float(
+                        outputs["critical_transition_prob"].detach().cpu().numpy()[index]
+                    ),
                 }
                 if "physics_turbidity_pred" in outputs:
                     row["physics_turbidity"] = float(
@@ -250,7 +293,7 @@ def collect_predictions(
 def evaluate_model(predictions: pd.DataFrame) -> dict[str, dict[str, float]]:
     metrics = {}
     for split_name, split_df in predictions.groupby("split"):
-        metrics[split_name] = {
+        split_metrics: dict[str, Any] = {
             "turbidity": regression_metrics(
                 split_df["actual_turbidity"], split_df["predicted_turbidity"]
             ),
@@ -258,6 +301,34 @@ def evaluate_model(predictions: pd.DataFrame) -> dict[str, dict[str, float]]:
                 split_df["actual_clearness"], split_df["predicted_clearness"]
             ),
         }
+        if {
+            "actual_self_purification_failure",
+            "predicted_self_purification_failure_prob",
+        }.issubset(split_df.columns):
+            split_metrics["self_purification_failure"] = {
+                "event_rate": float(split_df["actual_self_purification_failure"].mean()),
+                "mean_predicted_probability": float(
+                    split_df["predicted_self_purification_failure_prob"].mean()
+                ),
+            }
+        if {"actual_turbidity_surge", "predicted_turbidity_surge_prob"}.issubset(split_df.columns):
+            split_metrics["turbidity_surge"] = {
+                "event_rate": float(split_df["actual_turbidity_surge"].mean()),
+                "mean_predicted_probability": float(
+                    split_df["predicted_turbidity_surge_prob"].mean()
+                ),
+            }
+        if {
+            "actual_critical_transition",
+            "predicted_critical_transition_prob",
+        }.issubset(split_df.columns):
+            split_metrics["critical_transition"] = {
+                "event_rate": float(split_df["actual_critical_transition"].mean()),
+                "mean_predicted_probability": float(
+                    split_df["predicted_critical_transition_prob"].mean()
+                ),
+            }
+        metrics[split_name] = split_metrics
     return metrics
 
 
@@ -596,7 +667,7 @@ def write_run_summary(
 
 - Built the Wusongkou daily multimodal dataset for MSCIM and CMFBE-ST-GCN prototype training.
 - Converted the lightweight GraphRAG relationship table into feature-graph priors.
-- Trained `MSCIM`, `MSCIM-NoKG`, `CMFBE-ST-GCN`, and window baselines.
+- Trained `MSCIM`, `MSCIM-NoKG`, `CMFBE-ST-GCN`, and window baselines with auxiliary critical-transition risk outputs.
 - Exported predictions, metrics, feature importance, turbidity-driver diagnosis, physics notes, plots, and checkpoints.
 
 ## 2. Data Scope
@@ -629,8 +700,106 @@ def write_run_summary(
 - The boundary-detection head is reserved but not supervised by raster or UAV labels yet.
 - The current graph is a single-station feature graph, not a multi-section river-network graph.
 - The physics component is a runnable source-sink surrogate, not a calibrated 2D hydrodynamic solver.
+- The self-purification failure and critical-transition outputs are empirical prototype risks, not physically calibrated failure probabilities.
 """
     (output_dir / "run_summary.md").write_text(content, encoding="utf-8")
+
+
+def export_agent_threshold_knowledge(
+    predictions: pd.DataFrame,
+    threshold_summary: pd.DataFrame,
+    threshold_context: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    knowledge_dir = ensure_dir(output_dir / "thresholds")
+    latest_test = predictions[
+        (predictions["model"] == "cmfbe_stgcn") & (predictions["split"] == "test")
+    ].copy()
+    latest_test["target_date"] = pd.to_datetime(latest_test["target_date"])
+
+    top_thresholds = threshold_summary[threshold_summary["status"] == "ok"].copy()
+    top_thresholds = top_thresholds.sort_values(
+        ["r2_gain", "piecewise_r2"], ascending=False
+    ).head(12)
+    context_thresholds = threshold_context[threshold_context["status"] == "ok"].copy()
+    context_thresholds = context_thresholds.sort_values(
+        ["r2_gain", "piecewise_r2"], ascending=False
+    ).head(24)
+
+    knowledge_graph = {
+        "graph_name": "mechanism_parameter_threshold_knowledge_graph",
+        "scope": "wusongkou_daily_prototype",
+        "threshold_semantics": (
+            "Thresholds denote empirical critical levels at which turbidity forcing tends to exceed "
+            "self-purification capacity or turbidity tends to increase sharply in the current prototype."
+        ),
+        "risk_snapshot": {},
+        "threshold_nodes": [],
+        "contextual_threshold_nodes": [],
+        "guardrails": [
+            "Do not reinterpret these thresholds as calibrated 2D hydrodynamic physical thresholds.",
+            "Use them for screening, triage, and agent reasoning within the Wusongkou daily prototype.",
+            "Escalate to multi-station or physically calibrated workflows when spatial or control claims are requested.",
+        ],
+    }
+    if not latest_test.empty:
+        knowledge_graph["risk_snapshot"] = {
+            "test_window_start": str(latest_test["target_date"].min().date()),
+            "test_window_end": str(latest_test["target_date"].max().date()),
+            "critical_transition_rate": float(latest_test["actual_critical_transition"].mean()),
+            "mean_predicted_critical_transition_probability": float(
+                latest_test["predicted_critical_transition_prob"].mean()
+            ),
+            "self_purification_failure_rate": float(
+                latest_test["actual_self_purification_failure"].mean()
+            ),
+            "mean_predicted_self_purification_failure_probability": float(
+                latest_test["predicted_self_purification_failure_prob"].mean()
+            ),
+            "turbidity_surge_rate": float(latest_test["actual_turbidity_surge"].mean()),
+            "mean_predicted_turbidity_surge_probability": float(
+                latest_test["predicted_turbidity_surge_prob"].mean()
+            ),
+        }
+
+    for row in top_thresholds.itertuples(index=False):
+        knowledge_graph["threshold_nodes"].append(
+            {
+                "node_id": f"threshold::{row.feature}",
+                "type": "threshold",
+                "feature": row.feature,
+                "label": row.feature_label,
+                "threshold": float(row.threshold),
+                "unit": row.unit,
+                "response": row.response,
+                "r2_gain": float(row.r2_gain),
+                "piecewise_r2": float(row.piecewise_r2),
+                "response_jump": float(row.response_jump),
+                "interpretation": (
+                    "Higher-than-threshold values are associated with stronger net turbidity forcing "
+                    "or weaker self-purification in the current Wusongkou prototype."
+                ),
+            }
+        )
+
+    for row in context_thresholds.itertuples(index=False):
+        knowledge_graph["contextual_threshold_nodes"].append(
+            {
+                "node_id": f"context_threshold::{row.context_type}::{row.context}::{row.feature}",
+                "type": "contextual_threshold",
+                "context_type": row.context_type,
+                "context": row.context,
+                "feature": row.feature,
+                "label": row.feature_label,
+                "threshold": float(row.threshold),
+                "unit": row.unit,
+                "r2_gain": float(row.r2_gain),
+                "piecewise_r2": float(row.piecewise_r2),
+                "response_jump": float(row.response_jump),
+            }
+        )
+
+    save_json(knowledge_graph, knowledge_dir / "mechanism_parameter_threshold_kg.json")
 
 
 def main() -> None:
@@ -648,6 +817,7 @@ def main() -> None:
     hydrodynamics_config = config.get("hydrodynamics", {})
     ndti_config = config.get("ndti", {})
     causal_config = config.get("causal_discovery", {})
+    auxiliary_target_config = config.get("auxiliary_targets", {})
 
     dataset_df, dataset_summary = build_multimodal_dataset(
         data_root=config["data_root"],
@@ -670,6 +840,7 @@ def main() -> None:
         train_ratio=float(config["train_ratio"]),
         val_ratio=float(config["val_ratio"]),
         batch_size=int(config["batch_size"]),
+        auxiliary_target_config=auxiliary_target_config,
     )
     sorted_dataset_df = dataset_df.sort_values("date").reset_index(drop=True)
     train_rows = int(prepared.split_summary["train_rows"])
@@ -708,6 +879,7 @@ def main() -> None:
     physics_weight = float(config["loss"]["physics_weight"])
     change_weight = float(config["loss"].get("change_weight", 0.25))
     mechanism_weight = float(config["loss"].get("mechanism_weight", 0.18))
+    risk_weight = float(config["loss"].get("risk_weight", 0.15))
     epochs = int(config["epochs"])
     learning_rate = float(config["learning_rate"])
     weight_decay = float(config["weight_decay"])
@@ -723,6 +895,7 @@ def main() -> None:
         physics_weight=physics_weight,
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
+        risk_weight=risk_weight,
         include_physics=False,
     )
     mscim_no_kg_model, mscim_no_kg_history = train_model(
@@ -736,6 +909,7 @@ def main() -> None:
         physics_weight=physics_weight,
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
+        risk_weight=risk_weight,
         include_physics=False,
     )
     cmfbe_model, cmfbe_history = train_model(
@@ -749,6 +923,7 @@ def main() -> None:
         physics_weight=physics_weight,
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
+        risk_weight=risk_weight,
         include_physics=True,
     )
 
@@ -858,6 +1033,15 @@ def main() -> None:
         metrics=metrics,
         feature_importance=feature_importance,
     )
+    threshold_summary_path = output_dir / "thresholds" / "cmfbe_threshold_summary.csv"
+    threshold_context_path = output_dir / "thresholds" / "cmfbe_thresholds_by_context.csv"
+    if threshold_summary_path.exists() and threshold_context_path.exists():
+        export_agent_threshold_knowledge(
+            predictions=all_predictions_df,
+            threshold_summary=pd.read_csv(threshold_summary_path),
+            threshold_context=pd.read_csv(threshold_context_path),
+            output_dir=output_dir,
+        )
 
     summary_note = {
         "best_test_turbidity_model": model_comparison[

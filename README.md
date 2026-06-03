@@ -4,6 +4,8 @@
 
 The current release is intended for scientific review and prototype extension. It is not a production water-quality forecasting service and it is not a calibrated two-dimensional hydrodynamic solver.
 
+The current modeling goal is broader than extrapolating existing turbidity values. The prototype is meant to diagnose turbidity evolution, estimate clearness change and self-purification stress, and identify critical driver levels at which the system tends to shift toward rapid turbidity increase or self-purification failure.
+
 ## Repository Scope
 
 - `src/water_ai/`: data processing, model definitions, physics-surrogate utilities, metrics, and diagnosis helpers.
@@ -62,6 +64,7 @@ Key output locations:
 - `outputs/plots/mscim_turbidity_driver_overview_20260419.png`
 - `outputs/plots/cmfbe_process_decomposition.png`
 - `outputs/thresholds/cmfbe_threshold_report.md`
+- `outputs/thresholds/mechanism_parameter_threshold_kg.json`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
 
@@ -77,6 +80,8 @@ Key output locations:
 | Huangdu absolute flow | 22.9 | m3/s |
 
 These thresholds are model/data empirical breakpoints for the current Wusongkou daily prototype. They are not physical critical shear-stress thresholds.
+
+Within this repository, a threshold refers to the empirical critical level at which one or more turbidity-driving factors tend to cause self-purification failure or sharp turbidity increase during water turbidity transport and recovery.
 
 ## Environment
 
@@ -97,6 +102,7 @@ python scripts\run_full_pipeline.py
 python scripts\plot_cmfbe_process_decomposition.py
 python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
+python scripts\export_threshold_knowledge_graph.py
 ```
 
 The scripts use repository-relative paths and write outputs under `outputs/`.
@@ -115,3 +121,4 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 - Boundary detection is reserved in the model design but is not trained without raster or UAV labels.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included.
 - The CMFBE process decomposition supports explanation and empirical screening, not physical calibration.
+- The current self-purification failure and critical-transition outputs are empirical prototype risks for screening and agent reasoning, not validated operational warning probabilities.

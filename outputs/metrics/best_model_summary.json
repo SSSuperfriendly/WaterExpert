@@ -1,6 +1,6 @@
 {
-  "best_test_turbidity_model": "mscim",
-  "best_test_clearness_model": "mscim",
+  "best_test_turbidity_model": "mscim_no_kg",
+  "best_test_clearness_model": "mscim_no_kg",
   "mscim_diagnosis_outputs": {
     "detail_csv": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_details.csv",
     "summary_csv": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.csv",

@@ -37,6 +37,13 @@ loss:
   physics_weight: 0.35
   change_weight: 0.35
   mechanism_weight: 0.18
+  risk_weight: 0.15
+
+auxiliary_targets:
+  turbidity_surge_log_delta: 0.22
+  turbidity_surge_ratio: 1.18
+  clearness_drop_min: 0.04
+  self_purification_drop_min: 0.03
 
 model:
   hidden_dim: 64

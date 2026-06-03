@@ -104,6 +104,12 @@ class MSCIMPrototype(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, 1),
         )
+        self.risk_head = nn.Sequential(
+            nn.Linear(hidden_dim + num_features, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 3),
+        )
         self.delta_gate = nn.Sequential(
             nn.Linear(hidden_dim + num_features, hidden_dim // 2),
             nn.GELU(),
@@ -162,6 +168,10 @@ class MSCIMPrototype(nn.Module):
         )
         clearness_aux_pred = torch.sigmoid(clearness_aux_logit)
         clearness_pred = self.derive_clearness_from_log_turbidity(log_turbidity_pred)
+        risk_logits = self.risk_head(fused_representation)
+        self_purification_failure_logit = risk_logits[:, 0]
+        turbidity_surge_logit = risk_logits[:, 1]
+        critical_transition_logit = risk_logits[:, 2]
 
         output = {
             "graph_encoded": graph_encoded,
@@ -176,6 +186,12 @@ class MSCIMPrototype(nn.Module):
             "turbidity_pred": turbidity_pred,
             "clearness_aux_pred": clearness_aux_pred,
             "clearness_pred": clearness_pred,
+            "self_purification_failure_logit": self_purification_failure_logit,
+            "self_purification_failure_prob": torch.sigmoid(self_purification_failure_logit),
+            "turbidity_surge_logit": turbidity_surge_logit,
+            "turbidity_surge_prob": torch.sigmoid(turbidity_surge_logit),
+            "critical_transition_logit": critical_transition_logit,
+            "critical_transition_prob": torch.sigmoid(critical_transition_logit),
         }
         if self.enable_boundary_head and self.boundary_head is not None:
             output["boundary_logits"] = self.boundary_head(temporal_output)

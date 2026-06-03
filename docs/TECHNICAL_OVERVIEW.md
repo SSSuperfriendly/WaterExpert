@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`WaterExpert` is a runnable water-clarity diagnosis prototype. It combines daily water-quality observations, weather data, hydrodynamic reference data, and lightweight knowledge-graph priors to predict turbidity and a clearness proxy, then explain likely turbidity drivers.
+`WaterExpert` is a runnable water-clarity diagnosis prototype. It combines daily water-quality observations, weather data, hydrodynamic reference data, and lightweight knowledge-graph priors to predict turbidity and a clearness proxy, diagnose likely turbidity drivers, and flag empirical critical-transition risk related to self-purification failure or rapid turbidity increase.
 
 ## Current Data Scope
 
@@ -24,6 +24,7 @@ MSCIM is the main prediction and diagnosis model. It uses time-window features, 
 
 - turbidity prediction;
 - clearness proxy prediction;
+- empirical critical-transition risk scoring;
 - dominant turbidity-driver ranking;
 - single-station diagnostic summaries.
 
@@ -65,7 +66,7 @@ See `outputs/metrics/model_comparison.csv` and `outputs/run_summary.md` for repr
 | Flushing potential | 3.646 | proxy |
 | Huangdu absolute flow | 22.9 | m3/s |
 
-These values are model/data empirical thresholds. They should not be described as physical critical shear-stress thresholds.
+These values are model/data empirical thresholds. Here, "threshold" means the empirical critical level at which one or more turbidity-driving factors tend to push the system toward self-purification failure or sharp turbidity increase in the current prototype. They should not be described as physical critical shear-stress thresholds.
 
 ## Key Outputs
 
@@ -75,6 +76,7 @@ These values are model/data empirical thresholds. They should not be described a
 - `outputs/plots/mscim_turbidity_driver_overview_20260419.png`
 - `outputs/plots/cmfbe_process_decomposition.png`
 - `outputs/thresholds/cmfbe_threshold_report.md`
+- `outputs/thresholds/mechanism_parameter_threshold_kg.json`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
 
@@ -85,6 +87,7 @@ python scripts\run_full_pipeline.py
 python scripts\plot_cmfbe_process_decomposition.py
 python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
+python scripts\export_threshold_knowledge_graph.py
 ```
 
 ## Current Boundaries
@@ -93,3 +96,4 @@ python scripts\analyze_cmfbe_thresholds.py
 - Boundary detection is reserved in the model design but is not trained without raster/UAV labels.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included yet.
 - CMFBE-ST-GCN is useful for process explanation and empirical threshold screening, but it is not a calibrated 2D hydrodynamic solver.
+- The self-purification failure and critical-transition outputs are empirical auxiliary signals for diagnosis and agent reasoning, not physically calibrated risk probabilities.

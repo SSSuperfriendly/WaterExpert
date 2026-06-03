@@ -1,4 +1,4 @@
-﻿source_domain,target_domain,weight
+source_domain,target_domain,weight
 sediment,sediment,6146.0
 flow,flow,3908.0
 rainfall,rainfall,3086.0
@@ -11,8 +11,8 @@ flow,rainfall,539.0
 wind,wind,428.0
 sediment,flow,416.0
 flow,sediment,416.0
-rainfall,runoff,397.0
 runoff,rainfall,397.0
+rainfall,runoff,397.0
 sediment,rainfall,343.0
 rainfall,sediment,343.0
 sediment,turbidity,256.0
@@ -34,8 +34,8 @@ sediment,wind,88.0
 wind,sediment,88.0
 nutrients,runoff,71.0
 runoff,nutrients,71.0
-water_quality,rainfall,70.0
 rainfall,water_quality,70.0
+water_quality,rainfall,70.0
 nutrients,sediment,68.0
 sediment,nutrients,68.0
 algae,algae,58.0

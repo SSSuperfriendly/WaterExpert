@@ -268,6 +268,7 @@ def write_report(frame: pd.DataFrame, summary_df: pd.DataFrame, context_df: pd.D
         "- 当前结果基于 `CMFBE-ST-GCN` 吴淞口单站日尺度测试集。",
         f"- 样本范围：`{frame['target_date'].min().date()}` 到 `{frame['target_date'].max().date()}`，共 `{len(frame)}` 天。",
         "- 响应变量：`net_process_response = source_total - sink_total`，即致浊源项总和减去去浊汇项总和。",
+        "- 阈值含义：当候选因子超过经验阈值时，模型更倾向于出现自净能力失效或浊度急剧增加的临界状态。",
         "- 阈值算法：对候选因子做两段式线性拟合，寻找使分段拟合解释度最高的经验断点。",
         "- 重要边界：这些是当前数据和模型输出上的经验阈值，不等同于完整二维水动力模型标定出的物理临界阈值。",
         "",

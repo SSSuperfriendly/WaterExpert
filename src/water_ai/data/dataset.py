@@ -17,15 +17,28 @@ class TimeSeriesWindowDataset(Dataset):
         scaler: StandardScaler,
         history_days: int,
         horizon_days: int,
+        auxiliary_target_config: dict[str, float] | None = None,
     ) -> None:
         self.feature_columns = feature_columns
         self.samples: list[dict[str, np.ndarray | float | str]] = []
+        self.auxiliary_target_config = {
+            "turbidity_surge_log_delta": 0.22,
+            "turbidity_surge_ratio": 1.18,
+            "clearness_drop_min": 0.04,
+            "self_purification_drop_min": 0.03,
+            **(auxiliary_target_config or {}),
+        }
 
         raw_features = df[feature_columns].to_numpy(dtype=np.float32)
         scaled_features = scaler.transform(df[feature_columns]).astype(np.float32)
         turbidity = df["turbidity"].to_numpy(dtype=np.float32)
         log_turbidity = np.log1p(np.clip(turbidity, a_min=0.0, a_max=None)).astype(np.float32)
         clearness = df["clearness_proxy"].to_numpy(dtype=np.float32)
+        self_purification = (
+            df["self_purification_index"].to_numpy(dtype=np.float32)
+            if "self_purification_index" in df.columns
+            else np.zeros(len(df), dtype=np.float32)
+        )
         dates = pd.to_datetime(df["date"]).reset_index(drop=True)
 
         total_needed = history_days + horizon_days
@@ -35,6 +48,15 @@ class TimeSeriesWindowDataset(Dataset):
             if dates.iloc[target_index] - dates.iloc[start] != pd.Timedelta(days=total_needed - 1):
                 continue
 
+            auxiliary_targets = self._derive_auxiliary_targets(
+                last_turbidity=float(turbidity[end - 1]),
+                last_clearness=float(clearness[end - 1]),
+                last_self_purification=float(self_purification[end - 1]),
+                target_turbidity=float(turbidity[target_index]),
+                target_log_turbidity=float(log_turbidity[target_index]),
+                target_clearness=float(clearness[target_index]),
+                target_self_purification=float(self_purification[target_index]),
+            )
             self.samples.append(
                 {
                     "x": scaled_features[start:end],
@@ -44,9 +66,52 @@ class TimeSeriesWindowDataset(Dataset):
                     "y_turbidity": float(turbidity[target_index]),
                     "y_log_turbidity": float(log_turbidity[target_index]),
                     "y_clearness": float(clearness[target_index]),
+                    **auxiliary_targets,
                     "target_date": dates.iloc[target_index].strftime("%Y-%m-%d"),
                 }
             )
+
+    def _derive_auxiliary_targets(
+        self,
+        last_turbidity: float,
+        last_clearness: float,
+        last_self_purification: float,
+        target_turbidity: float,
+        target_log_turbidity: float,
+        target_clearness: float,
+        target_self_purification: float,
+    ) -> dict[str, float]:
+        log_delta = float(target_log_turbidity - np.log1p(max(last_turbidity, 0.0)))
+        turbidity_ratio = float(target_turbidity / max(last_turbidity, 1e-6))
+        clearness_drop = float(last_clearness - target_clearness)
+        self_purification_drop = float(last_self_purification - target_self_purification)
+
+        turbidity_surge = float(
+            log_delta >= float(self.auxiliary_target_config["turbidity_surge_log_delta"])
+            or turbidity_ratio >= float(self.auxiliary_target_config["turbidity_surge_ratio"])
+        )
+        self_purification_failure = float(
+            (
+                clearness_drop >= float(self.auxiliary_target_config["clearness_drop_min"])
+                and self_purification_drop
+                >= float(self.auxiliary_target_config["self_purification_drop_min"])
+            )
+            or (
+                turbidity_surge > 0.0
+                and clearness_drop >= 0.5 * float(self.auxiliary_target_config["clearness_drop_min"])
+            )
+        )
+        critical_transition = float(
+            max(self_purification_failure, turbidity_surge)
+        )
+
+        return {
+            "y_turbidity_delta": float(target_turbidity - last_turbidity),
+            "y_clearness_delta": float(target_clearness - last_clearness),
+            "y_self_purification_failure": self_purification_failure,
+            "y_turbidity_surge": turbidity_surge,
+            "y_critical_transition": critical_transition,
+        }
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -61,6 +126,15 @@ class TimeSeriesWindowDataset(Dataset):
             "y_turbidity": torch.tensor(sample["y_turbidity"], dtype=torch.float32),
             "y_log_turbidity": torch.tensor(sample["y_log_turbidity"], dtype=torch.float32),
             "y_clearness": torch.tensor(sample["y_clearness"], dtype=torch.float32),
+            "y_turbidity_delta": torch.tensor(sample["y_turbidity_delta"], dtype=torch.float32),
+            "y_clearness_delta": torch.tensor(sample["y_clearness_delta"], dtype=torch.float32),
+            "y_self_purification_failure": torch.tensor(
+                sample["y_self_purification_failure"], dtype=torch.float32
+            ),
+            "y_turbidity_surge": torch.tensor(sample["y_turbidity_surge"], dtype=torch.float32),
+            "y_critical_transition": torch.tensor(
+                sample["y_critical_transition"], dtype=torch.float32
+            ),
             "target_date": sample["target_date"],
         }
 
@@ -96,6 +170,7 @@ def prepare_dataloaders(
     train_ratio: float,
     val_ratio: float,
     batch_size: int,
+    auxiliary_target_config: dict[str, float] | None = None,
 ) -> PreparedData:
     train_df, val_df, test_df = _split_dataframe(df, train_ratio=train_ratio, val_ratio=val_ratio)
 
@@ -103,13 +178,28 @@ def prepare_dataloaders(
     scaler.fit(train_df[feature_columns])
 
     train_dataset = TimeSeriesWindowDataset(
-        train_df, feature_columns, scaler, history_days=history_days, horizon_days=horizon_days
+        train_df,
+        feature_columns,
+        scaler,
+        history_days=history_days,
+        horizon_days=horizon_days,
+        auxiliary_target_config=auxiliary_target_config,
     )
     val_dataset = TimeSeriesWindowDataset(
-        val_df, feature_columns, scaler, history_days=history_days, horizon_days=horizon_days
+        val_df,
+        feature_columns,
+        scaler,
+        history_days=history_days,
+        horizon_days=horizon_days,
+        auxiliary_target_config=auxiliary_target_config,
     )
     test_dataset = TimeSeriesWindowDataset(
-        test_df, feature_columns, scaler, history_days=history_days, horizon_days=horizon_days
+        test_df,
+        feature_columns,
+        scaler,
+        history_days=history_days,
+        horizon_days=horizon_days,
+        auxiliary_target_config=auxiliary_target_config,
     )
 
     return PreparedData(
