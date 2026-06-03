@@ -1,0 +1,63 @@
+{
+  "status": "ok",
+  "sample_count": 2048,
+  "response": "net_process_response",
+  "top_factors": [
+    {
+      "factor": "runoff_sediment_pulse",
+      "lower_bound": 0.0,
+      "upper_bound": 274.9590000000002,
+      "first_order_index": 0.5932582926675207,
+      "total_order_index": 0.608274686842896
+    },
+    {
+      "factor": "songpu_flushing_potential",
+      "lower_bound": 1.442706537974243,
+      "upper_bound": 15.22440600840886,
+      "first_order_index": 0.1965681900552866,
+      "total_order_index": 0.29474780072843393
+    },
+    {
+      "factor": "precipitation_3d",
+      "lower_bound": 0.0,
+      "upper_bound": 71.10000000000001,
+      "first_order_index": 0.07588687992519894,
+      "total_order_index": 0.0598221669963668
+    },
+    {
+      "factor": "songpu_flow_m3s_abs",
+      "lower_bound": 212.45,
+      "upper_bound": 986.6,
+      "first_order_index": 0.017272133413652142,
+      "total_order_index": 0.015470015833198406
+    },
+    {
+      "factor": "dissolved_oxygen",
+      "lower_bound": 3.1527333333333334,
+      "upper_bound": 8.928958333333334,
+      "first_order_index": 0.0198338078316718,
+      "total_order_index": 0.010948959666207299
+    },
+    {
+      "factor": "huangdu_flow_m3s_abs",
+      "lower_bound": 2.3995,
+      "upper_bound": 41.075,
+      "first_order_index": -0.006823247762191878,
+      "total_order_index": 0.004762707840251133
+    },
+    {
+      "factor": "self_purification_index",
+      "lower_bound": 0.5208882210815682,
+      "upper_bound": 2.008220364171559,
+      "first_order_index": 0.007271150781772153,
+      "total_order_index": 0.003128619829441876
+    },
+    {
+      "factor": "water_temp",
+      "lower_bound": 8.925791666666665,
+      "upper_bound": 31.1056,
+      "first_order_index": 0.0005145516309306189,
+      "total_order_index": 1.6001228288512664e-05
+    }
+  ]
+}

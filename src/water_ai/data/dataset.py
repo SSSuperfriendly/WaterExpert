@@ -18,9 +18,11 @@ class TimeSeriesWindowDataset(Dataset):
         history_days: int,
         horizon_days: int,
         auxiliary_target_config: dict[str, float] | None = None,
+        boundary_label_column: str = "boundary_label",
     ) -> None:
         self.feature_columns = feature_columns
         self.samples: list[dict[str, np.ndarray | float | str]] = []
+        self.boundary_label_column = boundary_label_column
         self.auxiliary_target_config = {
             "turbidity_surge_log_delta": 0.22,
             "turbidity_surge_ratio": 1.18,
@@ -34,6 +36,18 @@ class TimeSeriesWindowDataset(Dataset):
         turbidity = df["turbidity"].to_numpy(dtype=np.float32)
         log_turbidity = np.log1p(np.clip(turbidity, a_min=0.0, a_max=None)).astype(np.float32)
         clearness = df["clearness_proxy"].to_numpy(dtype=np.float32)
+        boundary_label_available = (
+            df["boundary_label_available"].to_numpy(dtype=np.float32)
+            if "boundary_label_available" in df.columns
+            else np.zeros(len(df), dtype=np.float32)
+        )
+        boundary_label = (
+            pd.to_numeric(df[boundary_label_column], errors="coerce")
+            .fillna(0.0)
+            .to_numpy(dtype=np.float32)
+            if boundary_label_column in df.columns
+            else np.zeros(len(df), dtype=np.float32)
+        )
         self_purification = (
             df["self_purification_index"].to_numpy(dtype=np.float32)
             if "self_purification_index" in df.columns
@@ -66,6 +80,8 @@ class TimeSeriesWindowDataset(Dataset):
                     "y_turbidity": float(turbidity[target_index]),
                     "y_log_turbidity": float(log_turbidity[target_index]),
                     "y_clearness": float(clearness[target_index]),
+                    "y_boundary_label": float(boundary_label[target_index]),
+                    "y_boundary_mask": float(boundary_label_available[target_index]),
                     **auxiliary_targets,
                     "target_date": dates.iloc[target_index].strftime("%Y-%m-%d"),
                 }
@@ -126,6 +142,8 @@ class TimeSeriesWindowDataset(Dataset):
             "y_turbidity": torch.tensor(sample["y_turbidity"], dtype=torch.float32),
             "y_log_turbidity": torch.tensor(sample["y_log_turbidity"], dtype=torch.float32),
             "y_clearness": torch.tensor(sample["y_clearness"], dtype=torch.float32),
+            "y_boundary_label": torch.tensor(sample["y_boundary_label"], dtype=torch.float32),
+            "y_boundary_mask": torch.tensor(sample["y_boundary_mask"], dtype=torch.float32),
             "y_turbidity_delta": torch.tensor(sample["y_turbidity_delta"], dtype=torch.float32),
             "y_clearness_delta": torch.tensor(sample["y_clearness_delta"], dtype=torch.float32),
             "y_self_purification_failure": torch.tensor(
@@ -222,5 +240,14 @@ def prepare_dataloaders(
             "val_end": str(val_df["date"].max().date()),
             "test_start": str(test_df["date"].min().date()),
             "test_end": str(test_df["date"].max().date()),
+            "train_boundary_windows": int(
+                sum(float(sample["y_boundary_mask"]) > 0.0 for sample in train_dataset.samples)
+            ),
+            "val_boundary_windows": int(
+                sum(float(sample["y_boundary_mask"]) > 0.0 for sample in val_dataset.samples)
+            ),
+            "test_boundary_windows": int(
+                sum(float(sample["y_boundary_mask"]) > 0.0 for sample in test_dataset.samples)
+            ),
         },
     )

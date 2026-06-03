@@ -1,0 +1,4 @@
+{
+  "status": "no_supervised_boundary_labels",
+  "message": "Boundary supervision path is implemented, but no labeled samples were available in this run."
+}

@@ -97,6 +97,6 @@ The final prediction blends the data-driven branch and the physics-guided branch
 ## 4. Scope statement
 
 - Current data scope: single-station multimodal daily prototype
-- Boundary head: reserved only, no raster training data available
+- Boundary head: supervision-ready interface implemented, waiting for raster/UAV boundary labels
 - Spatial graph statement: implemented as a feature factor graph because only one numeric water-quality station is currently available
 - Current physics stage: explicit process surrogate on daily single-station data, not a calibrated 2D PDE solver

@@ -34,7 +34,7 @@ from water_ai.models.cmfbe_stgcn import CMFBE_STGCNPrototype
 from water_ai.models.mscim import MSCIMPrototype
 from water_ai.physics.equations import export_physics_note
 from water_ai.utils.io import ensure_dir, load_yaml, save_json, set_seed
-from water_ai.utils.metrics import regression_metrics
+from water_ai.utils.metrics import binary_classification_metrics, regression_metrics
 
 
 def parse_args() -> argparse.Namespace:
@@ -71,6 +71,7 @@ def compute_loss(
     change_weight: float,
     mechanism_weight: float,
     risk_weight: float,
+    boundary_weight: float,
     include_physics: bool,
 ) -> torch.Tensor:
     loss = F.smooth_l1_loss(outputs["log_turbidity_pred"], batch["y_log_turbidity"])
@@ -98,6 +99,18 @@ def compute_loss(
             outputs["critical_transition_logit"],
             batch["y_critical_transition"],
         )
+    if boundary_weight > 0.0 and "boundary_logits" in outputs:
+        boundary_mask = batch["y_boundary_mask"]
+        if float(boundary_mask.sum().detach().cpu().item()) > 0.0:
+            boundary_loss = F.cross_entropy(
+                outputs["boundary_logits"],
+                batch["y_boundary_label"].long(),
+                reduction="none",
+            )
+            masked_boundary_loss = (boundary_loss * boundary_mask).sum() / boundary_mask.sum().clamp(
+                min=1.0
+            )
+            loss = loss + boundary_weight * masked_boundary_loss
     if include_physics and "physics_turbidity_pred" in outputs:
         physics_log_turbidity_pred = outputs.get(
             "physics_log_turbidity_pred", torch.log1p(outputs["physics_turbidity_pred"])
@@ -122,6 +135,7 @@ def run_epoch(
     change_weight: float,
     mechanism_weight: float,
     risk_weight: float,
+    boundary_weight: float,
     include_physics: bool,
 ) -> float:
     model.train() if optimizer is not None else model.eval()
@@ -141,6 +155,7 @@ def run_epoch(
                 change_weight=change_weight,
                 mechanism_weight=mechanism_weight,
                 risk_weight=risk_weight,
+                boundary_weight=boundary_weight,
                 include_physics=include_physics,
             )
             if optimizer is not None:
@@ -163,6 +178,7 @@ def train_model(
     change_weight: float,
     mechanism_weight: float,
     risk_weight: float,
+    boundary_weight: float,
     include_physics: bool,
 ) -> tuple[torch.nn.Module, list[dict[str, float]]]:
     optimizer = torch.optim.AdamW(
@@ -183,6 +199,7 @@ def train_model(
             change_weight=change_weight,
             mechanism_weight=mechanism_weight,
             risk_weight=risk_weight,
+            boundary_weight=boundary_weight,
             include_physics=include_physics,
         )
         val_loss = run_epoch(
@@ -195,6 +212,7 @@ def train_model(
             change_weight=change_weight,
             mechanism_weight=mechanism_weight,
             risk_weight=risk_weight,
+            boundary_weight=boundary_weight,
             include_physics=include_physics,
         )
         score = val_loss if not np.isnan(val_loss) else train_loss
@@ -261,7 +279,18 @@ def collect_predictions(
                     "predicted_critical_transition_prob": float(
                         outputs["critical_transition_prob"].detach().cpu().numpy()[index]
                     ),
+                    "actual_boundary_label": float(
+                        batch["y_boundary_label"].detach().cpu().numpy()[index]
+                    ),
+                    "boundary_label_available": float(
+                        batch["y_boundary_mask"].detach().cpu().numpy()[index]
+                    ),
                 }
+                if "boundary_logits" in outputs:
+                    boundary_probabilities = torch.softmax(outputs["boundary_logits"], dim=-1)
+                    row["predicted_boundary_probability"] = float(
+                        boundary_probabilities.detach().cpu().numpy()[index, 1]
+                    )
                 if "physics_turbidity_pred" in outputs:
                     row["physics_turbidity"] = float(
                         outputs["physics_turbidity_pred"].detach().cpu().numpy()[index]
@@ -334,6 +363,19 @@ def evaluate_model(predictions: pd.DataFrame) -> dict[str, dict[str, float]]:
                     split_df["predicted_critical_transition_prob"].mean()
                 ),
             }
+        boundary_subset = (
+            split_df[split_df["boundary_label_available"].fillna(0.0) > 0.0].copy()
+            if "boundary_label_available" in split_df.columns
+            else pd.DataFrame()
+        )
+        if {
+            "actual_boundary_label",
+            "predicted_boundary_probability",
+        }.issubset(boundary_subset.columns) and not boundary_subset.empty:
+            split_metrics["boundary_detection"] = binary_classification_metrics(
+                boundary_subset["actual_boundary_label"],
+                boundary_subset["predicted_boundary_probability"],
+            )
         metrics[split_name] = split_metrics
     return metrics
 
@@ -535,6 +577,31 @@ def save_prediction_plots(predictions: pd.DataFrame, output_dir: Path) -> None:
         plt.close(fig)
 
 
+def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: Path) -> None:
+    boundary_dir = ensure_dir(output_dir / "boundary")
+    available_mask = predictions["boundary_label_available"].fillna(0.0) > 0.0
+    available = predictions.loc[available_mask].copy()
+    if available.empty:
+        summary = {
+            "status": "no_supervised_boundary_labels",
+            "message": "Boundary supervision path is implemented, but no labeled samples were available in this run.",
+        }
+        save_json(summary, boundary_dir / "boundary_detection_summary.json")
+        return
+
+    available.to_csv(
+        boundary_dir / "boundary_predictions.csv", index=False, encoding="utf-8-sig"
+    )
+    summary: dict[str, Any] = {"status": "evaluated", "splits": {}}
+    for split_name, split_df in available.groupby("split"):
+        summary["splits"][split_name] = binary_classification_metrics(
+            split_df["actual_boundary_label"],
+            split_df["predicted_boundary_probability"],
+        )
+        summary["splits"][split_name]["labeled_samples"] = int(len(split_df))
+    save_json(summary, boundary_dir / "boundary_detection_summary.json")
+
+
 def save_model_comparison(metrics: dict[str, Any], output_dir: Path) -> pd.DataFrame:
     rows = []
     for model_name, model_metrics in metrics.items():
@@ -666,6 +733,13 @@ def write_run_summary(
         for model_name, model_metrics in metrics.items()
         if model_name != "data" and "test" in model_metrics
     }
+    boundary_meta = dataset_summary.get("boundary_labels", {})
+    boundary_note = (
+        f"- Boundary supervision: {boundary_meta.get('labeled_days', 0)} labeled days loaded from "
+        f"`{boundary_meta.get('source_path', 'N/A')}`."
+        if boundary_meta.get("status") == "loaded"
+        else "- Boundary supervision: interface implemented, but no raster/UAV labels were loaded in this run."
+    )
 
     content = f"""# WaterExpert Pipeline Run Summary
 
@@ -703,7 +777,7 @@ def write_run_summary(
 
 ## 6. Current Boundaries
 
-- The boundary-detection head is reserved but not supervised by raster or UAV labels yet.
+{boundary_note}
 - The current graph is a single-station feature graph, not a multi-section river-network graph.
 - The physics component is a runnable source-sink surrogate, not a calibrated 2D hydrodynamic solver.
 - The self-purification failure and critical-transition outputs are empirical prototype risks, not physically calibrated failure probabilities.
@@ -743,6 +817,7 @@ def main() -> None:
     ndti_config = config.get("ndti", {})
     causal_config = config.get("causal_discovery", {})
     auxiliary_target_config = config.get("auxiliary_targets", {})
+    boundary_config = config.get("boundary_labels", {})
 
     dataset_df, dataset_summary = build_multimodal_dataset(
         data_root=config["data_root"],
@@ -756,6 +831,7 @@ def main() -> None:
         ndti_enabled=bool(ndti_config.get("enabled", False)),
         ndti_dir=ndti_config.get("source_dir"),
         ndti_output_dir=ndti_config.get("output_dir"),
+        boundary_config=boundary_config,
     )
     prepared = prepare_dataloaders(
         df=dataset_df,
@@ -806,6 +882,7 @@ def main() -> None:
     change_weight = float(config["loss"].get("change_weight", 0.25))
     mechanism_weight = float(config["loss"].get("mechanism_weight", 0.18))
     risk_weight_default = float(config["loss"].get("risk_weight", 0.0))
+    boundary_weight = float(config["loss"].get("boundary_weight", 0.0))
     risk_weight_mscim = float(config["loss"].get("risk_weight_mscim", risk_weight_default))
     risk_weight_mscim_no_kg = float(
         config["loss"].get("risk_weight_mscim_no_kg", risk_weight_default)
@@ -827,6 +904,7 @@ def main() -> None:
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
         risk_weight=risk_weight_mscim,
+        boundary_weight=boundary_weight,
         include_physics=False,
     )
     mscim_no_kg_model, mscim_no_kg_history = train_model(
@@ -841,6 +919,7 @@ def main() -> None:
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
         risk_weight=risk_weight_mscim_no_kg,
+        boundary_weight=boundary_weight,
         include_physics=False,
     )
     cmfbe_model, cmfbe_history = train_model(
@@ -855,6 +934,7 @@ def main() -> None:
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
         risk_weight=risk_weight_cmfbe,
+        boundary_weight=boundary_weight,
         include_physics=True,
     )
 
@@ -957,6 +1037,7 @@ def main() -> None:
 
     save_json(metrics, output_dir / "metrics" / "metrics.json")
     save_prediction_plots(all_predictions_df, output_dir)
+    export_boundary_detection_artifacts(all_predictions_df, output_dir)
     write_run_summary(
         output_dir=output_dir,
         dataset_summary=dataset_summary,

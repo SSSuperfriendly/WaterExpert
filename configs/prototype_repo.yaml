@@ -15,6 +15,14 @@ ndti:
   source_dir: "data/ndti"
   output_dir: "outputs/ndti_preprocessed"
 
+boundary_labels:
+  enabled: false
+  source_path: "data/raw/wusongkou_boundary_labels.csv"
+  date_column: "date"
+  label_column: "boundary_label"
+  extent_ratio_column: "boundary_extent_ratio"
+  extent_ratio_threshold: 0.5
+
 causal_discovery:
   enabled: true
   tau_max: 3
@@ -38,6 +46,7 @@ loss:
   change_weight: 0.35
   mechanism_weight: 0.18
   risk_weight: 0.0
+  boundary_weight: 0.25
   risk_weight_mscim: 0.0
   risk_weight_mscim_no_kg: 0.0
   risk_weight_cmfbe: 0.08

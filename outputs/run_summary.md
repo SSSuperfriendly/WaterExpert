@@ -67,7 +67,7 @@
 
 ## 6. Current Boundaries
 
-- The boundary-detection head is reserved but not supervised by raster or UAV labels yet.
+- Boundary supervision: interface implemented, but no raster/UAV labels were loaded in this run.
 - The current graph is a single-station feature graph, not a multi-section river-network graph.
 - The physics component is a runnable source-sink surrogate, not a calibrated 2D hydrodynamic solver.
 - The self-purification failure and critical-transition outputs are empirical prototype risks, not physically calibrated failure probabilities.

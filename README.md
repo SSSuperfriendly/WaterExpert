@@ -72,6 +72,10 @@ Key output locations:
 - `outputs/agent/agent_context.json`
 - `outputs/agent/scenario_triage.json`
 - `outputs/agent/response_playbook.json`
+- `outputs/boundary/boundary_detection_summary.json`
+- `outputs/sensitivity/cmfbe_sobol_indices.csv`
+- `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
 - `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
@@ -114,6 +118,27 @@ This artifact:
 
 It is not a trained `RL-TGRR` policy, not a validated restoration controller, and not proof of intervention optimality.
 
+## Boundary Supervision Interface
+
+The repository now includes a supervision-ready boundary-detection pathway for `MSCIM`.
+
+- Boundary labels can be loaded through `configs/prototype_repo.yaml` and `configs/prototype.yaml`.
+- A fill-in template is provided at `data/raw/wusongkou_boundary_labels_template.csv`.
+- When raster/UAV-derived labels are supplied, the pipeline trains the existing boundary head and exports `outputs/boundary/boundary_detection_summary.json`.
+
+Without real labels, the pipeline degrades safely to a no-label mode and records that status explicitly.
+
+## Sobol And Counterfactual Prototype
+
+The repository now exports prototype CMFBE sensitivity and one-factor counterfactual artifacts:
+
+- `outputs/sensitivity/cmfbe_sobol_indices.csv`
+- `outputs/sensitivity/cmfbe_sobol_indices.json`
+- `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+
+These outputs are generated from the current learned CMFBE surrogate and are intended to push the mechanism-parameter-threshold line forward. They are not full calibrated hydrodynamic uncertainty analyses or validated intervention-outcome simulations.
+
 ## Environment
 
 The repository was last verified with Python 3.12.7. Install the pinned runtime dependencies:
@@ -137,6 +162,8 @@ python scripts\export_threshold_knowledge_graph.py
 python scripts\export_scenario_triage.py
 python scripts\export_response_playbook.py
 python scripts\export_agent_context.py
+python scripts\create_boundary_label_template.py
+python scripts\analyze_cmfbe_sobol_counterfactual.py
 ```
 
 The scripts use repository-relative paths and write outputs under `outputs/`.
@@ -157,5 +184,6 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included.
 - The exported scenario tags are empirical triage labels for the current prototype, not validated governance decisions or counterfactual intervention outcomes.
 - The exported recommendation playbook is an agent reasoning scaffold, not a trained RL policy or validated intervention optimizer.
+- The new Sobol and counterfactual outputs are surrogate-level prototypes, not calibrated operational sensitivity or policy-response results.
 - The CMFBE process decomposition supports explanation and empirical screening, not physical calibration.
 - The current self-purification failure and critical-transition outputs are empirical prototype risks for screening and agent reasoning, not validated operational warning probabilities.

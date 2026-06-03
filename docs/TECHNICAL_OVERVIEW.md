@@ -103,6 +103,27 @@ This artifact maps scenario classes to:
 
 It is designed as an agent-facing bridge toward future `RL-TGRR` style work, but it is not itself a reinforcement-learning controller, policy optimizer, or validated restoration recommendation engine.
 
+## Boundary Supervision Path
+
+The `MSCIM` boundary head is now connected to an optional supervision pathway rather than being a pure placeholder.
+
+- Expected label interface: a date-aligned boundary label table configured in `configs/prototype_repo.yaml`.
+- Template file: `data/raw/wusongkou_boundary_labels_template.csv`.
+- Exported status and evaluation artifact: `outputs/boundary/boundary_detection_summary.json`.
+
+This means the current repository can ingest raster/UAV-derived boundary labels as soon as they are available, merge them into the daily multimodal dataset, and include a supervised boundary loss during training.
+
+## Sobol And Counterfactual Prototype
+
+The repository now includes a prototype sensitivity and counterfactual analysis layer for the learned `CMFBE-ST-GCN` surrogate:
+
+- `outputs/sensitivity/cmfbe_sobol_indices.csv`
+- `outputs/sensitivity/cmfbe_sobol_indices.json`
+- `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+
+These artifacts provide Monte Carlo Sobol-style sensitivity indices and one-factor counterfactual perturbation summaries over the current single-station mechanism surrogate. They are useful for prioritizing mechanism inspection, threshold reasoning, and future intervention-data collection, but they are not yet substitutes for full calibrated hydrodynamic uncertainty analysis or validated treatment simulation.
+
 ## Key Outputs
 
 - `outputs/predictions/predictions.csv`
@@ -115,6 +136,10 @@ It is designed as an agent-facing bridge toward future `RL-TGRR` style work, but
 - `outputs/agent/agent_context.json`
 - `outputs/agent/scenario_triage.json`
 - `outputs/agent/response_playbook.json`
+- `outputs/boundary/boundary_detection_summary.json`
+- `outputs/sensitivity/cmfbe_sobol_indices.csv`
+- `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
 - `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
@@ -130,6 +155,8 @@ python scripts\export_threshold_knowledge_graph.py
 python scripts\export_scenario_triage.py
 python scripts\export_response_playbook.py
 python scripts\export_agent_context.py
+python scripts\create_boundary_label_template.py
+python scripts\analyze_cmfbe_sobol_counterfactual.py
 ```
 
 ## Current Boundaries
@@ -139,5 +166,6 @@ python scripts\export_agent_context.py
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included yet.
 - The current scenario triage layer is an empirical prototype classification and should not be described as an optimal policy, intervention recommendation, or validated governance label.
 - The current response playbook is a guarded recommendation scaffold and should not be described as a trained RL controller or validated restoration policy.
+- The current Sobol and counterfactual exports are surrogate-level prototypes and should not be described as calibrated operational uncertainty or intervention-response products.
 - CMFBE-ST-GCN is useful for process explanation and empirical threshold screening, but it is not a calibrated 2D hydrodynamic solver.
 - The self-purification failure and critical-transition outputs are empirical auxiliary signals for diagnosis and agent reasoning, not physically calibrated risk probabilities.

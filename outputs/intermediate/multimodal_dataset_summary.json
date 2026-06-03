@@ -38,6 +38,10 @@
   },
   "ndti_enabled": false,
   "ndti": null,
+  "boundary_labels": {
+    "enabled": false,
+    "status": "disabled"
+  },
   "water_station": {
     "province": "上海市",
     "city": "宝山区",
@@ -179,7 +183,7 @@
   ],
   "notes": {
     "current_scope": "single-station multimodal daily prototype",
-    "boundary_detection_head": "reserved only, no raster training data available",
+    "boundary_detection_head": "supervision-ready interface implemented, waiting for raster/UAV boundary labels",
     "spatial_graph": "implemented as a feature factor graph because only one numeric water-quality station is currently available"
   }
 }
