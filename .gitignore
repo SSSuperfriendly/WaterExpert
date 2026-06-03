@@ -19,3 +19,6 @@ outputs_ndti_baseline/
 # Keep committed model outputs intentionally, but ignore ad-hoc rerun folders.
 outputs_tmp/
 scratch/
+
+# Internal working notes should stay local.
+key notes*.pdf

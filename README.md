@@ -6,6 +6,8 @@ The current release is intended for scientific review and prototype extension. I
 
 The current modeling goal is broader than extrapolating existing turbidity values. The prototype is meant to diagnose turbidity evolution, estimate clearness change and self-purification stress, and identify critical driver levels at which the system tends to shift toward rapid turbidity increase or self-purification failure.
 
+The current handoff package also includes an agent-ready scenario triage layer. It groups daily test-window states into empirical forcing regimes such as `external_input`, `internal_release`, `algal_dominant`, and `chronic_composite` so that a downstream collaborator can build reasoning and orchestration tools on top of the current prototype outputs.
+
 ## Repository Scope
 
 - `src/water_ai/`: data processing, model definitions, physics-surrogate utilities, metrics, and diagnosis helpers.
@@ -66,6 +68,8 @@ Key output locations:
 - `outputs/thresholds/cmfbe_threshold_report.md`
 - `outputs/thresholds/mechanism_parameter_threshold_kg.json`
 - `outputs/agent/agent_context.json`
+- `outputs/agent/scenario_triage.json`
+- `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
 
@@ -83,6 +87,17 @@ Key output locations:
 These thresholds are model/data empirical breakpoints for the current Wusongkou daily prototype. They are not physical critical shear-stress thresholds.
 
 Within this repository, a threshold refers to the empirical critical level at which one or more turbidity-driving factors tend to cause self-purification failure or sharp turbidity increase during water turbidity transport and recovery.
+
+## Scenario Triage Layer
+
+The repository now exports an empirical scenario triage artifact for the `CMFBE-ST-GCN` test window:
+
+- `external_input`: rainfall-runoff dominated turbidity forcing.
+- `internal_release`: bed-shear and resuspension dominated turbidity forcing.
+- `algal_dominant`: warm, nutrient-sensitive biological turbidity forcing.
+- `chronic_composite`: mixed or persistent multi-driver stress with weakened self-purification support.
+
+These labels are deterministic prototype classifications derived from current process outputs, auxiliary risk scores, and empirical threshold exceedance patterns. They are meant for agent reasoning, screening, and structured case retrieval. They are not validated operational incident labels or intervention policies.
 
 ## Environment
 
@@ -104,6 +119,7 @@ python scripts\plot_cmfbe_process_decomposition.py
 python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
 python scripts\export_threshold_knowledge_graph.py
+python scripts\export_scenario_triage.py
 python scripts\export_agent_context.py
 ```
 
@@ -114,13 +130,15 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 1. Install `requirements.txt`.
 2. Run `python -m compileall src scripts`.
 3. Run `python scripts\analyze_cmfbe_thresholds.py` to confirm committed predictions and threshold outputs are readable.
-4. Run `python scripts\run_full_pipeline.py` if retraining from included raw inputs is required.
-5. Review `docs/TECHNICAL_OVERVIEW.md` and `docs/HANDOFF_FOR_AGENT_MODEL.md` before extending the project.
+4. Run `python scripts\export_scenario_triage.py` and `python scripts\export_agent_context.py` to confirm the agent-facing artifacts can be regenerated.
+5. Run `python scripts\run_full_pipeline.py` if retraining from included raw inputs is required.
+6. Review `docs/TECHNICAL_OVERVIEW.md` and `docs/HANDOFF_FOR_AGENT_MODEL.md` before extending the project.
 
 ## Known Boundaries
 
 - The current enhanced model is Wusongkou-centered, not a full multi-station hydrodynamic model.
 - Boundary detection is reserved in the model design but is not trained without raster or UAV labels.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included.
+- The exported scenario tags are empirical triage labels for the current prototype, not validated governance decisions or counterfactual intervention outcomes.
 - The CMFBE process decomposition supports explanation and empirical screening, not physical calibration.
 - The current self-purification failure and critical-transition outputs are empirical prototype risks for screening and agent reasoning, not validated operational warning probabilities.

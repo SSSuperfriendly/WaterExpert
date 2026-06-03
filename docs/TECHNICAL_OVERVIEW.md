@@ -68,6 +68,24 @@ See `outputs/metrics/model_comparison.csv` and `outputs/run_summary.md` for repr
 
 These values are model/data empirical thresholds. Here, "threshold" means the empirical critical level at which one or more turbidity-driving factors tend to push the system toward self-purification failure or sharp turbidity increase in the current prototype. They should not be described as physical critical shear-stress thresholds.
 
+## Scenario Triage Export
+
+The current prototype also exports an agent-oriented scenario triage layer built from the same CMFBE test-window outputs, empirical threshold exceedance patterns, and auxiliary risk scores.
+
+Scenario families currently include:
+
+- `external_input`: rainfall-runoff dominated turbidity forcing.
+- `internal_release`: hydrodynamic resuspension dominated turbidity forcing.
+- `algal_dominant`: warm, nutrient-sensitive biological turbidity forcing.
+- `chronic_composite`: mixed or persistent multi-driver stress with weakened self-purification support.
+
+The corresponding artifacts are:
+
+- `outputs/agent/scenario_triage.json`
+- `outputs/diagnosis/scenario_triage_daily.csv`
+
+This layer is intended as a deterministic empirical abstraction for downstream agent reasoning and scenario retrieval. It is not yet a reinforcement-learning policy layer, a validated incident taxonomy, or a counterfactual governance simulator.
+
 ## Key Outputs
 
 - `outputs/predictions/predictions.csv`
@@ -78,6 +96,8 @@ These values are model/data empirical thresholds. Here, "threshold" means the em
 - `outputs/thresholds/cmfbe_threshold_report.md`
 - `outputs/thresholds/mechanism_parameter_threshold_kg.json`
 - `outputs/agent/agent_context.json`
+- `outputs/agent/scenario_triage.json`
+- `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
 
@@ -89,6 +109,7 @@ python scripts\plot_cmfbe_process_decomposition.py
 python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
 python scripts\export_threshold_knowledge_graph.py
+python scripts\export_scenario_triage.py
 python scripts\export_agent_context.py
 ```
 
@@ -97,5 +118,6 @@ python scripts\export_agent_context.py
 - The current enhanced run is single-station-centered, not a full multi-station hydrodynamic model.
 - Boundary detection is reserved in the model design but is not trained without raster/UAV labels.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included yet.
+- The current scenario triage layer is an empirical prototype classification and should not be described as an optimal policy, intervention recommendation, or validated governance label.
 - CMFBE-ST-GCN is useful for process explanation and empirical threshold screening, but it is not a calibrated 2D hydrodynamic solver.
 - The self-purification failure and critical-transition outputs are empirical auxiliary signals for diagnosis and agent reasoning, not physically calibrated risk probabilities.

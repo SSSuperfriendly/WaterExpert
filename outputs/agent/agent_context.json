@@ -102,5 +102,110 @@
     "What are the top turbidity drivers in the latest verified test window?",
     "Does the current scenario resemble a rainfall-driven, flow-driven, or mixed turbidity surge?",
     "What data or model gaps prevent stronger physical or spatial conclusions?"
+  ],
+  "scenario_triage_path": "outputs/agent/scenario_triage.json",
+  "scenario_counts": {
+    "algal_dominant": 14,
+    "chronic_composite": 3,
+    "external_input": 9,
+    "internal_release": 66
+  },
+  "scenario_high_priority_days": [
+    {
+      "target_date": "2024-11-01",
+      "primary_scenario": "external_input",
+      "primary_score": 1.1864,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.7126,
+      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (203.4 mm); flushing potential remained below empirical threshold (2.689)"
+    },
+    {
+      "target_date": "2024-09-20",
+      "primary_scenario": "external_input",
+      "primary_score": 1.1342,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.0065,
+      "evidence_summary": "3-day precipitation exceeded threshold (70.5 mm); 7-day precipitation exceeded threshold (141.6 mm); air temperature exceeded warm threshold (27.4 degC); flushing potential remained below empirical threshold (1.492)"
+    },
+    {
+      "target_date": "2024-11-29",
+      "primary_scenario": "internal_release",
+      "primary_score": 1.1314,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.1113,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.421); resuspension potential exceeded empirical threshold (1176.0); flushing potential was strong (8.026)"
+    },
+    {
+      "target_date": "2024-09-13",
+      "primary_scenario": "internal_release",
+      "primary_score": 1.1052,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.0029,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.406); resuspension potential exceeded empirical threshold (1688.4); air temperature exceeded warm threshold (29.8 degC); flushing potential was strong (21.309)"
+    },
+    {
+      "target_date": "2024-11-02",
+      "primary_scenario": "external_input",
+      "primary_score": 1.1023,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.3309,
+      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (178.2 mm); resuspension potential exceeded empirical threshold (2630.2); flushing potential was strong (9.223)"
+    },
+    {
+      "target_date": "2024-11-28",
+      "primary_scenario": "internal_release",
+      "primary_score": 1.0749,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.1131,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.393); resuspension potential exceeded empirical threshold (1253.2); flushing potential was strong (10.515)"
+    },
+    {
+      "target_date": "2024-11-26",
+      "primary_scenario": "internal_release",
+      "primary_score": 1.0679,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.0269,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.397); resuspension potential exceeded empirical threshold (886.8); flushing potential was strong (10.170)"
+    },
+    {
+      "target_date": "2024-10-25",
+      "primary_scenario": "internal_release",
+      "primary_score": 1.031,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.0025,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.388); resuspension potential exceeded empirical threshold (1075.6); flushing potential was strong (11.453)"
+    },
+    {
+      "target_date": "2024-10-31",
+      "primary_scenario": "external_input",
+      "primary_score": 1.026,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.6137,
+      "evidence_summary": "3-day precipitation exceeded threshold (111.8 mm); 7-day precipitation exceeded threshold (158.6 mm); flushing potential was strong (4.477)"
+    },
+    {
+      "target_date": "2024-11-03",
+      "primary_scenario": "external_input",
+      "primary_score": 1.0238,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.0249,
+      "evidence_summary": "3-day precipitation exceeded threshold (49.1 mm); 7-day precipitation exceeded threshold (160.9 mm); bed shear proxy exceeded threshold (0.368); resuspension potential exceeded empirical threshold (1201.8)"
+    },
+    {
+      "target_date": "2024-11-11",
+      "primary_scenario": "internal_release",
+      "primary_score": 0.9982,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.0619,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.368); resuspension potential exceeded empirical threshold (968.4); flushing potential was strong (14.862)"
+    },
+    {
+      "target_date": "2024-12-29",
+      "primary_scenario": "internal_release",
+      "primary_score": 0.9956,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.273,
+      "evidence_summary": "resuspension potential exceeded empirical threshold (867.1); flushing potential was strong (8.806)"
+    }
   ]
 }
