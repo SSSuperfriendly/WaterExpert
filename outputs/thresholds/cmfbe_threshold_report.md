@@ -1,58 +1,58 @@
-# CMFBE-ST-GCN 浑浊响应阈值分析
+# CMFBE-ST-GCN Threshold Response Analysis
 
-## 1. 分析口径
+## 1. Analysis Scope
 
-- 当前结果基于 `CMFBE-ST-GCN` 吴淞口单站日尺度测试集。
-- 样本范围：`2024-09-07` 到 `2024-12-31`，共 `92` 天。
-- 响应变量：`net_process_response = source_total - sink_total`，即致浊源项总和减去去浊汇项总和。
-- 阈值含义：当候选因子超过经验阈值时，模型更倾向于出现自净能力失效或浊度急剧增加的临界状态。
-- 阈值算法：对候选因子做两段式线性拟合，寻找使分段拟合解释度最高的经验断点。
-- 重要边界：这些是当前数据和模型输出上的经验阈值，不等同于完整二维水动力模型标定出的物理临界阈值。
+- Source: `CMFBE-ST-GCN` test-window outputs from the current Wusongkou daily prototype.
+- Window: `2024-09-07` to `2024-12-31`, `92` days.
+- Response variable: `net_process_response = source_total - sink_total`, representing net turbidity forcing after subtracting self-purification and export sinks.
+- Threshold meaning: an empirical critical level at which the prototype becomes more likely to shift toward self-purification failure or rapid turbidity increase.
+- Method: one-breakpoint piecewise linear fit, selected by maximum explanatory gain over a global linear fit.
+- Boundary: these are empirical thresholds from the current model-and-data configuration, not calibrated 2D hydrodynamic physical thresholds.
 
-## 2. 全局经验阈值 Top 结果
+## 2. Global Threshold Candidates
 
-| 因子 | 阈值 | 单位 | 分段R2 | 相对线性R2提升 | 阈值以上响应变化 | 可信度 |
+| Factor | Threshold | Unit | Piecewise R2 | R2 Gain | Response Jump | Confidence |
 | --- | ---: | --- | ---: | ---: | ---: | --- |
-| 3日累计降水 | 49.1000 | mm | 0.406 | 0.251 | 0.409 | 较高 |
-| 冲刷外输潜力 | 3.6456 | proxy | 0.220 | 0.216 | -0.353 | 较高 |
-| 黄渡流量绝对值 | 22.9000 | m3/s | 0.220 | 0.175 | 0.000 | 较高 |
-| 7日累计降水 | 141.6000 | mm | 0.349 | 0.159 | 0.202 | 较高 |
-| 松浦大桥流量绝对值 | 878.0000 | m3/s | 0.112 | 0.109 | 0.311 | 较高 |
-| 再悬浮潜力 | 572.4000 | proxy | 0.107 | 0.106 | -0.291 | 较高 |
-| 风速 | 1.3167 | m/s | 0.091 | 0.082 | 0.082 | 中等 |
-| 水动力速度代理 | 1.1006 | dimensionless | 0.090 | 0.078 | -0.233 | 中等 |
+| 3-day cumulative precipitation | 49.1000 | mm | 0.406 | 0.251 | 0.409 | high |
+| Songpu flushing potential | 3.6456 | proxy | 0.220 | 0.216 | -0.353 | high |
+| Huangdu absolute flow | 22.9000 | m3/s | 0.220 | 0.175 | 0.000 | high |
+| 7-day cumulative precipitation | 141.6000 | mm | 0.349 | 0.159 | 0.202 | high |
+| Songpu absolute flow | 878.0000 | m3/s | 0.112 | 0.109 | 0.311 | high |
+| Songpu resuspension potential | 572.4000 | proxy | 0.107 | 0.106 | -0.291 | high |
+| Wind speed | 1.3167 | m/s | 0.091 | 0.082 | 0.082 | medium |
+| Hydrodynamic velocity proxy | 1.1012 | dimensionless | 0.090 | 0.078 | -0.233 | medium |
 
-## 3. 不同水动力条件和气候背景下的阈值
+## 3. Contextual Threshold Candidates
 
-| 背景类型 | 背景 | 因子 | 阈值 | 单位 | 分段R2 | R2提升 | 阈值以上响应变化 | 可信度 |
+| Context Type | Context | Factor | Threshold | Unit | Piecewise R2 | R2 Gain | Response Jump | Confidence |
 | --- | --- | --- | ---: | --- | ---: | ---: | ---: | --- |
-| 气候温度背景 | 中温背景 | 水动力速度代理 | 1.0616 | dimensionless | 0.477 | 0.473 | 0.249 | 中等 |
-| 气候温度背景 | 中温背景 | 床面剪切代理 | 0.3637 | dimensionless | 0.442 | 0.394 | 0.476 | 中等 |
-| 水动力条件 | 中水动力 | 床面剪切代理 | 0.3543 | dimensionless | 0.662 | 0.361 | 0.816 | 中等 |
-| 水动力条件 | 中水动力 | 风速 | 1.2958 | m/s | 0.361 | 0.357 | -0.039 | 中等 |
-| 水动力条件 | 低水动力 | 床面剪切代理 | 0.3128 | dimensionless | 0.376 | 0.314 | 0.608 | 中等 |
-| 气候温度背景 | 中温背景 | 风速 | 1.8417 | m/s | 0.352 | 0.295 | -0.212 | 中等 |
-| 降雨背景 | 常规降雨 | 7日累计降水 | 6.5000 | mm | 0.356 | 0.279 | 0.266 | 中等 |
-| 水动力条件 | 中水动力 | 水动力速度代理 | 1.0817 | dimensionless | 0.424 | 0.270 | 0.447 | 中等 |
-| 降雨背景 | 强降雨背景 | 风速 | 3.0750 | m/s | 0.334 | 0.270 | 0.123 | 中等 |
-| 水动力条件 | 中水动力 | 7日累计降水 | 71.3000 | mm | 0.400 | 0.261 | 0.278 | 中等 |
-| 降雨背景 | 常规降雨 | 风速 | 2.0250 | m/s | 0.268 | 0.261 | -0.009 | 中等 |
-| 气候温度背景 | 高温背景 | 7日累计降水 | 110.8000 | mm | 0.376 | 0.257 | 0.421 | 中等 |
-| 水动力条件 | 低水动力 | 7日累计降水 | 110.8000 | mm | 0.452 | 0.255 | 0.570 | 中等 |
-| 水动力条件 | 低水动力 | 气温 | 20.7417 | degC | 0.416 | 0.240 | 0.420 | 中等 |
-| 水动力条件 | 低水动力 | 风速 | 3.1625 | m/s | 0.261 | 0.234 | 0.335 | 中等 |
-| 气候温度背景 | 高温背景 | 风速 | 3.5167 | m/s | 0.234 | 0.234 | 0.259 | 中等 |
-| 水动力条件 | 低水动力 | 水动力速度代理 | 0.9470 | dimensionless | 0.240 | 0.233 | 0.166 | 中等 |
-| 降雨背景 | 少雨背景 | 气温 | 17.6348 | degC | 0.513 | 0.227 | 0.011 | 中等 |
+| temperature background | mild background | Hydrodynamic velocity proxy | 1.0621 | dimensionless | 0.477 | 0.473 | 0.249 | medium |
+| temperature background | mild background | Bed shear proxy | 0.3639 | dimensionless | 0.438 | 0.390 | 0.477 | medium |
+| hydrodynamic condition | moderate hydrodynamics | Bed shear proxy | 0.3544 | dimensionless | 0.662 | 0.361 | 0.816 | medium |
+| hydrodynamic condition | moderate hydrodynamics | Wind speed | 1.2958 | m/s | 0.361 | 0.357 | -0.039 | medium |
+| hydrodynamic condition | low hydrodynamics | Bed shear proxy | 0.3129 | dimensionless | 0.376 | 0.315 | 0.608 | medium |
+| temperature background | mild background | Wind speed | 1.8417 | m/s | 0.352 | 0.295 | -0.212 | medium |
+| rainfall background | normal rainfall background | 7-day cumulative precipitation | 6.5000 | mm | 0.356 | 0.279 | 0.267 | medium |
+| hydrodynamic condition | moderate hydrodynamics | Hydrodynamic velocity proxy | 1.0823 | dimensionless | 0.425 | 0.271 | 0.447 | medium |
+| rainfall background | heavy-rainfall background | Wind speed | 3.0750 | m/s | 0.334 | 0.270 | 0.123 | medium |
+| hydrodynamic condition | moderate hydrodynamics | 7-day cumulative precipitation | 71.3000 | mm | 0.400 | 0.261 | 0.278 | medium |
+| rainfall background | normal rainfall background | Wind speed | 2.0250 | m/s | 0.268 | 0.261 | -0.009 | medium |
+| temperature background | warm background | 7-day cumulative precipitation | 110.8000 | mm | 0.376 | 0.257 | 0.422 | medium |
+| hydrodynamic condition | low hydrodynamics | 7-day cumulative precipitation | 110.8000 | mm | 0.452 | 0.255 | 0.570 | medium |
+| hydrodynamic condition | low hydrodynamics | Air temperature | 20.7417 | degC | 0.416 | 0.240 | 0.421 | medium |
+| hydrodynamic condition | low hydrodynamics | Hydrodynamic velocity proxy | 0.9475 | dimensionless | 0.242 | 0.234 | 0.166 | medium |
+| hydrodynamic condition | low hydrodynamics | Wind speed | 3.1625 | m/s | 0.261 | 0.234 | 0.336 | medium |
+| temperature background | warm background | Wind speed | 3.5167 | m/s | 0.234 | 0.234 | 0.259 | medium |
+| rainfall background | dry background | Air temperature | 17.6348 | degC | 0.513 | 0.227 | 0.011 | medium |
 
-## 4. 可汇报结论
+## 4. Interpretable Takeaways
 
-当前 CMFBE-ST-GCN 的阈值分析显示，吴淞口测试期内的浑浊响应具有明显的非线性分段特征；其中降雨累积、水动力速度代理、床面剪切代理和冲刷/再悬浮相关代理量是最值得优先关注的阈值因子。
+The strongest empirical threshold signals remain concentrated in cumulative rainfall, hydrodynamic forcing, bed shear, and flushing-related transport indicators.
 
-从治理解释上看，当降雨背景和水动力扰动超过经验阈值后，模型中的致浊源项更容易超过去浊汇项，水体净变化转向“正向致浊”；而在较强冲刷外输或沉降絮凝条件下，去浊汇项会增强，水体恢复变清的概率上升。
+In operational interpretation, exceedance of these thresholds should be read as a heightened likelihood that turbidity-driving processes will dominate over self-purification and export sinks in the current prototype.
 
-## 5. 下一步数据需求
+## 5. Next Data Requirements
 
-- 若要把当前经验阈值升级为物理阈值，需要补充断面流速、断面水深、底泥粒径、临界剪切应力和真实悬沙浓度。
-- 若要形成空间阈值地图，需要接入多站点水动力或二维水动力格网结果，以及遥感/NDTI 或透明度空间反演产品。
-- 若要做反事实阈值，需要补充工程调度、治理事件和外源输入负荷数据。
+- Upgrade empirical thresholds to physically calibrated control thresholds by adding section velocity, depth, sediment grain size, critical shear stress, and observed suspended-sediment concentration.
+- Build spatial threshold maps by adding multi-station hydrodynamics or 2D hydrodynamic fields together with remote-sensing or UAV-derived clarity products.
+- Build counterfactual threshold analyses by adding engineering control, restoration intervention, and external loading event records.

@@ -37,7 +37,10 @@ loss:
   physics_weight: 0.35
   change_weight: 0.35
   mechanism_weight: 0.18
-  risk_weight: 0.15
+  risk_weight: 0.0
+  risk_weight_mscim: 0.0
+  risk_weight_mscim_no_kg: 0.0
+  risk_weight_cmfbe: 0.08
 
 auxiliary_targets:
   turbidity_surge_log_delta: 0.22

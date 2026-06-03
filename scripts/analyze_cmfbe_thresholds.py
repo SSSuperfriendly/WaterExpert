@@ -30,18 +30,24 @@ class Candidate:
 
 
 CANDIDATES = [
-    Candidate("velocity_proxy", "水动力速度代理", "dimensionless"),
-    Candidate("bed_shear_proxy", "床面剪切代理", "dimensionless"),
-    Candidate("precipitation_3d", "3日累计降水", "mm"),
-    Candidate("precipitation_7d", "7日累计降水", "mm"),
-    Candidate("wind_speed", "风速", "m/s"),
-    Candidate("air_temp", "气温", "degC"),
-    Candidate("songpu_flow_m3s_abs", "松浦大桥流量绝对值", "m3/s"),
-    Candidate("huangdu_flow_m3s_abs", "黄渡流量绝对值", "m3/s"),
-    Candidate("songpu_tidal_pumping_proxy", "潮汐回流代理", "dimensionless"),
-    Candidate("songpu_resuspension_potential", "再悬浮潜力", "proxy"),
-    Candidate("songpu_flushing_potential", "冲刷外输潜力", "proxy"),
+    Candidate("velocity_proxy", "Hydrodynamic velocity proxy", "dimensionless"),
+    Candidate("bed_shear_proxy", "Bed shear proxy", "dimensionless"),
+    Candidate("precipitation_3d", "3-day cumulative precipitation", "mm"),
+    Candidate("precipitation_7d", "7-day cumulative precipitation", "mm"),
+    Candidate("wind_speed", "Wind speed", "m/s"),
+    Candidate("air_temp", "Air temperature", "degC"),
+    Candidate("songpu_flow_m3s_abs", "Songpu absolute flow", "m3/s"),
+    Candidate("huangdu_flow_m3s_abs", "Huangdu absolute flow", "m3/s"),
+    Candidate("songpu_tidal_pumping_proxy", "Songpu tidal pumping proxy", "dimensionless"),
+    Candidate("songpu_resuspension_potential", "Songpu resuspension potential", "proxy"),
+    Candidate("songpu_flushing_potential", "Songpu flushing potential", "proxy"),
 ]
+
+CONTEXT_LABELS = {
+    "hydrodynamic_condition": "hydrodynamic condition",
+    "rainfall_background": "rainfall background",
+    "temperature_background": "temperature background",
+}
 
 
 def configure_matplotlib() -> None:
@@ -88,13 +94,22 @@ def load_analysis_frame() -> pd.DataFrame:
         frame["net_process_response"] >= 0.0, "net_turbidifying", "net_clearing"
     )
     frame["hydrodynamic_condition"] = tertile_label(
-        frame["velocity_proxy"], low="低水动力", mid="中水动力", high="高水动力"
+        frame["velocity_proxy"],
+        low="low hydrodynamics",
+        mid="moderate hydrodynamics",
+        high="high hydrodynamics",
     )
     frame["rainfall_background"] = tertile_label(
-        frame["precipitation_7d"], low="少雨背景", mid="常规降雨", high="强降雨背景"
+        frame["precipitation_7d"],
+        low="dry background",
+        mid="normal rainfall background",
+        high="heavy-rainfall background",
     )
     frame["temperature_background"] = tertile_label(
-        frame["air_temp"], low="低温背景", mid="中温背景", high="高温背景"
+        frame["air_temp"],
+        low="cool background",
+        mid="mild background",
+        high="warm background",
     )
     return frame
 
@@ -200,12 +215,7 @@ def build_threshold_tables(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFr
             }
         )
 
-    contexts = [
-        ("hydrodynamic_condition", "水动力条件"),
-        ("rainfall_background", "降雨背景"),
-        ("temperature_background", "气候温度背景"),
-    ]
-    for context_column, context_label in contexts:
+    for context_column, context_label in CONTEXT_LABELS.items():
         for context_value, group in frame.groupby(context_column):
             for feature in [
                 "precipitation_7d",
@@ -233,21 +243,21 @@ def build_threshold_tables(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFr
     summary_df = pd.DataFrame(global_rows)
     context_df = pd.DataFrame(context_rows)
     THRESHOLD_DIR.mkdir(parents=True, exist_ok=True)
-    summary_df.to_csv(SUMMARY_CSV, index=False, encoding="utf-8-sig")
-    context_df.to_csv(CONTEXT_CSV, index=False, encoding="utf-8-sig")
+    summary_df.to_csv(SUMMARY_CSV, index=False, encoding="utf-8")
+    context_df.to_csv(CONTEXT_CSV, index=False, encoding="utf-8")
     return summary_df, context_df
 
 
 def confidence_label(row: pd.Series) -> str:
     if row.get("status") != "ok":
-        return "不可用"
+        return "insufficient"
     gain = float(row.get("r2_gain", 0.0))
     n = int(row.get("n", 0))
     if n >= 40 and gain >= 0.10:
-        return "较高"
+        return "high"
     if n >= 25 and gain >= 0.05:
-        return "中等"
-    return "探索性"
+        return "medium"
+    return "exploratory"
 
 
 def write_report(frame: pd.DataFrame, summary_df: pd.DataFrame, context_df: pd.DataFrame) -> None:
@@ -261,20 +271,20 @@ def write_report(frame: pd.DataFrame, summary_df: pd.DataFrame, context_df: pd.D
     context_good = context_good.sort_values(["r2_gain", "piecewise_r2"], ascending=False)
 
     lines = [
-        "# CMFBE-ST-GCN 浑浊响应阈值分析",
+        "# CMFBE-ST-GCN Threshold Response Analysis",
         "",
-        "## 1. 分析口径",
+        "## 1. Analysis Scope",
         "",
-        "- 当前结果基于 `CMFBE-ST-GCN` 吴淞口单站日尺度测试集。",
-        f"- 样本范围：`{frame['target_date'].min().date()}` 到 `{frame['target_date'].max().date()}`，共 `{len(frame)}` 天。",
-        "- 响应变量：`net_process_response = source_total - sink_total`，即致浊源项总和减去去浊汇项总和。",
-        "- 阈值含义：当候选因子超过经验阈值时，模型更倾向于出现自净能力失效或浊度急剧增加的临界状态。",
-        "- 阈值算法：对候选因子做两段式线性拟合，寻找使分段拟合解释度最高的经验断点。",
-        "- 重要边界：这些是当前数据和模型输出上的经验阈值，不等同于完整二维水动力模型标定出的物理临界阈值。",
+        "- Source: `CMFBE-ST-GCN` test-window outputs from the current Wusongkou daily prototype.",
+        f"- Window: `{frame['target_date'].min().date()}` to `{frame['target_date'].max().date()}`, `{len(frame)}` days.",
+        "- Response variable: `net_process_response = source_total - sink_total`, representing net turbidity forcing after subtracting self-purification and export sinks.",
+        "- Threshold meaning: an empirical critical level at which the prototype becomes more likely to shift toward self-purification failure or rapid turbidity increase.",
+        "- Method: one-breakpoint piecewise linear fit, selected by maximum explanatory gain over a global linear fit.",
+        "- Boundary: these are empirical thresholds from the current model-and-data configuration, not calibrated 2D hydrodynamic physical thresholds.",
         "",
-        "## 2. 全局经验阈值 Top 结果",
+        "## 2. Global Threshold Candidates",
         "",
-        "| 因子 | 阈值 | 单位 | 分段R2 | 相对线性R2提升 | 阈值以上响应变化 | 可信度 |",
+        "| Factor | Threshold | Unit | Piecewise R2 | R2 Gain | Response Jump | Confidence |",
         "| --- | ---: | --- | ---: | ---: | ---: | --- |",
     ]
     for row in top.itertuples(index=False):
@@ -287,9 +297,9 @@ def write_report(frame: pd.DataFrame, summary_df: pd.DataFrame, context_df: pd.D
     lines.extend(
         [
             "",
-            "## 3. 不同水动力条件和气候背景下的阈值",
+            "## 3. Contextual Threshold Candidates",
             "",
-            "| 背景类型 | 背景 | 因子 | 阈值 | 单位 | 分段R2 | R2提升 | 阈值以上响应变化 | 可信度 |",
+            "| Context Type | Context | Factor | Threshold | Unit | Piecewise R2 | R2 Gain | Response Jump | Confidence |",
             "| --- | --- | --- | ---: | --- | ---: | ---: | ---: | --- |",
         ]
     )
@@ -303,17 +313,17 @@ def write_report(frame: pd.DataFrame, summary_df: pd.DataFrame, context_df: pd.D
     lines.extend(
         [
             "",
-            "## 4. 可汇报结论",
+            "## 4. Interpretable Takeaways",
             "",
-            "当前 CMFBE-ST-GCN 的阈值分析显示，吴淞口测试期内的浑浊响应具有明显的非线性分段特征；其中降雨累积、水动力速度代理、床面剪切代理和冲刷/再悬浮相关代理量是最值得优先关注的阈值因子。",
+            "The strongest empirical threshold signals remain concentrated in cumulative rainfall, hydrodynamic forcing, bed shear, and flushing-related transport indicators.",
             "",
-            "从治理解释上看，当降雨背景和水动力扰动超过经验阈值后，模型中的致浊源项更容易超过去浊汇项，水体净变化转向“正向致浊”；而在较强冲刷外输或沉降絮凝条件下，去浊汇项会增强，水体恢复变清的概率上升。",
+            "In operational interpretation, exceedance of these thresholds should be read as a heightened likelihood that turbidity-driving processes will dominate over self-purification and export sinks in the current prototype.",
             "",
-            "## 5. 下一步数据需求",
+            "## 5. Next Data Requirements",
             "",
-            "- 若要把当前经验阈值升级为物理阈值，需要补充断面流速、断面水深、底泥粒径、临界剪切应力和真实悬沙浓度。",
-            "- 若要形成空间阈值地图，需要接入多站点水动力或二维水动力格网结果，以及遥感/NDTI 或透明度空间反演产品。",
-            "- 若要做反事实阈值，需要补充工程调度、治理事件和外源输入负荷数据。",
+            "- Upgrade empirical thresholds to physically calibrated control thresholds by adding section velocity, depth, sediment grain size, critical shear stress, and observed suspended-sediment concentration.",
+            "- Build spatial threshold maps by adding multi-station hydrodynamics or 2D hydrodynamic fields together with remote-sensing or UAV-derived clarity products.",
+            "- Build counterfactual threshold analyses by adding engineering control, restoration intervention, and external loading event records.",
         ]
     )
     REPORT_MD.write_text("\n".join(lines), encoding="utf-8")
@@ -335,12 +345,12 @@ def plot_threshold_response(frame: pd.DataFrame, summary_df: pd.DataFrame) -> No
         ax.scatter(x, y, s=32, alpha=0.72, color="#3b6f8f", edgecolor="white", linewidth=0.4)
         ax.axhline(0.0, color="#343a40", linewidth=1.0, alpha=0.7)
         ax.axvline(row.threshold, color="#c44536", linewidth=2.0, linestyle="--")
-        ax.set_title(f"{row.feature_label} 阈值 {row.threshold:.3f}", fontsize=13, fontweight="bold")
+        ax.set_title(f"{row.feature_label} threshold {row.threshold:.3f}", fontsize=13, fontweight="bold")
         ax.set_xlabel(f"{row.feature_label} ({row.unit})")
-        ax.set_ylabel("净致浊响应")
+        ax.set_ylabel("Net process response")
         ax.grid(alpha=0.18)
 
-    fig.suptitle("CMFBE-ST-GCN 浑浊响应经验阈值", fontsize=18, fontweight="bold")
+    fig.suptitle("CMFBE-ST-GCN empirical threshold responses", fontsize=18, fontweight="bold")
     fig.savefig(PLOT_PATH, dpi=220, bbox_inches="tight")
     plt.close(fig)
 

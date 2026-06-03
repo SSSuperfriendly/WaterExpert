@@ -23,6 +23,10 @@ from sklearn.linear_model import Ridge
 from water_ai.data.dataset import PreparedData, prepare_dataloaders
 from water_ai.data.kg_priors import build_feature_graph_priors
 from water_ai.data.multimodal_builder import build_multimodal_dataset
+from water_ai.interpretability.agent_exports import (
+    build_threshold_knowledge_graph,
+    save_agent_context,
+)
 from water_ai.interpretability.turbidity_diagnosis import diagnose_mscim_turbidity
 from water_ai.models.cmfbe_stgcn import CMFBE_STGCNPrototype
 from water_ai.models.mscim import MSCIMPrototype
@@ -710,96 +714,15 @@ def export_agent_threshold_knowledge(
     threshold_summary: pd.DataFrame,
     threshold_context: pd.DataFrame,
     output_dir: Path,
-) -> None:
+) -> dict[str, Any]:
     knowledge_dir = ensure_dir(output_dir / "thresholds")
-    latest_test = predictions[
-        (predictions["model"] == "cmfbe_stgcn") & (predictions["split"] == "test")
-    ].copy()
-    latest_test["target_date"] = pd.to_datetime(latest_test["target_date"])
-
-    top_thresholds = threshold_summary[threshold_summary["status"] == "ok"].copy()
-    top_thresholds = top_thresholds.sort_values(
-        ["r2_gain", "piecewise_r2"], ascending=False
-    ).head(12)
-    context_thresholds = threshold_context[threshold_context["status"] == "ok"].copy()
-    context_thresholds = context_thresholds.sort_values(
-        ["r2_gain", "piecewise_r2"], ascending=False
-    ).head(24)
-
-    knowledge_graph = {
-        "graph_name": "mechanism_parameter_threshold_knowledge_graph",
-        "scope": "wusongkou_daily_prototype",
-        "threshold_semantics": (
-            "Thresholds denote empirical critical levels at which turbidity forcing tends to exceed "
-            "self-purification capacity or turbidity tends to increase sharply in the current prototype."
-        ),
-        "risk_snapshot": {},
-        "threshold_nodes": [],
-        "contextual_threshold_nodes": [],
-        "guardrails": [
-            "Do not reinterpret these thresholds as calibrated 2D hydrodynamic physical thresholds.",
-            "Use them for screening, triage, and agent reasoning within the Wusongkou daily prototype.",
-            "Escalate to multi-station or physically calibrated workflows when spatial or control claims are requested.",
-        ],
-    }
-    if not latest_test.empty:
-        knowledge_graph["risk_snapshot"] = {
-            "test_window_start": str(latest_test["target_date"].min().date()),
-            "test_window_end": str(latest_test["target_date"].max().date()),
-            "critical_transition_rate": float(latest_test["actual_critical_transition"].mean()),
-            "mean_predicted_critical_transition_probability": float(
-                latest_test["predicted_critical_transition_prob"].mean()
-            ),
-            "self_purification_failure_rate": float(
-                latest_test["actual_self_purification_failure"].mean()
-            ),
-            "mean_predicted_self_purification_failure_probability": float(
-                latest_test["predicted_self_purification_failure_prob"].mean()
-            ),
-            "turbidity_surge_rate": float(latest_test["actual_turbidity_surge"].mean()),
-            "mean_predicted_turbidity_surge_probability": float(
-                latest_test["predicted_turbidity_surge_prob"].mean()
-            ),
-        }
-
-    for row in top_thresholds.itertuples(index=False):
-        knowledge_graph["threshold_nodes"].append(
-            {
-                "node_id": f"threshold::{row.feature}",
-                "type": "threshold",
-                "feature": row.feature,
-                "label": row.feature_label,
-                "threshold": float(row.threshold),
-                "unit": row.unit,
-                "response": row.response,
-                "r2_gain": float(row.r2_gain),
-                "piecewise_r2": float(row.piecewise_r2),
-                "response_jump": float(row.response_jump),
-                "interpretation": (
-                    "Higher-than-threshold values are associated with stronger net turbidity forcing "
-                    "or weaker self-purification in the current Wusongkou prototype."
-                ),
-            }
-        )
-
-    for row in context_thresholds.itertuples(index=False):
-        knowledge_graph["contextual_threshold_nodes"].append(
-            {
-                "node_id": f"context_threshold::{row.context_type}::{row.context}::{row.feature}",
-                "type": "contextual_threshold",
-                "context_type": row.context_type,
-                "context": row.context,
-                "feature": row.feature,
-                "label": row.feature_label,
-                "threshold": float(row.threshold),
-                "unit": row.unit,
-                "r2_gain": float(row.r2_gain),
-                "piecewise_r2": float(row.piecewise_r2),
-                "response_jump": float(row.response_jump),
-            }
-        )
-
+    knowledge_graph = build_threshold_knowledge_graph(
+        predictions=predictions,
+        threshold_summary=threshold_summary,
+        threshold_context=threshold_context,
+    )
     save_json(knowledge_graph, knowledge_dir / "mechanism_parameter_threshold_kg.json")
+    return knowledge_graph
 
 
 def main() -> None:
@@ -879,7 +802,12 @@ def main() -> None:
     physics_weight = float(config["loss"]["physics_weight"])
     change_weight = float(config["loss"].get("change_weight", 0.25))
     mechanism_weight = float(config["loss"].get("mechanism_weight", 0.18))
-    risk_weight = float(config["loss"].get("risk_weight", 0.15))
+    risk_weight_default = float(config["loss"].get("risk_weight", 0.0))
+    risk_weight_mscim = float(config["loss"].get("risk_weight_mscim", risk_weight_default))
+    risk_weight_mscim_no_kg = float(
+        config["loss"].get("risk_weight_mscim_no_kg", risk_weight_default)
+    )
+    risk_weight_cmfbe = float(config["loss"].get("risk_weight_cmfbe", risk_weight_default))
     epochs = int(config["epochs"])
     learning_rate = float(config["learning_rate"])
     weight_decay = float(config["weight_decay"])
@@ -895,7 +823,7 @@ def main() -> None:
         physics_weight=physics_weight,
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
-        risk_weight=risk_weight,
+        risk_weight=risk_weight_mscim,
         include_physics=False,
     )
     mscim_no_kg_model, mscim_no_kg_history = train_model(
@@ -909,7 +837,7 @@ def main() -> None:
         physics_weight=physics_weight,
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
-        risk_weight=risk_weight,
+        risk_weight=risk_weight_mscim_no_kg,
         include_physics=False,
     )
     cmfbe_model, cmfbe_history = train_model(
@@ -923,7 +851,7 @@ def main() -> None:
         physics_weight=physics_weight,
         change_weight=change_weight,
         mechanism_weight=mechanism_weight,
-        risk_weight=risk_weight,
+        risk_weight=risk_weight_cmfbe,
         include_physics=True,
     )
 
@@ -1035,8 +963,9 @@ def main() -> None:
     )
     threshold_summary_path = output_dir / "thresholds" / "cmfbe_threshold_summary.csv"
     threshold_context_path = output_dir / "thresholds" / "cmfbe_thresholds_by_context.csv"
+    threshold_kg: dict[str, Any] = {}
     if threshold_summary_path.exists() and threshold_context_path.exists():
-        export_agent_threshold_knowledge(
+        threshold_kg = export_agent_threshold_knowledge(
             predictions=all_predictions_df,
             threshold_summary=pd.read_csv(threshold_summary_path),
             threshold_context=pd.read_csv(threshold_context_path),
@@ -1053,6 +982,13 @@ def main() -> None:
         "mscim_diagnosis_outputs": {key: str(value) for key, value in diagnosis_outputs.items()},
     }
     save_json(summary_note, output_dir / "metrics" / "best_model_summary.json")
+    if threshold_kg:
+        save_agent_context(
+            output_path=output_dir / "agent" / "agent_context.json",
+            metrics=metrics,
+            best_model_summary=summary_note,
+            threshold_kg=threshold_kg,
+        )
 
     print(f"Pipeline completed. Outputs saved to: {output_dir}")
 

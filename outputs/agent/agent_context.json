@@ -1,0 +1,106 @@
+{
+  "product_name": "WaterExpert",
+  "scope": "wusongkou_daily_prototype",
+  "purpose": "Agent-facing context for turbidity evolution diagnosis, self-purification stress screening, and empirical threshold reasoning.",
+  "best_model_summary": {
+    "best_test_turbidity_model": "mscim",
+    "best_test_clearness_model": "mscim_no_kg",
+    "mscim_diagnosis_outputs": {
+      "detail_csv": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_details.csv",
+      "summary_csv": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.csv",
+      "domain_csv": "outputs\\diagnosis\\mscim_turbidity_domain_diagnosis.csv",
+      "summary_md": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.md",
+      "summary_json": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.json"
+    }
+  },
+  "test_models": {
+    "mscim": {
+      "turbidity_r2": 0.7734934089420371,
+      "turbidity_rmse": 25.54383770311932,
+      "clearness_r2": 0.7379679168507771,
+      "clearness_rmse": 0.03865542640852411,
+      "self_purification_failure": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.4797158114936041
+      },
+      "turbidity_surge": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.4678327425018601
+      },
+      "critical_transition": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.5237034646713216
+      }
+    },
+    "mscim_no_kg": {
+      "turbidity_r2": 0.7644070834973021,
+      "turbidity_rmse": 26.051146337223855,
+      "clearness_r2": 0.7448084069482299,
+      "clearness_rmse": 0.03814752928650461,
+      "self_purification_failure": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.5287979475182035
+      },
+      "turbidity_surge": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.5270564614430718
+      },
+      "critical_transition": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.48848725660987524
+      }
+    },
+    "cmfbe_stgcn": {
+      "turbidity_r2": 0.7106296663211813,
+      "turbidity_rmse": 28.87172461965596,
+      "clearness_r2": 0.7151087499065678,
+      "clearness_rmse": 0.040306286637137194,
+      "self_purification_failure": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.12576241979031297
+      },
+      "turbidity_surge": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.1263680475290723
+      },
+      "critical_transition": {
+        "event_rate": 0.21739130434782608,
+        "mean_predicted_probability": 0.126913522104429
+      }
+    },
+    "ridge_window_baseline": {
+      "turbidity_r2": -0.5738947116220294,
+      "turbidity_rmse": 67.33386784392,
+      "clearness_r2": -1.294325972355154,
+      "clearness_rmse": 0.11438281864856693
+    },
+    "persistence_baseline": {
+      "turbidity_r2": 0.688051521448753,
+      "turbidity_rmse": 29.976930436394582,
+      "clearness_r2": 0.6522691668937299,
+      "clearness_rmse": 0.04453021931974343
+    }
+  },
+  "threshold_kg_path": "outputs/thresholds/mechanism_parameter_threshold_kg.json",
+  "threshold_risk_snapshot": {
+    "test_window_start": "2024-09-07",
+    "test_window_end": "2024-12-31",
+    "critical_transition_rate": 0.21739130434782608,
+    "mean_predicted_critical_transition_probability": 0.12691352210442897,
+    "self_purification_failure_rate": 0.21739130434782608,
+    "mean_predicted_self_purification_failure_probability": 0.12576241979031294,
+    "turbidity_surge_rate": 0.21739130434782608,
+    "mean_predicted_turbidity_surge_probability": 0.12636804752907227
+  },
+  "guardrails": [
+    "Current outputs support empirical diagnosis and screening, not calibrated operational control.",
+    "Do not claim a full multi-station hydrodynamic model has been trained.",
+    "Do not claim spatial boundary maps, Sobol sensitivity, or counterfactual control maps are available."
+  ],
+  "recommended_agent_queries": [
+    "Which factors are currently closest to empirical self-purification failure thresholds?",
+    "What are the top turbidity drivers in the latest verified test window?",
+    "Does the current scenario resemble a rainfall-driven, flow-driven, or mixed turbidity surge?",
+    "What data or model gaps prevent stronger physical or spatial conclusions?"
+  ]
+}

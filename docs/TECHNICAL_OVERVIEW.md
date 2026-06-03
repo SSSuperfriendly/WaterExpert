@@ -48,9 +48,9 @@ Current test-set results:
 
 | Model | Turbidity R2 | Clearness Proxy R2 |
 | --- | ---: | ---: |
-| MSCIM | 0.7812 | 0.7434 |
-| MSCIM-NoKG | 0.7395 | 0.6668 |
-| CMFBE-ST-GCN | 0.7386 | 0.7097 |
+| MSCIM | 0.7735 | 0.7380 |
+| MSCIM-NoKG | 0.7644 | 0.7448 |
+| CMFBE-ST-GCN | 0.7106 | 0.7151 |
 | Persistence baseline | 0.6881 | 0.6523 |
 
 See `outputs/metrics/model_comparison.csv` and `outputs/run_summary.md` for reproducible output summaries.
@@ -61,7 +61,7 @@ See `outputs/metrics/model_comparison.csv` and `outputs/run_summary.md` for repr
 
 | Factor | Empirical Threshold | Unit |
 | --- | ---: | --- |
-| 3-day cumulative precipitation | 35.9 | mm |
+| 3-day cumulative precipitation | 49.1 | mm |
 | 7-day cumulative precipitation | 141.6 | mm |
 | Flushing potential | 3.646 | proxy |
 | Huangdu absolute flow | 22.9 | m3/s |
@@ -77,6 +77,7 @@ These values are model/data empirical thresholds. Here, "threshold" means the em
 - `outputs/plots/cmfbe_process_decomposition.png`
 - `outputs/thresholds/cmfbe_threshold_report.md`
 - `outputs/thresholds/mechanism_parameter_threshold_kg.json`
+- `outputs/agent/agent_context.json`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
 
@@ -88,6 +89,7 @@ python scripts\plot_cmfbe_process_decomposition.py
 python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
 python scripts\export_threshold_knowledge_graph.py
+python scripts\export_agent_context.py
 ```
 
 ## Current Boundaries

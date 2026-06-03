@@ -16,6 +16,7 @@ The agent should treat the project as a diagnosis and decision-support prototype
 - CMFBE process decomposition: `outputs/diagnosis/cmfbe_process_decomposition_summary.csv`, `outputs/plots/cmfbe_process_decomposition.png`
 - Threshold analysis: `outputs/thresholds/cmfbe_threshold_report.md`, `outputs/thresholds/cmfbe_threshold_summary.csv`
 - Threshold knowledge graph: `outputs/thresholds/mechanism_parameter_threshold_kg.json`
+- Unified agent context: `outputs/agent/agent_context.json`
 - Data foundation: `data/raw/`, `data/full_station_database/`, `data/knowledge_graph/`
 
 ## Recommended Agent Capabilities
@@ -25,7 +26,8 @@ The agent should treat the project as a diagnosis and decision-support prototype
 3. Scenario triage: compare rainfall, flow, flushing, and resuspension conditions against empirical thresholds and identify possible self-purification failure or turbidity-surge risk.
 4. Data-gap detection: tell users when a requested spatial, physical, or counterfactual claim is outside the current evidence.
 5. Threshold reasoning: retrieve threshold nodes and contextual threshold nodes from the exported mechanism-parameter-threshold knowledge graph.
-6. Experiment orchestration: call the active scripts, check generated outputs, and report changed metrics.
+6. Agent grounding: use `outputs/agent/agent_context.json` as the first-stop summary for metrics, risk snapshot, best-model note, and guardrails.
+7. Experiment orchestration: call the active scripts, check generated outputs, and report changed metrics.
 
 ## Guardrails
 
@@ -41,5 +43,5 @@ The agent should treat the project as a diagnosis and decision-support prototype
 2. Add a script runner tool that executes the active scripts and checks whether expected files changed.
 3. Add a data validator for required raw inputs and config paths before training.
 4. Add structured response templates for `metric_summary`, `driver_diagnosis`, `threshold_check`, `critical_transition_risk`, and `data_gap`.
-5. Use `outputs/thresholds/mechanism_parameter_threshold_kg.json` as the first structured retrieval artifact for agent-side threshold reasoning.
+5. Use `outputs/thresholds/mechanism_parameter_threshold_kg.json` and `outputs/agent/agent_context.json` as the first structured retrieval artifacts for agent-side reasoning.
 6. Add future tools only after new data exists for multi-station hydrodynamics, raster/UAV boundaries, Sobol sensitivity, and counterfactual experiments.
