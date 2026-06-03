@@ -73,9 +73,12 @@ Key output locations:
 - `outputs/agent/scenario_triage.json`
 - `outputs/agent/response_playbook.json`
 - `outputs/boundary/boundary_detection_summary.json`
+- `outputs/boundary/boundary_label_generation_summary.json`
 - `outputs/sensitivity/cmfbe_sobol_indices.csv`
 - `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_joint_counterfactual_summary.csv`
 - `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+- `outputs/agent/cmfbe_mechanism_intervention_digest.json`
 - `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
@@ -124,18 +127,21 @@ The repository now includes a supervision-ready boundary-detection pathway for `
 
 - Boundary labels can be loaded through `configs/prototype_repo.yaml` and `configs/prototype.yaml`.
 - A fill-in template is provided at `data/raw/wusongkou_boundary_labels_template.csv`.
-- When raster/UAV-derived labels are supplied, the pipeline trains the existing boundary head and exports `outputs/boundary/boundary_detection_summary.json`.
+- The repository also includes `scripts/generate_real_raster_boundary_labels.py`, which derives a real raster boundary-change proxy from DLR daily water masks for the Wusongkou AOI and writes `data/raw/wusongkou_boundary_labels.csv`.
+- When raster/UAV-derived labels or the committed real-raster proxy labels are supplied, the pipeline trains the existing boundary head and exports `outputs/boundary/boundary_detection_summary.json`.
 
-Without real labels, the pipeline degrades safely to a no-label mode and records that status explicitly.
+These labels should be read as a real raster-derived boundary-change proxy for supervision, not as a manually curated governance-zone map.
 
 ## Sobol And Counterfactual Prototype
 
-The repository now exports prototype CMFBE sensitivity and one-factor counterfactual artifacts:
+The repository now exports prototype CMFBE sensitivity, one-factor counterfactual, and linked multi-factor intervention artifacts:
 
 - `outputs/sensitivity/cmfbe_sobol_indices.csv`
 - `outputs/sensitivity/cmfbe_sobol_indices.json`
 - `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_joint_counterfactual_summary.csv`
 - `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+- `outputs/agent/cmfbe_mechanism_intervention_digest.json`
 
 These outputs are generated from the current learned CMFBE surrogate and are intended to push the mechanism-parameter-threshold line forward. They are not full calibrated hydrodynamic uncertainty analyses or validated intervention-outcome simulations.
 
@@ -163,6 +169,7 @@ python scripts\export_scenario_triage.py
 python scripts\export_response_playbook.py
 python scripts\export_agent_context.py
 python scripts\create_boundary_label_template.py
+python scripts\generate_real_raster_boundary_labels.py
 python scripts\analyze_cmfbe_sobol_counterfactual.py
 ```
 
@@ -180,8 +187,8 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 ## Known Boundaries
 
 - The current enhanced model is Wusongkou-centered, not a full multi-station hydrodynamic model.
-- Boundary detection is reserved in the model design but is not trained without raster or UAV labels.
-- Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included.
+- Boundary detection is only as strong as the available supervision; the current committed labels are real raster-derived AOI boundary-change proxies, not manual governance-zone annotations.
+- Spatial threshold maps and calibrated policy-response analysis are not included.
 - The exported scenario tags are empirical triage labels for the current prototype, not validated governance decisions or counterfactual intervention outcomes.
 - The exported recommendation playbook is an agent reasoning scaffold, not a trained RL policy or validated intervention optimizer.
 - The new Sobol and counterfactual outputs are surrogate-level prototypes, not calibrated operational sensitivity or policy-response results.

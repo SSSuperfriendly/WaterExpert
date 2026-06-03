@@ -19,7 +19,9 @@ The agent should treat the project as a diagnosis and decision-support prototype
 - Scenario triage: `outputs/agent/scenario_triage.json`, `outputs/diagnosis/scenario_triage_daily.csv`
 - Recommendation playbook: `outputs/agent/response_playbook.json`
 - Boundary supervision status: `outputs/boundary/boundary_detection_summary.json`
-- CMFBE sensitivity and counterfactuals: `outputs/sensitivity/cmfbe_sobol_indices.csv`, `outputs/counterfactual/cmfbe_counterfactual_summary.csv`, `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+- Boundary-label generation audit: `outputs/boundary/boundary_label_generation_summary.json`
+- CMFBE sensitivity and counterfactuals: `outputs/sensitivity/cmfbe_sobol_indices.csv`, `outputs/counterfactual/cmfbe_counterfactual_summary.csv`, `outputs/counterfactual/cmfbe_joint_counterfactual_summary.csv`, `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+- Mechanism intervention digest: `outputs/agent/cmfbe_mechanism_intervention_digest.json`
 - Unified agent context: `outputs/agent/agent_context.json`
 - Data foundation: `data/raw/`, `data/full_station_database/`, `data/knowledge_graph/`
 
@@ -30,10 +32,10 @@ The agent should treat the project as a diagnosis and decision-support prototype
 3. Scenario triage: compare rainfall, flow, flushing, and resuspension conditions against empirical thresholds and identify possible self-purification failure or turbidity-surge risk.
 4. Scenario retrieval: surface whether the latest state is closer to `external_input`, `internal_release`, `algal_dominant`, or `chronic_composite`, and explain why using the exported evidence fields.
 5. Guarded recommendation drafting: use `outputs/agent/response_playbook.json` to draft follow-up monitoring advice and response templates without presenting them as validated intervention policies.
-6. Boundary-label readiness: inspect whether real raster/UAV labels were loaded, and if so expose the supervised boundary-detection status from `outputs/boundary/boundary_detection_summary.json`.
+6. Boundary-label readiness: inspect whether real raster/UAV labels or the committed real-raster proxy labels were loaded, and if so expose the supervised boundary-detection status from `outputs/boundary/boundary_detection_summary.json`.
 7. Data-gap detection: tell users when a requested spatial, physical, counterfactual, Sobol, or policy-optimization claim is outside the current evidence.
 8. Threshold reasoning: retrieve threshold nodes and contextual threshold nodes from the exported mechanism-parameter-threshold knowledge graph.
-9. Mechanism probing: use the Sobol and counterfactual prototype outputs to rank likely bottlenecks and propose next measurements without claiming intervention optimality.
+9. Mechanism probing: use the Sobol, linked counterfactual, and mechanism-digest outputs to rank likely bottlenecks and propose next measurements without claiming intervention optimality.
 10. Agent grounding: use `outputs/agent/agent_context.json` as the first-stop summary for metrics, risk snapshot, scenario counts, best-model note, and guardrails.
 11. Experiment orchestration: call the active scripts, check generated outputs, and report changed metrics.
 
@@ -45,14 +47,14 @@ The agent should treat the project as a diagnosis and decision-support prototype
 - Do not describe the current response playbook as RL-TGRR, a trained policy, or an optimal restoration controller.
 - Do not describe the current Sobol or counterfactual outputs as validated engineering-effect simulations or calibrated uncertainty products.
 - Do not claim a 20-station joint hydrodynamic model has been trained; the current enhanced run is Wusongkou-centered.
-- Do not claim spatial boundary maps, Sobol indices, or counterfactual threshold maps exist unless new outputs are added.
+- Do not claim calibrated spatial governance maps or validated control policies exist unless new outputs are added.
 - Treat `outputs/` as the current reproducible baseline, not as proof of production readiness.
 
 ## Suggested Extension Path
 
-1. Wrap `outputs/metrics`, `outputs/diagnosis`, `outputs/thresholds`, `outputs/agent/scenario_triage.json`, `outputs/agent/response_playbook.json`, `outputs/boundary/boundary_detection_summary.json`, and the Sobol/counterfactual artifacts with retrieval tools for grounded answers.
+1. Wrap `outputs/metrics`, `outputs/diagnosis`, `outputs/thresholds`, `outputs/agent/scenario_triage.json`, `outputs/agent/response_playbook.json`, `outputs/agent/cmfbe_mechanism_intervention_digest.json`, `outputs/boundary/boundary_detection_summary.json`, and the Sobol/counterfactual artifacts with retrieval tools for grounded answers.
 2. Add a script runner tool that executes the active scripts and checks whether expected files changed.
 3. Add a data validator for required raw inputs and config paths before training.
 4. Add structured response templates for `metric_summary`, `driver_diagnosis`, `threshold_check`, `scenario_triage`, `response_playbook`, `boundary_status`, `sobol_summary`, `counterfactual_probe`, `critical_transition_risk`, and `data_gap`.
-5. Use `outputs/thresholds/mechanism_parameter_threshold_kg.json`, `outputs/agent/scenario_triage.json`, `outputs/agent/response_playbook.json`, `outputs/boundary/boundary_detection_summary.json`, and `outputs/agent/agent_context.json` as the first structured retrieval artifacts for agent-side reasoning.
+5. Use `outputs/thresholds/mechanism_parameter_threshold_kg.json`, `outputs/agent/scenario_triage.json`, `outputs/agent/response_playbook.json`, `outputs/agent/cmfbe_mechanism_intervention_digest.json`, `outputs/boundary/boundary_detection_summary.json`, and `outputs/agent/agent_context.json` as the first structured retrieval artifacts for agent-side reasoning.
 6. Add future tools only after new data exists for multi-station hydrodynamics, raster/UAV boundaries, richer Sobol and counterfactual experiments, intervention records, and explicit action-effect observations.

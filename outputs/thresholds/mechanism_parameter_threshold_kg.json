@@ -6,11 +6,11 @@
     "test_window_start": "2024-09-07",
     "test_window_end": "2024-12-31",
     "critical_transition_rate": 0.21739130434782608,
-    "mean_predicted_critical_transition_probability": 0.1350329651607393,
+    "mean_predicted_critical_transition_probability": 0.18315969488543013,
     "self_purification_failure_rate": 0.21739130434782608,
-    "mean_predicted_self_purification_failure_probability": 0.13957284270208734,
+    "mean_predicted_self_purification_failure_probability": 0.19533377213646536,
     "turbidity_surge_rate": 0.21739130434782608,
-    "mean_predicted_turbidity_surge_probability": 0.14141071984372305
+    "mean_predicted_turbidity_surge_probability": 0.18107395117049632
   },
   "threshold_nodes": [
     {

@@ -48,6 +48,23 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_repo_path(path_value: str | Path | None) -> str | None:
+    if path_value is None:
+        return None
+    path = Path(path_value)
+    if path.is_absolute():
+        return str(path)
+    return str((PROJECT_ROOT / path).resolve())
+
+
+def to_repo_relative(path_value: str | Path) -> str:
+    path = Path(path_value)
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT)).replace("/", "\\")
+    except Exception:
+        return str(path)
+
+
 def choose_device(config_device: str) -> torch.device:
     if config_device == "cpu":
         return torch.device("cpu")
@@ -592,13 +609,21 @@ def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: P
     available.to_csv(
         boundary_dir / "boundary_predictions.csv", index=False, encoding="utf-8-sig"
     )
-    summary: dict[str, Any] = {"status": "evaluated", "splits": {}}
+    summary: dict[str, Any] = {"status": "evaluated", "models": {}, "overall": {}}
+    for model_name, model_df in available.groupby("model"):
+        summary["models"][model_name] = {}
+        for split_name, split_df in model_df.groupby("split"):
+            summary["models"][model_name][split_name] = binary_classification_metrics(
+                split_df["actual_boundary_label"],
+                split_df["predicted_boundary_probability"],
+            )
+            summary["models"][model_name][split_name]["labeled_samples"] = int(len(split_df))
     for split_name, split_df in available.groupby("split"):
-        summary["splits"][split_name] = binary_classification_metrics(
+        summary["overall"][split_name] = binary_classification_metrics(
             split_df["actual_boundary_label"],
             split_df["predicted_boundary_probability"],
         )
-        summary["splits"][split_name]["labeled_samples"] = int(len(split_df))
+        summary["overall"][split_name]["labeled_samples"] = int(len(split_df))
     save_json(summary, boundary_dir / "boundary_detection_summary.json")
 
 
@@ -807,7 +832,7 @@ def main() -> None:
 
     set_seed(int(config["random_seed"]))
     device = choose_device(config.get("device", "auto"))
-    output_dir = ensure_dir(config["output_dir"])
+    output_dir = ensure_dir(resolve_repo_path(config["output_dir"]))
     ensure_dir(output_dir / "metrics")
     ensure_dir(output_dir / "predictions")
     ensure_dir(output_dir / "interpretability")
@@ -818,19 +843,24 @@ def main() -> None:
     causal_config = config.get("causal_discovery", {})
     auxiliary_target_config = config.get("auxiliary_targets", {})
     boundary_config = config.get("boundary_labels", {})
+    if boundary_config.get("source_path"):
+        boundary_config = {
+            **boundary_config,
+            "source_path": resolve_repo_path(boundary_config.get("source_path")),
+        }
 
     dataset_df, dataset_summary = build_multimodal_dataset(
-        data_root=config["data_root"],
+        data_root=resolve_repo_path(config["data_root"]),
         water_pattern=config["water_pattern"],
         weather_filename=config["weather_filename"],
         output_dir=output_dir,
         hydrodynamics_enabled=bool(hydrodynamics_config.get("enabled", False)),
-        hydrodynamics_source_path=hydrodynamics_config.get("source_path"),
-        hydrodynamics_wide_path=hydrodynamics_config.get("wide_path"),
-        hydrodynamics_output_dir=hydrodynamics_config.get("output_dir"),
+        hydrodynamics_source_path=resolve_repo_path(hydrodynamics_config.get("source_path")),
+        hydrodynamics_wide_path=resolve_repo_path(hydrodynamics_config.get("wide_path")),
+        hydrodynamics_output_dir=resolve_repo_path(hydrodynamics_config.get("output_dir")),
         ndti_enabled=bool(ndti_config.get("enabled", False)),
-        ndti_dir=ndti_config.get("source_dir"),
-        ndti_output_dir=ndti_config.get("output_dir"),
+        ndti_dir=resolve_repo_path(ndti_config.get("source_dir")),
+        ndti_output_dir=resolve_repo_path(ndti_config.get("output_dir")),
         boundary_config=boundary_config,
     )
     prepared = prepare_dataloaders(
@@ -847,7 +877,7 @@ def main() -> None:
     train_rows = int(prepared.split_summary["train_rows"])
     train_df_for_causality = sorted_dataset_df.iloc[:train_rows].copy()
     adjacency, graph_summary = build_feature_graph_priors(
-        rag_artifacts_dir=config["rag_artifacts_dir"],
+        rag_artifacts_dir=resolve_repo_path(config["rag_artifacts_dir"]),
         feature_columns=dataset_summary["feature_columns"],
         output_dir=output_dir,
         causal_df=train_df_for_causality if bool(causal_config.get("enabled", True)) else None,
@@ -1063,13 +1093,17 @@ def main() -> None:
         "best_test_clearness_model": model_comparison[
             model_comparison["split"] == "test"
         ].sort_values("clearness_r2", ascending=False).iloc[0]["model"],
-        "mscim_diagnosis_outputs": {key: str(value) for key, value in diagnosis_outputs.items()},
+        "mscim_diagnosis_outputs": {
+            key: to_repo_relative(value) for key, value in diagnosis_outputs.items()
+        },
     }
     save_json(summary_note, output_dir / "metrics" / "best_model_summary.json")
     scenario_triage: dict[str, Any] | None = None
     response_playbook: dict[str, Any] | None = None
+    mechanism_digest: dict[str, Any] | None = None
     threshold_summary_for_scenarios = output_dir / "thresholds" / "cmfbe_threshold_summary.csv"
     feature_dataset_path = output_dir / "intermediate" / "multimodal_daily_dataset.csv"
+    mechanism_digest_path = output_dir / "agent" / "cmfbe_mechanism_intervention_digest.json"
     if threshold_summary_for_scenarios.exists() and feature_dataset_path.exists():
         _, _, scenario_triage = save_scenario_triage(
             output_json_path=output_dir / "agent" / "scenario_triage.json",
@@ -1084,6 +1118,8 @@ def main() -> None:
             scenario_triage=scenario_triage,
             threshold_kg=threshold_kg,
         )
+    if mechanism_digest_path.exists():
+        mechanism_digest = json.loads(mechanism_digest_path.read_text(encoding="utf-8"))
     if threshold_kg:
         save_agent_context(
             output_path=output_dir / "agent" / "agent_context.json",
@@ -1092,6 +1128,7 @@ def main() -> None:
             threshold_kg=threshold_kg,
             scenario_triage=scenario_triage,
             response_playbook=response_playbook,
+            mechanism_digest=mechanism_digest,
         )
 
     print(f"Pipeline completed. Outputs saved to: {output_dir}")

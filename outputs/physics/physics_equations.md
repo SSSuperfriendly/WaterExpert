@@ -58,45 +58,45 @@ The current runnable prototype still uses a single-station daily surrogate, but 
 
 `Clearness_t+1 = 1 - (log(1 + Turbidity_t+1) - log_turbidity_min) / (log_turbidity_max - log_turbidity_min)`
 
-The final prediction blends the data-driven branch and the physics-guided branch with fusion ratio `0.754`.
+The final prediction blends the data-driven branch and the physics-guided branch with fusion ratio `0.751`.
 
 ## 3. Learned mechanism parameters
 
 ```json
 {
-  "velocity_flow_scale": 0.197428,
-  "velocity_aux_flow_scale": 0.066514,
-  "velocity_depth_scale": 0.318309,
-  "shear_flow_scale": 0.216712,
-  "shear_wind_scale": 0.067986,
-  "shear_stage_scale": 0.059292,
-  "erosion_threshold": 0.844066,
-  "deposition_threshold": 1.281661,
-  "erosion_coeff": 0.154295,
-  "runoff_coeff": 0.156840,
-  "tidal_coeff": 0.120171,
-  "bloom_coeff": 0.087615,
-  "deposition_coeff": 0.210646,
-  "flushing_coeff": 0.241172,
-  "purification_coeff": 0.115694,
-  "floc_coeff": 0.258351,
-  "temp_optimum": 21.955864,
-  "temp_width": 6.885683,
-  "n_half_sat": 1.076054,
-  "p_half_sat": 0.056312,
-  "light_threshold": 0.510415,
-  "light_sharpness": 3.999662,
-  "flow_optimum": 0.861092,
-  "flow_width": 0.416389,
-  "do_midpoint": 5.838995,
-  "do_sharpness": 0.732163,
-  "fusion_ratio": 0.753797
+  "velocity_flow_scale": 0.187493,
+  "velocity_aux_flow_scale": 0.062777,
+  "velocity_depth_scale": 0.336636,
+  "shear_flow_scale": 0.239111,
+  "shear_wind_scale": 0.076085,
+  "shear_stage_scale": 0.066707,
+  "erosion_threshold": 0.778176,
+  "deposition_threshold": 1.234217,
+  "erosion_coeff": 0.171545,
+  "runoff_coeff": 0.187485,
+  "tidal_coeff": 0.133420,
+  "bloom_coeff": 0.095604,
+  "deposition_coeff": 0.188609,
+  "flushing_coeff": 0.228974,
+  "purification_coeff": 0.113610,
+  "floc_coeff": 0.230462,
+  "temp_optimum": 21.991104,
+  "temp_width": 6.959231,
+  "n_half_sat": 1.030310,
+  "p_half_sat": 0.051877,
+  "light_threshold": 0.469099,
+  "light_sharpness": 3.984794,
+  "flow_optimum": 0.919963,
+  "flow_width": 0.445019,
+  "do_midpoint": 5.950837,
+  "do_sharpness": 0.799717,
+  "fusion_ratio": 0.750764
 }
 ```
 
 ## 4. Scope statement
 
 - Current data scope: single-station multimodal daily prototype
-- Boundary head: supervision-ready interface implemented, waiting for raster/UAV boundary labels
+- Boundary head: supervision-ready interface implemented; boundary labels loaded for training
 - Spatial graph statement: implemented as a feature factor graph because only one numeric water-quality station is currently available
 - Current physics stage: explicit process surrogate on daily single-station data, not a calibrated 2D PDE solver

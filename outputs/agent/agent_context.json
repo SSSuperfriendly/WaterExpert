@@ -3,8 +3,8 @@
   "scope": "wusongkou_daily_prototype",
   "purpose": "Agent-facing context for turbidity evolution diagnosis, self-purification stress screening, and empirical threshold reasoning.",
   "best_model_summary": {
-    "best_test_turbidity_model": "mscim",
-    "best_test_clearness_model": "mscim",
+    "best_test_turbidity_model": "cmfbe_stgcn",
+    "best_test_clearness_model": "cmfbe_stgcn",
     "mscim_diagnosis_outputs": {
       "detail_csv": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_details.csv",
       "summary_csv": "outputs\\diagnosis\\mscim_turbidity_factor_diagnosis_summary.csv",
@@ -15,57 +15,57 @@
   },
   "test_models": {
     "mscim": {
-      "turbidity_r2": 0.7713282373637965,
-      "turbidity_rmse": 25.665633828309492,
-      "clearness_r2": 0.730079815647407,
-      "clearness_rmse": 0.03923294545984422,
+      "turbidity_r2": 0.7291469958747001,
+      "turbidity_rmse": 27.93267656309762,
+      "clearness_r2": 0.6936728813237021,
+      "clearness_rmse": 0.04179515657697067,
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.4456480310662933
+        "mean_predicted_probability": 0.43844397430834564
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5827274588139161
+        "mean_predicted_probability": 0.5817180923793627
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5223010810820953
+        "mean_predicted_probability": 0.5341829689948455
       }
     },
     "mscim_no_kg": {
-      "turbidity_r2": 0.7367749538104382,
-      "turbidity_rmse": 27.536537449180653,
-      "clearness_r2": 0.7149962819869657,
-      "clearness_rmse": 0.04031424180756957,
+      "turbidity_r2": 0.581721904888548,
+      "turbidity_rmse": 34.71189192573113,
+      "clearness_r2": 0.4995052687532372,
+      "clearness_rmse": 0.0534235801418689,
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.49130261980968976
+        "mean_predicted_probability": 0.49122981403184973
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.49767386556967447
+        "mean_predicted_probability": 0.4828429701535598
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5306387271570123
+        "mean_predicted_probability": 0.4961303019005319
       }
     },
     "cmfbe_stgcn": {
-      "turbidity_r2": 0.703738950290987,
-      "turbidity_rmse": 29.213460377745772,
-      "clearness_r2": 0.7085190775772029,
-      "clearness_rmse": 0.0407697737355597,
+      "turbidity_r2": 0.7480955017190729,
+      "turbidity_rmse": 26.937896850603682,
+      "clearness_r2": 0.7016367746618661,
+      "clearness_rmse": 0.041248283465460105,
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.13957284270208734
+        "mean_predicted_probability": 0.19533377213646536
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.14141071984372305
+        "mean_predicted_probability": 0.18107395117049632
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.1350329651607393
+        "mean_predicted_probability": 0.18315969488543013
       }
     },
     "ridge_window_baseline": {
@@ -86,16 +86,16 @@
     "test_window_start": "2024-09-07",
     "test_window_end": "2024-12-31",
     "critical_transition_rate": 0.21739130434782608,
-    "mean_predicted_critical_transition_probability": 0.1350329651607393,
+    "mean_predicted_critical_transition_probability": 0.18315969488543013,
     "self_purification_failure_rate": 0.21739130434782608,
-    "mean_predicted_self_purification_failure_probability": 0.13957284270208734,
+    "mean_predicted_self_purification_failure_probability": 0.19533377213646536,
     "turbidity_surge_rate": 0.21739130434782608,
-    "mean_predicted_turbidity_surge_probability": 0.14141071984372305
+    "mean_predicted_turbidity_surge_probability": 0.18107395117049632
   },
   "guardrails": [
     "Current outputs support empirical diagnosis and screening, not calibrated operational control.",
     "Do not claim a full multi-station hydrodynamic model has been trained.",
-    "Do not claim spatial boundary maps, Sobol sensitivity, or counterfactual control maps are available."
+    "Do not claim calibrated spatial governance maps or validated control policies are available."
   ],
   "recommended_agent_queries": [
     "Which factors are currently closest to empirical self-purification failure thresholds?",
@@ -103,112 +103,115 @@
     "Does the current scenario resemble a rainfall-driven, flow-driven, or mixed turbidity surge?",
     "What data or model gaps prevent stronger physical or spatial conclusions?",
     "What follow-up monitoring actions fit the current empirical scenario?",
-    "Which guarded response template matches the latest high-priority case?"
+    "Which guarded response template matches the latest high-priority case?",
+    "Which linked factor interventions most reduce surrogate turbidity pressure?",
+    "What Sobol-ranked factors show the strongest interaction effects?"
   ],
   "scenario_triage_path": "outputs/agent/scenario_triage.json",
   "scenario_counts": {
-    "algal_dominant": 14,
-    "chronic_composite": 3,
-    "external_input": 9,
+    "algal_dominant": 15,
+    "chronic_composite": 1,
+    "external_input": 10,
     "internal_release": 66
   },
   "scenario_high_priority_days": [
     {
-      "target_date": "2024-11-01",
-      "primary_scenario": "external_input",
-      "primary_score": 1.1864,
-      "risk_band": "high",
-      "predicted_critical_transition_prob": 0.8854,
-      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (203.4 mm); flushing potential remained below empirical threshold (2.689)"
-    },
-    {
       "target_date": "2024-09-20",
       "primary_scenario": "external_input",
-      "primary_score": 1.1344,
+      "primary_score": 1.1437,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.0133,
+      "predicted_critical_transition_prob": 0.1744,
       "evidence_summary": "3-day precipitation exceeded threshold (70.5 mm); 7-day precipitation exceeded threshold (141.6 mm); air temperature exceeded warm threshold (27.4 degC); flushing potential remained below empirical threshold (1.492)"
     },
     {
       "target_date": "2024-11-29",
       "primary_scenario": "internal_release",
-      "primary_score": 1.1227,
+      "primary_score": 1.1246,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.1863,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.410); resuspension potential exceeded empirical threshold (1176.0); flushing potential was strong (8.026)"
-    },
-    {
-      "target_date": "2024-11-02",
-      "primary_scenario": "external_input",
-      "primary_score": 1.1113,
-      "risk_band": "high",
-      "predicted_critical_transition_prob": 0.3995,
-      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (178.2 mm); resuspension potential exceeded empirical threshold (2630.2); flushing potential was strong (9.223)"
+      "predicted_critical_transition_prob": 0.239,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.412); resuspension potential exceeded empirical threshold (1176.0); flushing potential was strong (8.026)"
     },
     {
       "target_date": "2024-09-13",
       "primary_scenario": "internal_release",
-      "primary_score": 1.0965,
+      "primary_score": 1.094,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.0057,
+      "predicted_critical_transition_prob": 0.1485,
       "evidence_summary": "bed shear proxy exceeded threshold (0.395); resuspension potential exceeded empirical threshold (1688.4); air temperature exceeded warm threshold (29.8 degC); flushing potential was strong (21.309)"
+    },
+    {
+      "target_date": "2024-11-01",
+      "primary_scenario": "external_input",
+      "primary_score": 1.0665,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.1891,
+      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (203.4 mm); flushing potential remained below empirical threshold (2.689)"
     },
     {
       "target_date": "2024-11-28",
       "primary_scenario": "internal_release",
-      "primary_score": 1.0668,
+      "primary_score": 1.0643,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.5582,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.382); resuspension potential exceeded empirical threshold (1253.2); flushing potential was strong (10.515)"
+      "predicted_critical_transition_prob": 0.22,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.383); resuspension potential exceeded empirical threshold (1253.2); flushing potential was strong (10.515)"
     },
     {
       "target_date": "2024-11-26",
       "primary_scenario": "internal_release",
-      "primary_score": 1.0595,
+      "primary_score": 1.0589,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.0128,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.386); resuspension potential exceeded empirical threshold (886.8); flushing potential was strong (10.170)"
+      "predicted_critical_transition_prob": 0.21,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.388); resuspension potential exceeded empirical threshold (886.8); flushing potential was strong (10.170)"
     },
     {
-      "target_date": "2024-10-31",
+      "target_date": "2024-11-02",
       "primary_scenario": "external_input",
-      "primary_score": 1.029,
+      "primary_score": 1.0367,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.8446,
-      "evidence_summary": "3-day precipitation exceeded threshold (111.8 mm); 7-day precipitation exceeded threshold (158.6 mm); flushing potential was strong (4.477)"
-    },
-    {
-      "target_date": "2024-10-25",
-      "primary_scenario": "internal_release",
-      "primary_score": 1.0229,
-      "risk_band": "high",
-      "predicted_critical_transition_prob": 0.0014,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.378); resuspension potential exceeded empirical threshold (1075.6); flushing potential was strong (11.453)"
+      "predicted_critical_transition_prob": 0.1578,
+      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (178.2 mm); resuspension potential exceeded empirical threshold (2630.2); flushing potential was strong (9.223)"
     },
     {
       "target_date": "2024-11-03",
       "primary_scenario": "external_input",
       "primary_score": 1.0223,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.0057,
+      "predicted_critical_transition_prob": 0.1553,
       "evidence_summary": "3-day precipitation exceeded threshold (49.1 mm); 7-day precipitation exceeded threshold (160.9 mm); resuspension potential exceeded empirical threshold (1201.8); flushing potential was strong (12.822)"
+    },
+    {
+      "target_date": "2024-10-25",
+      "primary_scenario": "internal_release",
+      "primary_score": 1.0214,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.1234,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.379); resuspension potential exceeded empirical threshold (1075.6); flushing potential was strong (11.453)"
     },
     {
       "target_date": "2024-11-11",
       "primary_scenario": "internal_release",
-      "primary_score": 0.9914,
+      "primary_score": 0.9851,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.0666,
+      "predicted_critical_transition_prob": 0.1345,
       "evidence_summary": "resuspension potential exceeded empirical threshold (968.4); flushing potential was strong (14.862)"
     },
     {
       "target_date": "2024-12-29",
       "primary_scenario": "internal_release",
-      "primary_score": 0.9886,
+      "primary_score": 0.985,
       "risk_band": "high",
-      "predicted_critical_transition_prob": 0.089,
+      "predicted_critical_transition_prob": 0.2779,
       "evidence_summary": "resuspension potential exceeded empirical threshold (867.1); flushing potential was strong (8.806)"
+    },
+    {
+      "target_date": "2024-09-18",
+      "primary_scenario": "internal_release",
+      "primary_score": 0.9846,
+      "risk_band": "high",
+      "predicted_critical_transition_prob": 0.1839,
+      "evidence_summary": "3-day precipitation exceeded threshold (64.9 mm); bed shear proxy exceeded threshold (0.382); resuspension potential exceeded empirical threshold (1009.0); air temperature exceeded warm threshold (29.4 degC)"
     }
   ],
-  "response_playbook_path": "outputs/agent/response_playbook.json"
+  "response_playbook_path": "outputs/agent/response_playbook.json",
+  "mechanism_intervention_digest_path": "outputs/agent/cmfbe_mechanism_intervention_digest.json"
 }

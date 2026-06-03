@@ -5,59 +5,75 @@
   "top_factors": [
     {
       "factor": "runoff_sediment_pulse",
+      "factor_label": "runoff sediment pulse",
       "lower_bound": 0.0,
       "upper_bound": 274.9590000000002,
-      "first_order_index": 0.5932582926675207,
-      "total_order_index": 0.608274686842896
+      "first_order_index": 0.6652474538929397,
+      "total_order_index": 0.7082008604886902,
+      "interaction_strength": 0.04295340659575053
     },
     {
       "factor": "songpu_flushing_potential",
+      "factor_label": "Songpu flushing potential",
       "lower_bound": 1.442706537974243,
       "upper_bound": 15.22440600840886,
-      "first_order_index": 0.1965681900552866,
-      "total_order_index": 0.29474780072843393
+      "first_order_index": 0.08737579259983723,
+      "total_order_index": 0.18866151007416723,
+      "interaction_strength": 0.10128571747433
     },
     {
       "factor": "precipitation_3d",
+      "factor_label": "3-day cumulative precipitation",
       "lower_bound": 0.0,
       "upper_bound": 71.10000000000001,
-      "first_order_index": 0.07588687992519894,
-      "total_order_index": 0.0598221669963668
+      "first_order_index": 0.0897320005155022,
+      "total_order_index": 0.06964963536953385,
+      "interaction_strength": 0.0
     },
     {
       "factor": "songpu_flow_m3s_abs",
+      "factor_label": "Songpu absolute flow",
       "lower_bound": 212.45,
       "upper_bound": 986.6,
-      "first_order_index": 0.017272133413652142,
-      "total_order_index": 0.015470015833198406
+      "first_order_index": 0.012859229493504968,
+      "total_order_index": 0.009978878618153612,
+      "interaction_strength": 0.0
     },
     {
       "factor": "dissolved_oxygen",
+      "factor_label": "dissolved oxygen",
       "lower_bound": 3.1527333333333334,
       "upper_bound": 8.928958333333334,
-      "first_order_index": 0.0198338078316718,
-      "total_order_index": 0.010948959666207299
+      "first_order_index": 0.020440374491472,
+      "total_order_index": 0.00972080024479594,
+      "interaction_strength": 0.0
     },
     {
       "factor": "huangdu_flow_m3s_abs",
+      "factor_label": "Huangdu absolute flow",
       "lower_bound": 2.3995,
       "upper_bound": 41.075,
-      "first_order_index": -0.006823247762191878,
-      "total_order_index": 0.004762707840251133
+      "first_order_index": -0.0072179953387860665,
+      "total_order_index": 0.008325237263098749,
+      "interaction_strength": 0.015543232601884815
     },
     {
       "factor": "self_purification_index",
+      "factor_label": "self-purification index",
       "lower_bound": 0.5208882210815682,
       "upper_bound": 2.008220364171559,
-      "first_order_index": 0.007271150781772153,
-      "total_order_index": 0.003128619829441876
+      "first_order_index": 0.007592323551940456,
+      "total_order_index": 0.0024084596386393696,
+      "interaction_strength": 0.0
     },
     {
       "factor": "water_temp",
+      "factor_label": "water temperature",
       "lower_bound": 8.925791666666665,
       "upper_bound": 31.1056,
-      "first_order_index": 0.0005145516309306189,
-      "total_order_index": 1.6001228288512664e-05
+      "first_order_index": 0.002100721165413328,
+      "total_order_index": 9.323603566692307e-05,
+      "interaction_strength": 0.0
     }
   ]
 }

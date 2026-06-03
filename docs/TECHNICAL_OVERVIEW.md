@@ -109,9 +109,11 @@ The `MSCIM` boundary head is now connected to an optional supervision pathway ra
 
 - Expected label interface: a date-aligned boundary label table configured in `configs/prototype_repo.yaml`.
 - Template file: `data/raw/wusongkou_boundary_labels_template.csv`.
+- Real-raster proxy generator: `scripts/generate_real_raster_boundary_labels.py`.
 - Exported status and evaluation artifact: `outputs/boundary/boundary_detection_summary.json`.
+- Exported label-generation audit: `outputs/boundary/boundary_label_generation_summary.json`.
 
-This means the current repository can ingest raster/UAV-derived boundary labels as soon as they are available, merge them into the daily multimodal dataset, and include a supervised boundary loss during training.
+The current committed supervision table is a real raster-derived AOI boundary-change proxy built from public daily water masks near Wusongkou. It can train the boundary head with a real external signal, but it should not be described as a hand-labeled governance-zone map.
 
 ## Sobol And Counterfactual Prototype
 
@@ -120,9 +122,11 @@ The repository now includes a prototype sensitivity and counterfactual analysis 
 - `outputs/sensitivity/cmfbe_sobol_indices.csv`
 - `outputs/sensitivity/cmfbe_sobol_indices.json`
 - `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_joint_counterfactual_summary.csv`
 - `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
+- `outputs/agent/cmfbe_mechanism_intervention_digest.json`
 
-These artifacts provide Monte Carlo Sobol-style sensitivity indices and one-factor counterfactual perturbation summaries over the current single-station mechanism surrogate. They are useful for prioritizing mechanism inspection, threshold reasoning, and future intervention-data collection, but they are not yet substitutes for full calibrated hydrodynamic uncertainty analysis or validated treatment simulation.
+These artifacts provide Monte Carlo Sobol-style sensitivity indices, one-factor counterfactual perturbation summaries, and linked multi-factor intervention summaries over the current single-station mechanism surrogate. They are useful for prioritizing mechanism inspection, threshold reasoning, and future intervention-data collection, but they are not substitutes for full calibrated hydrodynamic uncertainty analysis or validated treatment simulation.
 
 ## Key Outputs
 
@@ -136,9 +140,12 @@ These artifacts provide Monte Carlo Sobol-style sensitivity indices and one-fact
 - `outputs/agent/agent_context.json`
 - `outputs/agent/scenario_triage.json`
 - `outputs/agent/response_playbook.json`
+- `outputs/agent/cmfbe_mechanism_intervention_digest.json`
 - `outputs/boundary/boundary_detection_summary.json`
+- `outputs/boundary/boundary_label_generation_summary.json`
 - `outputs/sensitivity/cmfbe_sobol_indices.csv`
 - `outputs/counterfactual/cmfbe_counterfactual_summary.csv`
+- `outputs/counterfactual/cmfbe_joint_counterfactual_summary.csv`
 - `outputs/counterfactual/cmfbe_sobol_counterfactual_report.md`
 - `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
@@ -156,14 +163,15 @@ python scripts\export_scenario_triage.py
 python scripts\export_response_playbook.py
 python scripts\export_agent_context.py
 python scripts\create_boundary_label_template.py
+python scripts\generate_real_raster_boundary_labels.py
 python scripts\analyze_cmfbe_sobol_counterfactual.py
 ```
 
 ## Current Boundaries
 
 - The current enhanced run is single-station-centered, not a full multi-station hydrodynamic model.
-- Boundary detection is reserved in the model design but is not trained without raster/UAV labels.
-- Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included yet.
+- The current boundary supervision is a real raster-derived AOI boundary-change proxy, not a hand-labeled governance-zone product.
+- Spatial threshold maps and calibrated policy-response analysis are not included yet.
 - The current scenario triage layer is an empirical prototype classification and should not be described as an optimal policy, intervention recommendation, or validated governance label.
 - The current response playbook is a guarded recommendation scaffold and should not be described as a trained RL controller or validated restoration policy.
 - The current Sobol and counterfactual exports are surrogate-level prototypes and should not be described as calibrated operational uncertainty or intervention-response products.

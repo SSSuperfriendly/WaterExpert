@@ -1,0 +1,210 @@
+{
+  "artifact_name": "cmfbe_mechanism_intervention_digest",
+  "scope": "wusongkou_daily_prototype",
+  "test_window_start": "2024-09-07",
+  "test_window_end": "2024-12-31",
+  "days_analyzed": 92,
+  "response_semantics": "Negative deltas indicate lower surrogate turbidity pressure relative to the baseline test window.",
+  "top_sobol_factors": [
+    {
+      "factor": "runoff_sediment_pulse",
+      "factor_label": "runoff sediment pulse",
+      "lower_bound": 0.0,
+      "upper_bound": 274.9590000000002,
+      "first_order_index": 0.6652474538929397,
+      "total_order_index": 0.7082008604886902,
+      "interaction_strength": 0.04295340659575053
+    },
+    {
+      "factor": "songpu_flushing_potential",
+      "factor_label": "Songpu flushing potential",
+      "lower_bound": 1.442706537974243,
+      "upper_bound": 15.22440600840886,
+      "first_order_index": 0.08737579259983723,
+      "total_order_index": 0.18866151007416723,
+      "interaction_strength": 0.10128571747433
+    },
+    {
+      "factor": "precipitation_3d",
+      "factor_label": "3-day cumulative precipitation",
+      "lower_bound": 0.0,
+      "upper_bound": 71.10000000000001,
+      "first_order_index": 0.0897320005155022,
+      "total_order_index": 0.06964963536953385,
+      "interaction_strength": 0.0
+    },
+    {
+      "factor": "songpu_flow_m3s_abs",
+      "factor_label": "Songpu absolute flow",
+      "lower_bound": 212.45,
+      "upper_bound": 986.6,
+      "first_order_index": 0.012859229493504968,
+      "total_order_index": 0.009978878618153612,
+      "interaction_strength": 0.0
+    },
+    {
+      "factor": "dissolved_oxygen",
+      "factor_label": "dissolved oxygen",
+      "lower_bound": 3.1527333333333334,
+      "upper_bound": 8.928958333333334,
+      "first_order_index": 0.020440374491472,
+      "total_order_index": 0.00972080024479594,
+      "interaction_strength": 0.0
+    },
+    {
+      "factor": "huangdu_flow_m3s_abs",
+      "factor_label": "Huangdu absolute flow",
+      "lower_bound": 2.3995,
+      "upper_bound": 41.075,
+      "first_order_index": -0.0072179953387860665,
+      "total_order_index": 0.008325237263098749,
+      "interaction_strength": 0.015543232601884815
+    },
+    {
+      "factor": "self_purification_index",
+      "factor_label": "self-purification index",
+      "lower_bound": 0.5208882210815682,
+      "upper_bound": 2.008220364171559,
+      "first_order_index": 0.007592323551940456,
+      "total_order_index": 0.0024084596386393696,
+      "interaction_strength": 0.0
+    },
+    {
+      "factor": "water_temp",
+      "factor_label": "water temperature",
+      "lower_bound": 8.925791666666665,
+      "upper_bound": 31.1056,
+      "first_order_index": 0.002100721165413328,
+      "total_order_index": 9.323603566692307e-05,
+      "interaction_strength": 0.0
+    }
+  ],
+  "strongest_single_factor_counterfactuals": [
+    {
+      "factor": "songpu_flushing_potential",
+      "factor_label": "Songpu flushing potential",
+      "intervention": "plus_20pct",
+      "mean_net_process_delta": -0.027843916865400255,
+      "mean_turbidity_delta": -3.878935156601235,
+      "positive_response_day_change": -0.03260869565217389,
+      "mean_source_total_delta": 0.0,
+      "mean_sink_total_delta": 0.027843916865400255,
+      "improved_days_fraction": 1.0
+    },
+    {
+      "factor": "songpu_flow_m3s_abs",
+      "factor_label": "Songpu absolute flow",
+      "intervention": "set_to_threshold",
+      "mean_net_process_delta": -0.014330066659641016,
+      "mean_turbidity_delta": -2.46101513980872,
+      "positive_response_day_change": -0.021739130434782594,
+      "mean_source_total_delta": 0.0009992926891888684,
+      "mean_sink_total_delta": 0.01532935934882989,
+      "improved_days_fraction": 0.8695652173913043
+    },
+    {
+      "factor": "runoff_sediment_pulse",
+      "factor_label": "runoff sediment pulse",
+      "intervention": "minus_20pct",
+      "mean_net_process_delta": -0.008612005625024455,
+      "mean_turbidity_delta": -2.4390995483240085,
+      "positive_response_day_change": 0.0,
+      "mean_source_total_delta": -0.008612005625024455,
+      "mean_sink_total_delta": 0.0,
+      "improved_days_fraction": 0.25
+    },
+    {
+      "factor": "dissolved_oxygen",
+      "factor_label": "dissolved oxygen",
+      "intervention": "plus_20pct",
+      "mean_net_process_delta": -0.01076357835882321,
+      "mean_turbidity_delta": -1.4383940284205268,
+      "positive_response_day_change": -0.03260869565217389,
+      "mean_source_total_delta": 0.0,
+      "mean_sink_total_delta": 0.010763578358823212,
+      "improved_days_fraction": 1.0
+    },
+    {
+      "factor": "precipitation_3d",
+      "factor_label": "3-day cumulative precipitation",
+      "intervention": "minus_20pct",
+      "mean_net_process_delta": -0.006173715473683457,
+      "mean_turbidity_delta": -1.3279514714990637,
+      "positive_response_day_change": -0.021739130434782594,
+      "mean_source_total_delta": -0.006173715473683455,
+      "mean_sink_total_delta": 0.0,
+      "improved_days_fraction": 0.5543478260869565
+    },
+    {
+      "factor": "songpu_flow_m3s_abs",
+      "factor_label": "Songpu absolute flow",
+      "intervention": "plus_20pct",
+      "mean_net_process_delta": -0.008273734322598406,
+      "mean_turbidity_delta": -1.0519367585349217,
+      "positive_response_day_change": -0.021739130434782594,
+      "mean_source_total_delta": 0.0005413673459849258,
+      "mean_sink_total_delta": 0.00881510166858333,
+      "improved_days_fraction": 1.0
+    },
+    {
+      "factor": "huangdu_flow_m3s_abs",
+      "factor_label": "Huangdu absolute flow",
+      "intervention": "minus_20pct",
+      "mean_net_process_delta": -0.0061963533839357815,
+      "mean_turbidity_delta": -1.0421407759299206,
+      "positive_response_day_change": -0.010869565217391242,
+      "mean_source_total_delta": -0.009477244730879672,
+      "mean_sink_total_delta": -0.0032808913469438857,
+      "improved_days_fraction": 1.0
+    },
+    {
+      "factor": "huangdu_flow_m3s_abs",
+      "factor_label": "Huangdu absolute flow",
+      "intervention": "plus_20pct",
+      "mean_net_process_delta": 0.005159285898267638,
+      "mean_turbidity_delta": 0.8726677742255026,
+      "positive_response_day_change": 0.0,
+      "mean_source_total_delta": 0.007878057341630013,
+      "mean_sink_total_delta": 0.00271877144336238,
+      "improved_days_fraction": 0.0
+    }
+  ],
+  "joint_interventions": [
+    {
+      "bundle_name": "top_3_linked_intervention",
+      "bundle_size": 3,
+      "factors": "precipitation_3d|songpu_flushing_potential|songpu_flow_m3s_abs",
+      "factor_labels": "3-day cumulative precipitation|Songpu flushing potential|Songpu absolute flow",
+      "interventions": "precipitation_3d::minus_20pct|songpu_flushing_potential::plus_20pct|songpu_flow_m3s_abs::set_to_threshold",
+      "mean_net_process_delta": -0.04979040776707513,
+      "mean_turbidity_delta": -7.827616103753131,
+      "positive_response_day_change": -0.03260869565217389,
+      "improved_days_fraction": 1.0,
+      "additive_single_factor_expectation": -7.667901767909019,
+      "synergy_vs_additive": -0.15971433584411265
+    },
+    {
+      "bundle_name": "top_2_linked_intervention",
+      "bundle_size": 2,
+      "factors": "precipitation_3d|songpu_flushing_potential",
+      "factor_labels": "3-day cumulative precipitation|Songpu flushing potential",
+      "interventions": "precipitation_3d::minus_20pct|songpu_flushing_potential::plus_20pct",
+      "mean_net_process_delta": -0.034017632339083705,
+      "mean_turbidity_delta": -5.174674096880483,
+      "positive_response_day_change": -0.03260869565217389,
+      "improved_days_fraction": 1.0,
+      "additive_single_factor_expectation": -5.206886628100299,
+      "synergy_vs_additive": 0.03221253121981604
+    }
+  ],
+  "recommended_agent_queries": [
+    "Which mechanism factors dominate the current CMFBE surrogate according to Sobol total-order indices?",
+    "Which single-factor perturbations most reduce surrogate turbidity pressure?",
+    "Do linked runoff-flushing-resuspension interventions outperform the sum of one-factor changes?"
+  ],
+  "guardrails": [
+    "These results are surrogate-level mechanism probes, not validated engineering intervention outcomes.",
+    "Joint interventions are linked factor perturbations on the learned surrogate, not operational control recommendations.",
+    "Use this digest for retrieval, hypothesis ranking, and next-data planning only."
+  ]
+}

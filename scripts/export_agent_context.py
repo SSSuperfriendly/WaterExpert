@@ -30,6 +30,7 @@ AGENT_CONTEXT_PATH = OUTPUT_DIR / "agent" / "agent_context.json"
 SCENARIO_TRIAGE_JSON_PATH = OUTPUT_DIR / "agent" / "scenario_triage.json"
 SCENARIO_TRIAGE_CSV_PATH = OUTPUT_DIR / "diagnosis" / "scenario_triage_daily.csv"
 RESPONSE_PLAYBOOK_PATH = OUTPUT_DIR / "agent" / "response_playbook.json"
+MECHANISM_DIGEST_PATH = OUTPUT_DIR / "agent" / "cmfbe_mechanism_intervention_digest.json"
 
 
 def main() -> None:
@@ -38,6 +39,7 @@ def main() -> None:
     threshold_kg = json.loads(THRESHOLD_KG_PATH.read_text(encoding="utf-8"))
     scenario_triage = None
     response_playbook = None
+    mechanism_digest = None
     if (
         THRESHOLD_SUMMARY_PATH.exists()
         and PREDICTIONS_PATH.exists()
@@ -56,6 +58,8 @@ def main() -> None:
             scenario_triage=scenario_triage,
             threshold_kg=threshold_kg,
         )
+    if MECHANISM_DIGEST_PATH.exists():
+        mechanism_digest = json.loads(MECHANISM_DIGEST_PATH.read_text(encoding="utf-8"))
     save_agent_context(
         output_path=AGENT_CONTEXT_PATH,
         metrics=metrics,
@@ -63,6 +67,7 @@ def main() -> None:
         threshold_kg=threshold_kg,
         scenario_triage=scenario_triage,
         response_playbook=response_playbook,
+        mechanism_digest=mechanism_digest,
     )
     print(f"Saved agent context: {AGENT_CONTEXT_PATH}")
 

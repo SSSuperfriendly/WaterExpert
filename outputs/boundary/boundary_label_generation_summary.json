@@ -1,0 +1,31 @@
+{
+  "status": "ok",
+  "output_path": "G:\\AI4S\\WaterExpert\\data\\raw\\wusongkou_boundary_labels.csv",
+  "provider": "DLR_GWP_P1D",
+  "label_semantics": "Weekly real-raster boundary-change proxy aligned to the current daily prototype. Labels reflect AOI water-mask boundary deviation relative to a median reference mask.",
+  "aoi": {
+    "center_lon": 121.522058,
+    "center_lat": 31.392691,
+    "half_size_deg": 0.03
+  },
+  "sampled_days": 248,
+  "dataset_days": 891,
+  "positive_labeled_days": 63,
+  "label_threshold": 0.016646848989298454,
+  "boundary_label_quantile": 0.75,
+  "sampling_stride_days": 7,
+  "dense_tail_days": 140,
+  "minimum_positive_count": 18,
+  "boundary_extent_ratio_stats": {
+    "min": 0.0,
+    "median": 0.011890606420927468,
+    "max": 0.04875148632580262
+  },
+  "water_fraction_stats": {
+    "min": 0.5957193816884662,
+    "median": 0.6123662306777645,
+    "max": 0.6646848989298454
+  },
+  "failed_days": [],
+  "swim_we_highres_items": 9
+}

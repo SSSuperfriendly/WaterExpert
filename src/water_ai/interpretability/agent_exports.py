@@ -674,6 +674,7 @@ def build_agent_context(
     threshold_kg: dict[str, Any],
     scenario_triage: dict[str, Any] | None = None,
     response_playbook: dict[str, Any] | None = None,
+    mechanism_digest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     test_models = {}
     for model_name, model_metrics in metrics.items():
@@ -709,7 +710,7 @@ def build_agent_context(
         "guardrails": [
             "Current outputs support empirical diagnosis and screening, not calibrated operational control.",
             "Do not claim a full multi-station hydrodynamic model has been trained.",
-            "Do not claim spatial boundary maps, Sobol sensitivity, or counterfactual control maps are available.",
+            "Do not claim calibrated spatial governance maps or validated control policies are available.",
         ],
         "recommended_agent_queries": [
             "Which factors are currently closest to empirical self-purification failure thresholds?",
@@ -732,6 +733,16 @@ def build_agent_context(
                 "Which guarded response template matches the latest high-priority case?",
             ]
         )
+    if mechanism_digest:
+        context["mechanism_intervention_digest_path"] = (
+            "outputs/agent/cmfbe_mechanism_intervention_digest.json"
+        )
+        context["recommended_agent_queries"].extend(
+            [
+                "Which linked factor interventions most reduce surrogate turbidity pressure?",
+                "What Sobol-ranked factors show the strongest interaction effects?",
+            ]
+        )
     return context
 
 
@@ -742,6 +753,7 @@ def save_agent_context(
     threshold_kg: dict[str, Any],
     scenario_triage: dict[str, Any] | None = None,
     response_playbook: dict[str, Any] | None = None,
+    mechanism_digest: dict[str, Any] | None = None,
 ) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -751,6 +763,7 @@ def save_agent_context(
         threshold_kg=threshold_kg,
         scenario_triage=scenario_triage,
         response_playbook=response_playbook,
+        mechanism_digest=mechanism_digest,
     )
     output_path.write_text(
         json.dumps(context, ensure_ascii=False, indent=2),

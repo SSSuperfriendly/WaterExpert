@@ -1,8 +1,8 @@
 {
   "data": {
     "dataset_summary": {
-      "water_source_path": "data\\raw\\wusongkou_water_quality_2586.csv",
-      "weather_source_path": "data\\raw\\shanghai_weather_daily.csv",
+      "water_source_path": "G:\\AI4S\\WaterExpert\\data\\raw\\wusongkou_water_quality_2586.csv",
+      "weather_source_path": "G:\\AI4S\\WaterExpert\\data\\raw\\shanghai_weather_daily.csv",
       "hydrodynamics_enabled": true,
       "hydrodynamics": {
         "source_xls": "data\\raw\\shanghai_hydrodynamics.xls",
@@ -41,8 +41,13 @@
       "ndti_enabled": false,
       "ndti": null,
       "boundary_labels": {
-        "enabled": false,
-        "status": "disabled"
+        "enabled": true,
+        "status": "loaded",
+        "source_path": "G:\\AI4S\\WaterExpert\\data\\raw\\wusongkou_boundary_labels.csv",
+        "labeled_days": 248,
+        "positive_days": 63,
+        "label_column": "boundary_label",
+        "extent_ratio_threshold": 0.5
       },
       "water_station": {
         "province": "上海市",
@@ -181,16 +186,17 @@
       ],
       "targets": [
         "turbidity",
-        "clearness_proxy"
+        "clearness_proxy",
+        "boundary_label"
       ],
       "notes": {
         "current_scope": "single-station multimodal daily prototype",
-        "boundary_detection_head": "supervision-ready interface implemented, waiting for raster/UAV boundary labels",
+        "boundary_detection_head": "supervision-ready interface implemented; boundary labels loaded for training",
         "spatial_graph": "implemented as a feature factor graph because only one numeric water-quality station is currently available"
       }
     },
     "graph_summary": {
-      "relationships_path": "data\\knowledge_graph\\create_final_relationships.parquet",
+      "relationships_path": "G:\\AI4S\\WaterExpert\\data\\knowledge_graph\\create_final_relationships.parquet",
       "relationship_rows": 18157,
       "relationship_rows_with_domain_evidence": 8927,
       "feature_count": 56,
@@ -427,7 +433,7 @@
         "pc_alpha": 0.2,
         "alpha_level": 0.05,
         "discovered_edge_count": 143,
-        "output_csv": "outputs\\intermediate\\pcmci_discovered_edges.csv",
+        "output_csv": "G:\\AI4S\\WaterExpert\\outputs\\intermediate\\pcmci_discovered_edges.csv",
         "top_turbidity_parents": [
           {
             "source_feature": "conductivity",
@@ -601,248 +607,311 @@
       "val_end": "2024-08-16",
       "test_start": "2024-08-17",
       "test_end": "2024-12-31",
-      "train_boundary_windows": 0,
-      "val_boundary_windows": 0,
-      "test_boundary_windows": 0
+      "train_boundary_windows": 67,
+      "val_boundary_windows": 22,
+      "test_boundary_windows": 92
     }
   },
   "mscim": {
     "test": {
       "turbidity": {
-        "mae": 16.405861481376316,
-        "rmse": 25.665633828309492,
-        "r2": 0.7713282373637965,
-        "mape": 14.76542887767518
+        "mae": 19.151106875875723,
+        "rmse": 27.93267656309762,
+        "r2": 0.7291469958747001,
+        "mape": 18.83963955619263
       },
       "clearness": {
-        "mae": 0.025485293696755947,
-        "rmse": 0.03923294545984422,
-        "r2": 0.730079815647407,
-        "mape": 9.128904752266209
+        "mae": 0.029948550073996834,
+        "rmse": 0.04179515657697067,
+        "r2": 0.6936728813237021,
+        "mape": 10.299984424694875
       },
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.4456480310662933
+        "mean_predicted_probability": 0.43844397430834564
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5827274588139161
+        "mean_predicted_probability": 0.5817180923793627
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5223010810820953
+        "mean_predicted_probability": 0.5341829689948455
+      },
+      "boundary_detection": {
+        "accuracy": 0.8152173913043478,
+        "precision": 0.15,
+        "recall": 1.0,
+        "f1": 0.2608695652173913,
+        "positive_rate": 0.03260869565217391
       }
     },
     "train": {
       "turbidity": {
-        "mae": 14.122487345439756,
-        "rmse": 24.36774784903417,
-        "r2": 0.8962769761769136,
-        "mape": 33.205498289167245
+        "mae": 20.93930481807289,
+        "rmse": 32.26679256565492,
+        "r2": 0.8181321304592654,
+        "mape": 37.09257791178598
       },
       "clearness": {
-        "mae": 0.01808037237725897,
-        "rmse": 0.043209226675391434,
-        "r2": 0.7468366619467208,
-        "mape": 8.084100833507241
+        "mae": 0.026742099249003153,
+        "rmse": 0.048595013662695294,
+        "r2": 0.6797926893544375,
+        "mape": 14.484767844071195
       },
       "self_purification_failure": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.4582748619409708
+        "mean_predicted_probability": 0.45171971447192705
       },
       "turbidity_surge": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.5753908352209971
+        "mean_predicted_probability": 0.5788674484460782
       },
       "critical_transition": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.5360180840023563
+        "mean_predicted_probability": 0.5415668450614326
+      },
+      "boundary_detection": {
+        "accuracy": 0.7164179104477612,
+        "precision": 0.6818181818181818,
+        "recall": 0.5555555555555556,
+        "f1": 0.6122448979591836,
+        "positive_rate": 0.40298507462686567
       }
     },
     "val": {
       "turbidity": {
-        "mae": 7.100810093162334,
-        "rmse": 9.660386726889737,
-        "r2": 0.8646227943726684,
-        "mape": 9.620646688812496
+        "mae": 9.043204856129874,
+        "rmse": 11.554117089566516,
+        "r2": 0.8063444049309177,
+        "mape": 12.537446586836657
       },
       "clearness": {
-        "mae": 0.015750711470578625,
-        "rmse": 0.02205575569472611,
-        "r2": 0.8496205434486064,
-        "mape": 4.3879004433286894
+        "mae": 0.02022277675898729,
+        "rmse": 0.026947178341628967,
+        "r2": 0.7755233259040769,
+        "mape": 5.602787825107282
       },
       "self_purification_failure": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.45473946301283036
+        "mean_predicted_probability": 0.4635004388020102
       },
       "turbidity_surge": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.5559202121422354
+        "mean_predicted_probability": 0.5392063618761248
       },
       "critical_transition": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.5400277703209261
+        "mean_predicted_probability": 0.5264989786443457
+      },
+      "boundary_detection": {
+        "accuracy": 0.4090909090909091,
+        "precision": 0.23076923076923078,
+        "recall": 0.5,
+        "f1": 0.3157894736842105,
+        "positive_rate": 0.2727272727272727
       }
     }
   },
   "mscim_no_kg": {
     "test": {
       "turbidity": {
-        "mae": 17.519665054653,
-        "rmse": 27.536537449180653,
-        "r2": 0.7367749538104382,
-        "mape": 15.148708647247727
+        "mae": 27.307984808216926,
+        "rmse": 34.71189192573113,
+        "r2": 0.581721904888548,
+        "mape": 30.28143550928371
       },
       "clearness": {
-        "mae": 0.026756647164406983,
-        "rmse": 0.04031424180756957,
-        "r2": 0.7149962819869657,
-        "mape": 9.865433266529307
+        "mae": 0.0423009499259617,
+        "rmse": 0.0534235801418689,
+        "r2": 0.4995052687532372,
+        "mape": 13.372144061456911
       },
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.49130261980968976
+        "mean_predicted_probability": 0.49122981403184973
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.49767386556967447
+        "mean_predicted_probability": 0.4828429701535598
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5306387271570123
+        "mean_predicted_probability": 0.4961303019005319
+      },
+      "boundary_detection": {
+        "accuracy": 0.967391304347826,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "positive_rate": 0.03260869565217391
       }
     },
     "train": {
       "turbidity": {
-        "mae": 15.71040070680981,
-        "rmse": 25.853386575789116,
-        "r2": 0.8832439845721178,
-        "mape": 32.64754288604285
+        "mae": 25.890337808646706,
+        "rmse": 35.38299902885877,
+        "r2": 0.7813076123665373,
+        "mape": 46.96732006597107
       },
       "clearness": {
-        "mae": 0.02005782059361983,
-        "rmse": 0.043795235254455014,
-        "r2": 0.7399232358367696,
-        "mape": 10.308859199689042
+        "mae": 0.034177139701926686,
+        "rmse": 0.054743334277452774,
+        "r2": 0.5936405936053135,
+        "mape": 15.945136861698007
       },
       "self_purification_failure": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.48379955574488026
+        "mean_predicted_probability": 0.4978129534512504
       },
       "turbidity_surge": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.5117594111296866
+        "mean_predicted_probability": 0.4970537108233851
       },
       "critical_transition": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.5222240320892415
+        "mean_predicted_probability": 0.4837224699365787
+      },
+      "boundary_detection": {
+        "accuracy": 0.5970149253731343,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "positive_rate": 0.40298507462686567
       }
     },
     "val": {
       "turbidity": {
-        "mae": 7.139414829490459,
-        "rmse": 9.929617641411983,
-        "r2": 0.8569718335245207,
-        "mape": 9.619929617185324
+        "mae": 20.52921568608917,
+        "rmse": 23.38778276922707,
+        "r2": 0.2065224877086187,
+        "mape": 30.055974923085067
       },
       "clearness": {
-        "mae": 0.015864077395042486,
-        "rmse": 0.02274941779922069,
-        "r2": 0.8400128141449351,
-        "mape": 4.437829784242062
+        "mae": 0.04223155711604431,
+        "rmse": 0.049392732425707866,
+        "r2": 0.245827434198155,
+        "mape": 11.345832427805536
       },
       "self_purification_failure": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.5002689369484387
+        "mean_predicted_probability": 0.5060257373657902
       },
       "turbidity_surge": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.4963557981284319
+        "mean_predicted_probability": 0.4983338550128768
       },
       "critical_transition": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.533966624631291
+        "mean_predicted_probability": 0.49116801819970124
+      },
+      "boundary_detection": {
+        "accuracy": 0.6818181818181818,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "positive_rate": 0.2727272727272727
       }
     }
   },
   "cmfbe_stgcn": {
     "test": {
       "turbidity": {
-        "mae": 19.128945931144383,
-        "rmse": 29.213460377745772,
-        "r2": 0.703738950290987,
-        "mape": 16.502236635114137
+        "mae": 18.522486147673234,
+        "rmse": 26.937896850603682,
+        "r2": 0.7480955017190729,
+        "mape": 17.444742111535653
       },
       "clearness": {
-        "mae": 0.02823369043028873,
-        "rmse": 0.0407697737355597,
-        "r2": 0.7085190775772029,
-        "mape": 10.463629543911502
+        "mae": 0.029166708173959152,
+        "rmse": 0.041248283465460105,
+        "r2": 0.7016367746618661,
+        "mape": 10.175686035268022
       },
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.13957284270208734
+        "mean_predicted_probability": 0.19533377213646536
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.14141071984372305
+        "mean_predicted_probability": 0.18107395117049632
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.1350329651607393
+        "mean_predicted_probability": 0.18315969488543013
+      },
+      "boundary_detection": {
+        "accuracy": 0.9130434782608695,
+        "precision": 0.2222222222222222,
+        "recall": 0.6666666666666666,
+        "f1": 0.3333333333333333,
+        "positive_rate": 0.03260869565217391
       }
     },
     "train": {
       "turbidity": {
-        "mae": 14.043543400545406,
-        "rmse": 23.406502455062807,
-        "r2": 0.9042987892469607,
-        "mape": 26.287234434164002
+        "mae": 18.936827638337753,
+        "rmse": 29.982213597686176,
+        "r2": 0.842973925914422,
+        "mape": 35.40592127986554
       },
       "clearness": {
-        "mae": 0.018085138520034842,
-        "rmse": 0.04056227243966663,
-        "r2": 0.7769036929868586,
-        "mape": 9.0648304308492
+        "mae": 0.023962062471108433,
+        "rmse": 0.04741941852360384,
+        "r2": 0.6950979991820059,
+        "mape": 10.925922118430204
       },
       "self_purification_failure": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.14601477718573516
+        "mean_predicted_probability": 0.18181298410472196
       },
       "turbidity_surge": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.14544586179327493
+        "mean_predicted_probability": 0.1782367089524483
       },
       "critical_transition": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.14612700798786066
+        "mean_predicted_probability": 0.18147497834303442
+      },
+      "boundary_detection": {
+        "accuracy": 0.8059701492537313,
+        "precision": 1.0,
+        "recall": 0.5185185185185185,
+        "f1": 0.6829268292682926,
+        "positive_rate": 0.40298507462686567
       }
     },
     "val": {
       "turbidity": {
-        "mae": 8.684000943614318,
-        "rmse": 11.662991928131424,
-        "r2": 0.8026775630328795,
-        "mape": 11.37477386463108
+        "mae": 8.583933096016402,
+        "rmse": 11.594877714120337,
+        "r2": 0.804975638052272,
+        "mape": 11.654893775762826
       },
       "clearness": {
-        "mae": 0.019100581122710642,
-        "rmse": 0.02591175037570333,
-        "r2": 0.7924426447058395,
-        "mape": 5.414912648887877
+        "mae": 0.019271692343517742,
+        "rmse": 0.027269818732446625,
+        "r2": 0.7701157973607659,
+        "mape": 5.373879476459528
       },
       "self_purification_failure": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.13828352867394883
+        "mean_predicted_probability": 0.22374877953423863
       },
       "turbidity_surge": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.14057480403638353
+        "mean_predicted_probability": 0.21307428161391115
       },
       "critical_transition": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.13608076002611572
+        "mean_predicted_probability": 0.19888852398216197
+      },
+      "boundary_detection": {
+        "accuracy": 0.5909090909090909,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "positive_rate": 0.2727272727272727
       }
     }
   },

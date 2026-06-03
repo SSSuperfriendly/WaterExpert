@@ -16,12 +16,23 @@ ndti:
   output_dir: "outputs/ndti_preprocessed"
 
 boundary_labels:
-  enabled: false
+  enabled: true
   source_path: "data/raw/wusongkou_boundary_labels.csv"
   date_column: "date"
   label_column: "boundary_label"
   extent_ratio_column: "boundary_extent_ratio"
   extent_ratio_threshold: 0.5
+  raster_proxy:
+    provider: "DLR_GWP_P1D"
+    center_lon: 121.522058
+    center_lat: 31.392691
+    aoi_half_size_deg: 0.03
+    sampling_stride_days: 7
+    dense_tail_days: 140
+    boundary_label_quantile: 0.75
+    boundary_label_min_ratio: 0.015
+    minimum_positive_count: 18
+    max_workers: 4
 
 causal_discovery:
   enabled: true

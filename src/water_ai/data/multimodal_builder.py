@@ -390,7 +390,13 @@ def _merge_optional_boundary_labels(
 
     resolved_path = Path(source_path)
     if not resolved_path.is_absolute():
-        resolved_path = Path(data_root) / source_path
+        direct_candidate = resolved_path
+        data_root_candidate = Path(data_root) / source_path
+        resolved_path = (
+            direct_candidate
+            if direct_candidate.exists()
+            else data_root_candidate
+        )
     if not resolved_path.exists():
         return base_df, {
             "enabled": True,
@@ -439,6 +445,23 @@ def _merge_optional_boundary_labels(
         merged_df = merged_df.rename(columns={label_column: "boundary_label"})
     if ratio_column in merged_df.columns and ratio_column != "boundary_extent_ratio":
         merged_df = merged_df.rename(columns={ratio_column: "boundary_extent_ratio"})
+    merged_df["boundary_label_available"] = (
+        pd.to_numeric(merged_df["boundary_label_available"], errors="coerce")
+        .fillna(0.0)
+        .clip(lower=0.0, upper=1.0)
+    )
+    if "boundary_label" in merged_df.columns:
+        merged_df["boundary_label"] = pd.to_numeric(
+            merged_df["boundary_label"], errors="coerce"
+        )
+    if "boundary_extent_ratio" in merged_df.columns:
+        merged_df["boundary_extent_ratio"] = pd.to_numeric(
+            merged_df["boundary_extent_ratio"], errors="coerce"
+        )
+    if "label_confidence" in merged_df.columns:
+        merged_df["label_confidence"] = pd.to_numeric(
+            merged_df["label_confidence"], errors="coerce"
+        )
 
     boundary_output_dir = ensure_dir(Path(output_dir) / "boundary")
     available_mask = merged_df["boundary_label_available"].fillna(0.0) > 0.0
@@ -644,18 +667,44 @@ def build_multimodal_dataset(
     )
     merged_df = _engineer_features(merged_df)
 
+    boundary_metadata_columns = [
+        column
+        for column in [
+            "boundary_label",
+            "boundary_label_available",
+            "boundary_extent_ratio",
+            "label_confidence",
+        ]
+        if column in merged_df.columns
+    ]
     numeric_columns = merged_df.select_dtypes(include=[np.number]).columns.tolist()
     drop_columns = []
     for column in numeric_columns:
+        if column in boundary_metadata_columns:
+            continue
         missing_ratio = float(merged_df[column].isna().mean())
         if missing_ratio >= 0.85:
             drop_columns.append(column)
     merged_df = merged_df.drop(columns=drop_columns)
 
     numeric_columns = merged_df.select_dtypes(include=[np.number]).columns.tolist()
-    merged_df[numeric_columns] = (
-        merged_df[numeric_columns].interpolate(limit_direction="both").ffill().bfill()
-    )
+    boundary_metadata_columns = [column for column in boundary_metadata_columns if column in numeric_columns]
+    interpolated_columns = [
+        column for column in numeric_columns if column not in boundary_metadata_columns
+    ]
+    if interpolated_columns:
+        merged_df[interpolated_columns] = (
+            merged_df[interpolated_columns]
+            .interpolate(limit_direction="both")
+            .ffill()
+            .bfill()
+        )
+    if "boundary_label_available" in merged_df.columns:
+        merged_df["boundary_label_available"] = (
+            pd.to_numeric(merged_df["boundary_label_available"], errors="coerce")
+            .fillna(0.0)
+            .clip(lower=0.0, upper=1.0)
+        )
 
     feature_columns = []
     for column in BASE_FEATURE_COLUMNS:

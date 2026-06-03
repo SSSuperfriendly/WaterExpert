@@ -1,6 +1,6 @@
 {
-  "water_source_path": "data\\raw\\wusongkou_water_quality_2586.csv",
-  "weather_source_path": "data\\raw\\shanghai_weather_daily.csv",
+  "water_source_path": "G:\\AI4S\\WaterExpert\\data\\raw\\wusongkou_water_quality_2586.csv",
+  "weather_source_path": "G:\\AI4S\\WaterExpert\\data\\raw\\shanghai_weather_daily.csv",
   "hydrodynamics_enabled": true,
   "hydrodynamics": {
     "source_xls": "data\\raw\\shanghai_hydrodynamics.xls",
@@ -39,8 +39,13 @@
   "ndti_enabled": false,
   "ndti": null,
   "boundary_labels": {
-    "enabled": false,
-    "status": "disabled"
+    "enabled": true,
+    "status": "loaded",
+    "source_path": "G:\\AI4S\\WaterExpert\\data\\raw\\wusongkou_boundary_labels.csv",
+    "labeled_days": 248,
+    "positive_days": 63,
+    "label_column": "boundary_label",
+    "extent_ratio_threshold": 0.5
   },
   "water_station": {
     "province": "上海市",
@@ -179,11 +184,12 @@
   ],
   "targets": [
     "turbidity",
-    "clearness_proxy"
+    "clearness_proxy",
+    "boundary_label"
   ],
   "notes": {
     "current_scope": "single-station multimodal daily prototype",
-    "boundary_detection_head": "supervision-ready interface implemented, waiting for raster/UAV boundary labels",
+    "boundary_detection_head": "supervision-ready interface implemented; boundary labels loaded for training",
     "spatial_graph": "implemented as a feature factor graph because only one numeric water-quality station is currently available"
   }
 }

@@ -34,8 +34,8 @@ sediment,wind,88.0
 wind,sediment,88.0
 nutrients,runoff,71.0
 runoff,nutrients,71.0
-water_quality,rainfall,70.0
 rainfall,water_quality,70.0
+water_quality,rainfall,70.0
 nutrients,sediment,68.0
 sediment,nutrients,68.0
 algae,algae,58.0
@@ -52,8 +52,8 @@ water_quality,runoff,23.0
 runoff,water_quality,23.0
 runoff,turbidity,19.0
 turbidity,runoff,19.0
-rainfall,wind,19.0
 wind,rainfall,19.0
+rainfall,wind,19.0
 flow,wind,17.0
 wind,flow,17.0
 wind,turbidity,17.0

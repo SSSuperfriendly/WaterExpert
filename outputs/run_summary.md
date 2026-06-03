@@ -27,22 +27,22 @@
 ```json
 {
   "mscim": {
-    "turbidity_r2": 0.7713,
-    "clearness_r2": 0.7301,
-    "turbidity_rmse": 25.6656,
-    "clearness_rmse": 0.0392
+    "turbidity_r2": 0.7291,
+    "clearness_r2": 0.6937,
+    "turbidity_rmse": 27.9327,
+    "clearness_rmse": 0.0418
   },
   "mscim_no_kg": {
-    "turbidity_r2": 0.7368,
-    "clearness_r2": 0.715,
-    "turbidity_rmse": 27.5365,
-    "clearness_rmse": 0.0403
+    "turbidity_r2": 0.5817,
+    "clearness_r2": 0.4995,
+    "turbidity_rmse": 34.7119,
+    "clearness_rmse": 0.0534
   },
   "cmfbe_stgcn": {
-    "turbidity_r2": 0.7037,
-    "clearness_r2": 0.7085,
-    "turbidity_rmse": 29.2135,
-    "clearness_rmse": 0.0408
+    "turbidity_r2": 0.7481,
+    "clearness_r2": 0.7016,
+    "turbidity_rmse": 26.9379,
+    "clearness_rmse": 0.0412
   },
   "ridge_window_baseline": {
     "turbidity_r2": -0.5739,
@@ -61,13 +61,13 @@
 
 ## 5. Main Driver Features
 
-- cmfbe_stgcn: dayofyear_sin (0.208), huangdu_water_level_m (0.126), nutrient_risk_index (0.056), huangdu_water_level_m_1d_diff (0.050), huangdu_flow_level_coupling (0.049)
-- mscim: dayofyear_sin (0.120), tn (0.091), conductivity (0.058), huangdu_flow_m3s_1d_diff (0.028), water_temp (0.025)
-- mscim_no_kg: songpu_water_level_m_3d_mean (0.136), tn (0.034), huangdu_water_level_m (0.034), dayofyear_cos (0.034), huangdu_flow_m3s_3d_mean (0.028)
+- cmfbe_stgcn: songpu_resuspension_potential (0.031), songpu_water_level_m_1d_diff (0.028), humidity (0.026), huangdu_flow_m3s (0.025), huangdu_flow_m3s_abs (0.025)
+- mscim: huangdu_flow_m3s_7d_mean (0.024), huangdu_flow_m3s (0.023), wind_speed (0.022), dayofyear_sin (0.022), songpu_flow_m3s_3d_mean (0.021)
+- mscim_no_kg: dayofyear_cos (0.024), conductivity_anomaly (0.022), songpu_resuspension_potential (0.021), songpu_flow_m3s_7d_mean (0.021), songpu_flow_m3s_1d_diff (0.021)
 
 ## 6. Current Boundaries
 
-- Boundary supervision: interface implemented, but no raster/UAV labels were loaded in this run.
+- Boundary supervision: 248 labeled days loaded from `G:\AI4S\WaterExpert\data\raw\wusongkou_boundary_labels.csv`.
 - The current graph is a single-station feature graph, not a multi-section river-network graph.
 - The physics component is a runnable source-sink surrogate, not a calibrated 2D hydrodynamic solver.
 - The self-purification failure and critical-transition outputs are empirical prototype risks, not physically calibrated failure probabilities.

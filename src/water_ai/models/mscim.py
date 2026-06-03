@@ -29,18 +29,30 @@ class FeatureGraphBlock(nn.Module):
 
 
 class BoundarySegmentationHead(nn.Module):
-    """Reserved interface only: current data has no raster boundary labels."""
+    """Boundary-state classifier over the temporal backbone representation."""
 
     def __init__(self, hidden_dim: int) -> None:
         super().__init__()
+        self.gate = nn.Sequential(
+            nn.Linear(hidden_dim * 3, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, hidden_dim),
+        )
         self.head = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.GELU(),
             nn.Linear(hidden_dim, 2),
         )
 
-    def forward(self, encoded_sequence: torch.Tensor) -> torch.Tensor:
-        return self.head(encoded_sequence.mean(dim=1))
+    def forward(
+        self,
+        encoded_sequence: torch.Tensor,
+        attention_pooled: torch.Tensor,
+        last_state: torch.Tensor,
+    ) -> torch.Tensor:
+        mean_state = encoded_sequence.mean(dim=1)
+        fused_state = torch.cat([attention_pooled, mean_state, last_state], dim=-1)
+        return self.head(self.gate(fused_state))
 
 
 class MSCIMPrototype(nn.Module):
@@ -220,5 +232,9 @@ class MSCIMPrototype(nn.Module):
             "critical_transition_prob": torch.sigmoid(critical_transition_logit),
         }
         if self.enable_boundary_head and self.boundary_head is not None:
-            output["boundary_logits"] = self.boundary_head(temporal_output)
+            output["boundary_logits"] = self.boundary_head(
+                temporal_output,
+                attention_pooled=attention_pooled,
+                last_state=temporal_output[:, -1, :],
+            )
         return output
