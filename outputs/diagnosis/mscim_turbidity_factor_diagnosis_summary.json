@@ -3,160 +3,160 @@
     {
       "feature": "dayofyear_sin",
       "feature_label": "年周期正弦分量",
-      "driver_score": 0.07638633368617814
-    },
-    {
-      "feature": "huangdu_flow_m3s_7d_mean",
-      "feature_label": "黄渡流量7日均值",
-      "driver_score": 0.041321787439064
-    },
-    {
-      "feature": "air_temp",
-      "feature_label": "气温",
-      "driver_score": 0.03659332528933073
-    },
-    {
-      "feature": "huangdu_water_level_m",
-      "feature_label": "黄渡水位",
-      "driver_score": 0.029464148439096196
-    },
-    {
-      "feature": "huangdu_flow_m3s_3d_mean",
-      "feature_label": "黄渡流量3日均值",
-      "driver_score": 0.0261399320430507
-    },
-    {
-      "feature": "nh3_n",
-      "feature_label": "氨氮",
-      "driver_score": 0.022478157631944076
-    },
-    {
-      "feature": "songpu_flow_rise_flag",
-      "feature_label": "松浦大桥流量上涨标记",
-      "driver_score": 0.021053799497009175
+      "driver_score": 1.5565332662612807
     },
     {
       "feature": "huangdu_water_level_m_3d_mean",
       "feature_label": "黄渡水位3日均值",
-      "driver_score": 0.02084221015178153
+      "driver_score": 0.07200536269532598
+    },
+    {
+      "feature": "huangdu_flow_m3s_7d_mean",
+      "feature_label": "黄渡流量7日均值",
+      "driver_score": 0.037821685834585325
     },
     {
       "feature": "songpu_flow_m3s_7d_mean",
       "feature_label": "松浦大桥流量7日均值",
-      "driver_score": 0.019875016918851306
+      "driver_score": 0.025835368843020304
     },
     {
-      "feature": "tp",
-      "feature_label": "总磷",
-      "driver_score": 0.01983953994235692
+      "feature": "songpu_water_level_m_3d_mean",
+      "feature_label": "松浦大桥水位3日均值",
+      "driver_score": 0.024785078966290355
+    },
+    {
+      "feature": "air_temp",
+      "feature_label": "气温",
+      "driver_score": 0.022317001553070124
+    },
+    {
+      "feature": "wind_dir_cos",
+      "feature_label": "风向余弦分量",
+      "driver_score": 0.020308982698659984
+    },
+    {
+      "feature": "huangdu_flow_m3s_3d_mean",
+      "feature_label": "黄渡流量3日均值",
+      "driver_score": 0.019608864087469712
+    },
+    {
+      "feature": "wind_dir_sin",
+      "feature_label": "风向正弦分量",
+      "driver_score": 0.01923148326750379
+    },
+    {
+      "feature": "humidity",
+      "feature_label": "相对湿度",
+      "driver_score": 0.01671088364167625
     }
   ],
   "top_inhibitor_features": [
     {
       "feature": "ph",
       "feature_label": "pH",
-      "inhibitor_score": 0.2528478214517236
-    },
-    {
-      "feature": "codmn",
-      "feature_label": "高锰酸盐指数",
-      "inhibitor_score": 0.04720931742137865
-    },
-    {
-      "feature": "huangdu_water_level_m_3d_mean",
-      "feature_label": "黄渡水位3日均值",
-      "inhibitor_score": 0.03568051654450676
-    },
-    {
-      "feature": "songpu_water_level_m_1d_diff",
-      "feature_label": "松浦大桥水位日变化",
-      "inhibitor_score": 0.030538648965459644
+      "inhibitor_score": 0.3125488005133103
     },
     {
       "feature": "conductivity",
       "feature_label": "电导率",
-      "inhibitor_score": 0.02506058436974063
+      "inhibitor_score": 0.29172570556503435
+    },
+    {
+      "feature": "tn",
+      "feature_label": "总氮",
+      "inhibitor_score": 0.04029391602115657
+    },
+    {
+      "feature": "huangdu_water_level_m_3d_mean",
+      "feature_label": "黄渡水位3日均值",
+      "inhibitor_score": 0.03927285775780152
     },
     {
       "feature": "songpu_flow_m3s_7d_mean",
       "feature_label": "松浦大桥流量7日均值",
-      "inhibitor_score": 0.020494381766816925
+      "inhibitor_score": 0.03484609743463807
     },
     {
       "feature": "air_temp",
       "feature_label": "气温",
-      "inhibitor_score": 0.01860197836978604
+      "inhibitor_score": 0.024002393611463838
     },
     {
-      "feature": "dissolved_oxygen",
-      "feature_label": "溶解氧",
-      "inhibitor_score": 0.016424736135851836
+      "feature": "songpu_water_level_m_3d_mean",
+      "feature_label": "松浦大桥水位3日均值",
+      "inhibitor_score": 0.01621499981664111
+    },
+    {
+      "feature": "songpu_water_level_m_1d_diff",
+      "feature_label": "松浦大桥水位日变化",
+      "inhibitor_score": 0.01575385047560659
+    },
+    {
+      "feature": "songpu_flow_m3s_3d_mean",
+      "feature_label": "松浦大桥流量3日均值",
+      "inhibitor_score": 0.015272850583365336
     },
     {
       "feature": "huangdu_water_level_m",
       "feature_label": "黄渡水位",
-      "inhibitor_score": 0.015339758875400192
-    },
-    {
-      "feature": "water_air_temp_gap",
-      "feature_label": "水气温差",
-      "inhibitor_score": 0.015124115212845778
+      "inhibitor_score": 0.014191044914775335
     }
   ],
   "top_driver_domains": [
     {
       "direction": "driver",
-      "domain": "flow",
-      "domain_label": "水动力过程",
-      "score": 0.3173569520866235
+      "domain": "rainfall",
+      "domain_label": "降雨过程",
+      "score": 1.6172113719976267
     },
     {
       "direction": "driver",
-      "domain": "rainfall",
-      "domain_label": "降雨过程",
-      "score": 0.16079848375956435
+      "domain": "flow",
+      "domain_label": "水动力过程",
+      "score": 0.32642546537390343
     },
     {
       "direction": "driver",
       "domain": "runoff",
       "domain_label": "径流输入",
-      "score": 0.14214428353312028
-    },
-    {
-      "direction": "driver",
-      "domain": "sediment",
-      "domain_label": "泥沙再悬浮",
-      "score": 0.07953866972949349
-    },
-    {
-      "direction": "driver",
-      "domain": "nutrients",
-      "domain_label": "营养盐负荷",
-      "score": 0.05293792014787829
+      "score": 0.1329192296235298
     },
     {
       "direction": "driver",
       "domain": "wind",
       "domain_label": "风场扰动",
-      "score": 0.05286423863963532
+      "score": 0.06186772515789214
+    },
+    {
+      "direction": "driver",
+      "domain": "sediment",
+      "domain_label": "泥沙再悬浮",
+      "score": 0.05400281671912264
     },
     {
       "direction": "driver",
       "domain": "self_purification",
       "domain_label": "自净沉降",
-      "score": 0.0320053709932559
+      "score": 0.04489820253998598
     },
     {
       "direction": "driver",
       "domain": "water_quality",
       "domain_label": "水质本底",
-      "score": 0.030138449936479763
+      "score": 0.02796654885530544
+    },
+    {
+      "direction": "driver",
+      "domain": "nutrients",
+      "domain_label": "营养盐负荷",
+      "score": 0.02510535059854113
     },
     {
       "direction": "driver",
       "domain": "agriculture",
       "domain_label": "农业面源",
-      "score": 0.007148960378601813
+      "score": 0.004417392852464336
     }
   ],
   "top_inhibitor_domains": [
@@ -164,55 +164,55 @@
       "direction": "inhibitor",
       "domain": "water_quality",
       "domain_label": "水质本底",
-      "score": 0.37912325087670423
+      "score": 0.6293318403820278
     },
     {
       "direction": "inhibitor",
       "domain": "flow",
       "domain_label": "水动力过程",
-      "score": 0.2542465856414834
-    },
-    {
-      "direction": "inhibitor",
-      "domain": "self_purification",
-      "domain_label": "自净沉降",
-      "score": 0.10042879206775979
-    },
-    {
-      "direction": "inhibitor",
-      "domain": "sediment",
-      "domain_label": "泥沙再悬浮",
-      "score": 0.05940115587288406
+      "score": 0.4969885081811905
     },
     {
       "direction": "inhibitor",
       "domain": "runoff",
       "domain_label": "径流输入",
-      "score": 0.05933927453963367
+      "score": 0.058950259806075024
     },
     {
       "direction": "inhibitor",
       "domain": "rainfall",
       "domain_label": "降雨过程",
-      "score": 0.042643745300823786
+      "score": 0.058244148613144
+    },
+    {
+      "direction": "inhibitor",
+      "domain": "self_purification",
+      "domain_label": "自净沉降",
+      "score": 0.05811403372969252
     },
     {
       "direction": "inhibitor",
       "domain": "nutrients",
       "domain_label": "营养盐负荷",
-      "score": 0.030159298615296353
+      "score": 0.046736936952673044
+    },
+    {
+      "direction": "inhibitor",
+      "domain": "sediment",
+      "domain_label": "泥沙再悬浮",
+      "score": 0.04008846581406112
     },
     {
       "direction": "inhibitor",
       "domain": "wind",
       "domain_label": "风场扰动",
-      "score": 0.025645046562391617
+      "score": 0.01811556089415203
     },
     {
       "direction": "inhibitor",
       "domain": "agriculture",
       "domain_label": "农业面源",
-      "score": 0.012441662147782905
+      "score": 0.004104110260137215
     }
   ]
 }

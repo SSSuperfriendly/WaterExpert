@@ -55,11 +55,13 @@ class MSCIMPrototype(nn.Module):
         transformer_layers: int,
         num_heads: int,
         dropout: float,
+        max_sequence_length: int = 32,
         enable_boundary_head: bool = True,
     ) -> None:
         super().__init__()
         self.num_features = num_features
         self.feature_index = feature_index
+        self.max_sequence_length = max_sequence_length
         self.register_buffer(
             "clearness_log_min", torch.tensor(float(clearness_log_min), dtype=torch.float32)
         )
@@ -68,6 +70,9 @@ class MSCIMPrototype(nn.Module):
         )
         self.graph_block = FeatureGraphBlock(adjacency)
         self.input_projection = nn.Linear(num_features, hidden_dim)
+        self.position_embedding = nn.Parameter(
+            torch.zeros(1, max_sequence_length, hidden_dim)
+        )
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=hidden_dim,
             nhead=num_heads,
@@ -78,6 +83,11 @@ class MSCIMPrototype(nn.Module):
         )
         self.temporal_encoder = nn.TransformerEncoder(
             encoder_layer, num_layers=transformer_layers
+        )
+        self.temporal_pooler = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.Tanh(),
+            nn.Linear(hidden_dim, 1),
         )
         self.dropout = nn.Dropout(dropout)
         self.causal_scorer = nn.Sequential(
@@ -121,6 +131,7 @@ class MSCIMPrototype(nn.Module):
         self.clearness_bias = nn.Parameter(torch.tensor(1.2))
         self.enable_boundary_head = enable_boundary_head
         self.boundary_head = BoundarySegmentationHead(hidden_dim) if enable_boundary_head else None
+        nn.init.normal_(self.position_embedding, mean=0.0, std=0.02)
 
     def derive_clearness_from_log_turbidity(self, log_turbidity: torch.Tensor) -> torch.Tensor:
         log_range = torch.clamp(self.clearness_log_max - self.clearness_log_min, min=1e-6)
@@ -129,10 +140,24 @@ class MSCIMPrototype(nn.Module):
 
     def forward(self, x: torch.Tensor, x_raw: torch.Tensor | None = None) -> dict[str, torch.Tensor]:
         graph_encoded = self.graph_block(x)
-        temporal_input = self.dropout(self.input_projection(graph_encoded))
+        seq_len = graph_encoded.size(1)
+        if seq_len > self.max_sequence_length:
+            raise ValueError(
+                f"Input sequence length {seq_len} exceeds max_sequence_length {self.max_sequence_length}."
+            )
+        temporal_input = self.input_projection(graph_encoded)
+        temporal_input = temporal_input + self.position_embedding[:, :seq_len, :]
+        temporal_input = self.dropout(temporal_input)
         temporal_output = self.temporal_encoder(temporal_input)
 
-        pooled_temporal = 0.5 * (temporal_output.mean(dim=1) + temporal_output[:, -1, :])
+        temporal_attention_scores = self.temporal_pooler(temporal_output).squeeze(-1)
+        temporal_attention = torch.softmax(temporal_attention_scores, dim=1)
+        attention_pooled = torch.sum(
+            temporal_output * temporal_attention.unsqueeze(-1), dim=1
+        )
+        pooled_temporal = (
+            attention_pooled + temporal_output.mean(dim=1) + temporal_output[:, -1, :]
+        ) / 3.0
         feature_summary = graph_encoded.mean(dim=1)
         causal_saliency = torch.softmax(self.causal_scorer(feature_summary), dim=-1)
         causal_context = feature_summary * causal_saliency
@@ -176,6 +201,7 @@ class MSCIMPrototype(nn.Module):
         output = {
             "graph_encoded": graph_encoded,
             "temporal_output": temporal_output,
+            "temporal_attention": temporal_attention,
             "latent": pooled_temporal,
             "causal_saliency": causal_saliency,
             "delta_gate": delta_gate,

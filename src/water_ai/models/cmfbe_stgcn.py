@@ -28,6 +28,7 @@ class CMFBE_STGCNPrototype(nn.Module):
         transformer_layers: int,
         num_heads: int,
         dropout: float,
+        max_sequence_length: int = 32,
     ) -> None:
         super().__init__()
         self.feature_index = feature_index
@@ -41,6 +42,7 @@ class CMFBE_STGCNPrototype(nn.Module):
             transformer_layers=transformer_layers,
             num_heads=num_heads,
             dropout=dropout,
+            max_sequence_length=max_sequence_length,
             enable_boundary_head=True,
         )
 
@@ -78,7 +80,12 @@ class CMFBE_STGCNPrototype(nn.Module):
         self.do_midpoint = nn.Parameter(torch.tensor(_inverse_softplus(6.0)))
         self.do_sharpness = nn.Parameter(torch.tensor(_inverse_softplus(0.80)))
 
-        self.fusion_logit = nn.Parameter(torch.tensor(0.65))
+        self.fusion_logit = nn.Parameter(torch.tensor(1.10))
+        self.fusion_gate = nn.Sequential(
+            nn.Linear(hidden_dim + 6, hidden_dim // 2),
+            nn.GELU(),
+            nn.Linear(hidden_dim // 2, 1),
+        )
 
     def _positive(self, parameter: torch.Tensor) -> torch.Tensor:
         return F.softplus(parameter)
@@ -328,7 +335,20 @@ class CMFBE_STGCNPrototype(nn.Module):
             physics_log_turbidity_pred
         )
 
-        fusion_ratio = torch.sigmoid(self.fusion_logit)
+        fusion_features = torch.cat(
+            [
+                backbone_output["latent"],
+                current_log_turbidity.unsqueeze(-1),
+                physics_delta_log_turbidity.unsqueeze(-1),
+                velocity_proxy.unsqueeze(-1),
+                bed_shear_proxy.unsqueeze(-1),
+                source_total.unsqueeze(-1),
+                sink_total.unsqueeze(-1),
+            ],
+            dim=-1,
+        )
+        fusion_adjustment = 0.35 * torch.tanh(self.fusion_gate(fusion_features).squeeze(-1))
+        fusion_ratio = torch.sigmoid(self.fusion_logit + fusion_adjustment)
         log_turbidity_pred = fusion_ratio * backbone_output["log_turbidity_pred"] + (
             1.0 - fusion_ratio
         ) * physics_log_turbidity_pred
@@ -352,7 +372,7 @@ class CMFBE_STGCNPrototype(nn.Module):
             "physics_log_turbidity_pred": physics_log_turbidity_pred,
             "physics_turbidity_pred": physics_turbidity_pred,
             "physics_clearness_pred": physics_clearness_pred,
-            "fusion_ratio": fusion_ratio.expand_as(turbidity_pred),
+            "fusion_ratio": fusion_ratio,
             "turbidity_pred": turbidity_pred,
             "log_turbidity_pred": log_turbidity_pred,
             "clearness_pred": clearness_pred,

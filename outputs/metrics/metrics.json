@@ -602,240 +602,240 @@
   "mscim": {
     "test": {
       "turbidity": {
-        "mae": 15.436107469641644,
-        "rmse": 25.54383770311932,
-        "r2": 0.7734934089420371,
-        "mape": 13.922631259668822
+        "mae": 16.405861481376316,
+        "rmse": 25.665633828309492,
+        "r2": 0.7713282373637965,
+        "mape": 14.76542887767518
       },
       "clearness": {
-        "mae": 0.023632913503957832,
-        "rmse": 0.03865542640852411,
-        "r2": 0.7379679168507771,
-        "mape": 8.49887012163144
+        "mae": 0.025485293696755947,
+        "rmse": 0.03923294545984422,
+        "r2": 0.730079815647407,
+        "mape": 9.128904752266209
       },
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.4797158114936041
+        "mean_predicted_probability": 0.4456480310662933
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.4678327425018601
+        "mean_predicted_probability": 0.5827274588139161
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5237034646713216
+        "mean_predicted_probability": 0.5223010810820953
       }
     },
     "train": {
       "turbidity": {
-        "mae": 15.704355804966045,
-        "rmse": 26.111007974922224,
-        "r2": 0.8809055124803801,
-        "mape": 35.83606787644442
+        "mae": 14.122487345439756,
+        "rmse": 24.36774784903417,
+        "r2": 0.8962769761769136,
+        "mape": 33.205498289167245
       },
       "clearness": {
-        "mae": 0.019868784749275472,
-        "rmse": 0.04440026820122985,
-        "r2": 0.7326876567601773,
-        "mape": 9.904287607505864
+        "mae": 0.01808037237725897,
+        "rmse": 0.043209226675391434,
+        "r2": 0.7468366619467208,
+        "mape": 8.084100833507241
       },
       "self_purification_failure": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.4782058152123394
+        "mean_predicted_probability": 0.4582748619409708
       },
       "turbidity_surge": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.45612290355130136
+        "mean_predicted_probability": 0.5753908352209971
       },
       "critical_transition": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.5118205018787303
+        "mean_predicted_probability": 0.5360180840023563
       }
     },
     "val": {
       "turbidity": {
-        "mae": 7.418471986213617,
-        "rmse": 9.841515632215344,
-        "r2": 0.8594986511448226,
-        "mape": 10.085440794126653
+        "mae": 7.100810093162334,
+        "rmse": 9.660386726889737,
+        "r2": 0.8646227943726684,
+        "mape": 9.620646688812496
       },
       "clearness": {
-        "mae": 0.01652605976678629,
-        "rmse": 0.022582319367534315,
-        "r2": 0.8423544500128064,
-        "mape": 4.600409697833486
+        "mae": 0.015750711470578625,
+        "rmse": 0.02205575569472611,
+        "r2": 0.8496205434486064,
+        "mape": 4.3879004433286894
       },
       "self_purification_failure": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.46155612922347755
+        "mean_predicted_probability": 0.45473946301283036
       },
       "turbidity_surge": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.467865337312749
+        "mean_predicted_probability": 0.5559202121422354
       },
       "critical_transition": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.5336494087117963
+        "mean_predicted_probability": 0.5400277703209261
       }
     }
   },
   "mscim_no_kg": {
     "test": {
       "turbidity": {
-        "mae": 15.810719863228176,
-        "rmse": 26.051146337223855,
-        "r2": 0.7644070834973021,
-        "mape": 15.049792261036632
+        "mae": 17.519665054653,
+        "rmse": 27.536537449180653,
+        "r2": 0.7367749538104382,
+        "mape": 15.148708647247727
       },
       "clearness": {
-        "mae": 0.02333800786215326,
-        "rmse": 0.03814752928650461,
-        "r2": 0.7448084069482299,
-        "mape": 8.137107812257668
+        "mae": 0.026756647164406983,
+        "rmse": 0.04031424180756957,
+        "r2": 0.7149962819869657,
+        "mape": 9.865433266529307
       },
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5287979475182035
+        "mean_predicted_probability": 0.49130261980968976
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.5270564614430718
+        "mean_predicted_probability": 0.49767386556967447
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.48848725660987524
+        "mean_predicted_probability": 0.5306387271570123
       }
     },
     "train": {
       "turbidity": {
-        "mae": 12.571336186976515,
-        "rmse": 22.041946517667547,
-        "r2": 0.9151319402080055,
-        "mape": 19.035043570303685
+        "mae": 15.71040070680981,
+        "rmse": 25.853386575789116,
+        "r2": 0.8832439845721178,
+        "mape": 32.64754288604285
       },
       "clearness": {
-        "mae": 0.01596084060187205,
-        "rmse": 0.03672206364088796,
-        "r2": 0.8171470447411958,
-        "mape": 7.021603372941292
+        "mae": 0.02005782059361983,
+        "rmse": 0.043795235254455014,
+        "r2": 0.7399232358367696,
+        "mape": 10.308859199689042
       },
       "self_purification_failure": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.524748251415216
+        "mean_predicted_probability": 0.48379955574488026
       },
       "turbidity_surge": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.5229490261811477
+        "mean_predicted_probability": 0.5117594111296866
       },
       "critical_transition": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.48738839349940294
+        "mean_predicted_probability": 0.5222240320892415
       }
     },
     "val": {
       "turbidity": {
-        "mae": 7.931016601292433,
-        "rmse": 10.675958316612808,
-        "r2": 0.8346629215603826,
-        "mape": 10.447589548234825
+        "mae": 7.139414829490459,
+        "rmse": 9.929617641411983,
+        "r2": 0.8569718335245207,
+        "mape": 9.619929617185324
       },
       "clearness": {
-        "mae": 0.016854845844538866,
-        "rmse": 0.02281260968220174,
-        "r2": 0.8391227752944845,
-        "mape": 4.74563434129819
+        "mae": 0.015864077395042486,
+        "rmse": 0.02274941779922069,
+        "r2": 0.8400128141449351,
+        "mape": 4.437829784242062
       },
       "self_purification_failure": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.5307479906926112
+        "mean_predicted_probability": 0.5002689369484387
       },
       "turbidity_surge": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.5242429710594954
+        "mean_predicted_probability": 0.4963557981284319
       },
       "critical_transition": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.48846530650569275
+        "mean_predicted_probability": 0.533966624631291
       }
     }
   },
   "cmfbe_stgcn": {
     "test": {
       "turbidity": {
-        "mae": 18.599775604579758,
-        "rmse": 28.87172461965596,
-        "r2": 0.7106296663211813,
-        "mape": 17.076828454076594
+        "mae": 19.128945931144383,
+        "rmse": 29.213460377745772,
+        "r2": 0.703738950290987,
+        "mape": 16.502236635114137
       },
       "clearness": {
-        "mae": 0.027366485608660656,
-        "rmse": 0.040306286637137194,
-        "r2": 0.7151087499065678,
-        "mape": 9.816447305819363
+        "mae": 0.02823369043028873,
+        "rmse": 0.0407697737355597,
+        "r2": 0.7085190775772029,
+        "mape": 10.463629543911502
       },
       "self_purification_failure": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.12576241979031297
+        "mean_predicted_probability": 0.13957284270208734
       },
       "turbidity_surge": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.1263680475290723
+        "mean_predicted_probability": 0.14141071984372305
       },
       "critical_transition": {
         "event_rate": 0.21739130434782608,
-        "mean_predicted_probability": 0.126913522104429
+        "mean_predicted_probability": 0.1350329651607393
       }
     },
     "train": {
       "turbidity": {
-        "mae": 13.930938982683369,
-        "rmse": 24.11206685495649,
-        "r2": 0.8984422049142402,
-        "mape": 25.041383248683687
+        "mae": 14.043543400545406,
+        "rmse": 23.406502455062807,
+        "r2": 0.9042987892469607,
+        "mape": 26.287234434164002
       },
       "clearness": {
-        "mae": 0.018067765676488098,
-        "rmse": 0.04132887541009803,
-        "r2": 0.7683912291050723,
-        "mape": 7.59359458659295
+        "mae": 0.018085138520034842,
+        "rmse": 0.04056227243966663,
+        "r2": 0.7769036929868586,
+        "mape": 9.0648304308492
       },
       "self_purification_failure": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.13754652979739934
+        "mean_predicted_probability": 0.14601477718573516
       },
       "turbidity_surge": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.1383584260718666
+        "mean_predicted_probability": 0.14544586179327493
       },
       "critical_transition": {
         "event_rate": 0.16666666666666666,
-        "mean_predicted_probability": 0.13848790935584956
+        "mean_predicted_probability": 0.14612700798786066
       }
     },
     "val": {
       "turbidity": {
-        "mae": 10.503508745041568,
-        "rmse": 13.845602792615157,
-        "r2": 0.7219132753992576,
-        "mape": 14.475752087933735
+        "mae": 8.684000943614318,
+        "rmse": 11.662991928131424,
+        "r2": 0.8026775630328795,
+        "mape": 11.37477386463108
       },
       "clearness": {
-        "mae": 0.022303793810110176,
-        "rmse": 0.029559568925084583,
-        "r2": 0.7298899031979258,
-        "mape": 6.152937315981395
+        "mae": 0.019100581122710642,
+        "rmse": 0.02591175037570333,
+        "r2": 0.7924426447058395,
+        "mape": 5.414912648887877
       },
       "self_purification_failure": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.10217273280959972
+        "mean_predicted_probability": 0.13828352867394883
       },
       "turbidity_surge": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.10623953874280627
+        "mean_predicted_probability": 0.14057480403638353
       },
       "critical_transition": {
         "event_rate": 0.1592920353982301,
-        "mean_predicted_probability": 0.1033179257590472
+        "mean_predicted_probability": 0.13608076002611572
       }
     }
   },

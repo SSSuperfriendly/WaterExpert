@@ -39,11 +39,11 @@ The all-station database is included as a processed data foundation, but the enh
 
 ## Model Components
 
-- `MSCIM`: primary prediction and diagnosis model for turbidity, clearness proxy, and dominant driver attribution.
+- `MSCIM`: primary prediction and diagnosis model for turbidity, clearness proxy, and dominant driver attribution, built around a feature-graph prior plus a position-aware temporal Transformer encoder.
 - `MSCIM-NoKG`: ablation model that removes knowledge-graph priors by using an identity adjacency matrix.
-- `CMFBE-ST-GCN`: mechanism-aware model that adds explicit daily source/sink surrogate terms for runoff, resuspension, tidal trapping, biological growth proxy, deposition/flocculation, flushing/export, and self-purification.
+- `CMFBE-ST-GCN`: mechanism-aware hybrid prototype that reuses the MSCIM temporal backbone and adds explicit daily source/sink surrogate terms for runoff, resuspension, tidal trapping, biological growth proxy, deposition/flocculation, flushing/export, and self-purification.
 
-CMFBE-ST-GCN is a daily empirical mechanism surrogate. Its process terms improve interpretability, but they should not be interpreted as calibrated physical parameters from a 2D hydrodynamic model.
+CMFBE-ST-GCN is a daily empirical mechanism surrogate. Its process terms improve interpretability, but they should not be interpreted as calibrated physical parameters from a 2D hydrodynamic model, and its current graph is still a single-station feature graph rather than a multi-section river-network graph.
 
 ## Baseline Results
 

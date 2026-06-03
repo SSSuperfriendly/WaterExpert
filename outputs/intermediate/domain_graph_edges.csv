@@ -1,4 +1,4 @@
-source_domain,target_domain,weight
+﻿source_domain,target_domain,weight
 sediment,sediment,6146.0
 flow,flow,3908.0
 rainfall,rainfall,3086.0
@@ -26,8 +26,8 @@ turbidity,rainfall,127.0
 rainfall,turbidity,127.0
 sediment,runoff,108.0
 runoff,sediment,108.0
-turbidity,flow,98.0
 flow,turbidity,98.0
+turbidity,flow,98.0
 nutrients,flow,97.0
 flow,nutrients,97.0
 sediment,wind,88.0
@@ -40,8 +40,8 @@ nutrients,sediment,68.0
 sediment,nutrients,68.0
 algae,algae,58.0
 self_purification,self_purification,38.0
-nutrients,water_quality,37.0
 water_quality,nutrients,37.0
+nutrients,water_quality,37.0
 water_quality,sediment,36.0
 sediment,water_quality,36.0
 water_quality,flow,31.0
@@ -50,8 +50,8 @@ water_quality,turbidity,30.0
 turbidity,water_quality,30.0
 water_quality,runoff,23.0
 runoff,water_quality,23.0
-runoff,turbidity,19.0
 turbidity,runoff,19.0
+runoff,turbidity,19.0
 rainfall,wind,19.0
 wind,rainfall,19.0
 flow,wind,17.0

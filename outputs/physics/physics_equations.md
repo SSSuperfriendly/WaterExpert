@@ -58,39 +58,39 @@ The current runnable prototype still uses a single-station daily surrogate, but 
 
 `Clearness_t+1 = 1 - (log(1 + Turbidity_t+1) - log_turbidity_min) / (log_turbidity_max - log_turbidity_min)`
 
-The final prediction blends the data-driven branch and the physics-guided branch with fusion ratio `0.664`.
+The final prediction blends the data-driven branch and the physics-guided branch with fusion ratio `0.754`.
 
 ## 3. Learned mechanism parameters
 
 ```json
 {
-  "velocity_flow_scale": 0.197314,
-  "velocity_aux_flow_scale": 0.066356,
-  "velocity_depth_scale": 0.320090,
-  "shear_flow_scale": 0.222844,
-  "shear_wind_scale": 0.070684,
-  "shear_stage_scale": 0.061881,
-  "erosion_threshold": 0.822389,
-  "deposition_threshold": 1.270773,
-  "erosion_coeff": 0.159638,
-  "runoff_coeff": 0.169449,
-  "tidal_coeff": 0.124019,
-  "bloom_coeff": 0.090542,
-  "deposition_coeff": 0.203861,
-  "flushing_coeff": 0.240946,
-  "purification_coeff": 0.117528,
-  "floc_coeff": 0.249714,
-  "temp_optimum": 21.970713,
-  "temp_width": 6.909165,
-  "n_half_sat": 1.065167,
-  "p_half_sat": 0.054094,
-  "light_threshold": 0.494539,
-  "light_sharpness": 3.992219,
-  "flow_optimum": 0.881510,
-  "flow_width": 0.424474,
-  "do_midpoint": 5.873680,
-  "do_sharpness": 0.775221,
-  "fusion_ratio": 0.663786
+  "velocity_flow_scale": 0.197428,
+  "velocity_aux_flow_scale": 0.066514,
+  "velocity_depth_scale": 0.318309,
+  "shear_flow_scale": 0.216712,
+  "shear_wind_scale": 0.067986,
+  "shear_stage_scale": 0.059292,
+  "erosion_threshold": 0.844066,
+  "deposition_threshold": 1.281661,
+  "erosion_coeff": 0.154295,
+  "runoff_coeff": 0.156840,
+  "tidal_coeff": 0.120171,
+  "bloom_coeff": 0.087615,
+  "deposition_coeff": 0.210646,
+  "flushing_coeff": 0.241172,
+  "purification_coeff": 0.115694,
+  "floc_coeff": 0.258351,
+  "temp_optimum": 21.955864,
+  "temp_width": 6.885683,
+  "n_half_sat": 1.076054,
+  "p_half_sat": 0.056312,
+  "light_threshold": 0.510415,
+  "light_sharpness": 3.999662,
+  "flow_optimum": 0.861092,
+  "flow_width": 0.416389,
+  "do_midpoint": 5.838995,
+  "do_sharpness": 0.732163,
+  "fusion_ratio": 0.753797
 }
 ```
 

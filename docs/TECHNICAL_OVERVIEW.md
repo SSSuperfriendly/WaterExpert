@@ -28,6 +28,8 @@ MSCIM is the main prediction and diagnosis model. It uses time-window features, 
 - dominant turbidity-driver ranking;
 - single-station diagnostic summaries.
 
+The current temporal encoder is now position-aware rather than order-agnostic: each historical day receives an explicit temporal position embedding before Transformer encoding, and the final temporal representation uses attention-weighted pooling together with global mean and last-step context.
+
 ### MSCIM-NoKG
 
 MSCIM-NoKG is an ablation model. It keeps the same model structure but replaces the knowledge-prior adjacency with an identity matrix. It is used to estimate the contribution of the knowledge graph.
@@ -40,7 +42,7 @@ CMFBE-ST-GCN is the mechanism-aware process model. It shares the MSCIM backbone 
 - sink terms: deposition/flocculation, flushing/export, self-purification;
 - physical consistency: daily source-minus-sink balance, sign consistency, and threshold-response regularization.
 
-This is a daily empirical mechanism surrogate, not a calibrated 2D hydrodynamic PDE solver.
+This is a daily empirical mechanism surrogate, not a calibrated 2D hydrodynamic PDE solver. Despite the retained project name, its current graph structure is still a single-station feature graph rather than a fully realized multi-section spatiotemporal graph-convolution model.
 
 ## Current Metrics
 

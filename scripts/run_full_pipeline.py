@@ -790,6 +790,7 @@ def main() -> None:
         "transformer_layers": int(config["model"]["transformer_layers"]),
         "num_heads": int(config["model"]["num_heads"]),
         "dropout": float(config["model"]["dropout"]),
+        "max_sequence_length": int(config["history_days"]),
     }
     no_kg_kwargs = {
         **model_kwargs,

@@ -27,22 +27,22 @@
 ```json
 {
   "mscim": {
-    "turbidity_r2": 0.7735,
-    "clearness_r2": 0.738,
-    "turbidity_rmse": 25.5438,
-    "clearness_rmse": 0.0387
+    "turbidity_r2": 0.7713,
+    "clearness_r2": 0.7301,
+    "turbidity_rmse": 25.6656,
+    "clearness_rmse": 0.0392
   },
   "mscim_no_kg": {
-    "turbidity_r2": 0.7644,
-    "clearness_r2": 0.7448,
-    "turbidity_rmse": 26.0511,
-    "clearness_rmse": 0.0381
+    "turbidity_r2": 0.7368,
+    "clearness_r2": 0.715,
+    "turbidity_rmse": 27.5365,
+    "clearness_rmse": 0.0403
   },
   "cmfbe_stgcn": {
-    "turbidity_r2": 0.7106,
-    "clearness_r2": 0.7151,
-    "turbidity_rmse": 28.8717,
-    "clearness_rmse": 0.0403
+    "turbidity_r2": 0.7037,
+    "clearness_r2": 0.7085,
+    "turbidity_rmse": 29.2135,
+    "clearness_rmse": 0.0408
   },
   "ridge_window_baseline": {
     "turbidity_r2": -0.5739,
@@ -61,9 +61,9 @@
 
 ## 5. Main Driver Features
 
-- cmfbe_stgcn: tn (0.131), dayofyear_sin (0.046), huangdu_water_level_m_1d_diff (0.043), songpu_water_level_m_1d_diff (0.037), huangdu_water_level_m_3d_mean (0.034)
-- mscim: songpu_flow_m3s_1d_diff (0.031), songpu_flow_rise_flag (0.026), huangdu_flow_m3s_7d_mean (0.024), huangdu_water_level_m (0.023), songpu_flow_m3s_3d_mean (0.023)
-- mscim_no_kg: tn (0.362), dayofyear_cos (0.148), runoff_sediment_pulse (0.024), songpu_water_level_m_3d_mean (0.017), dayofyear_sin (0.017)
+- cmfbe_stgcn: dayofyear_sin (0.208), huangdu_water_level_m (0.126), nutrient_risk_index (0.056), huangdu_water_level_m_1d_diff (0.050), huangdu_flow_level_coupling (0.049)
+- mscim: dayofyear_sin (0.120), tn (0.091), conductivity (0.058), huangdu_flow_m3s_1d_diff (0.028), water_temp (0.025)
+- mscim_no_kg: songpu_water_level_m_3d_mean (0.136), tn (0.034), huangdu_water_level_m (0.034), dayofyear_cos (0.034), huangdu_flow_m3s_3d_mean (0.028)
 
 ## 6. Current Boundaries
 

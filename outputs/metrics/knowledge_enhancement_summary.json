@@ -1,16 +1,16 @@
 {
   "kg_ablation_test_delta": {
-    "turbidity_r2_gain": 0.009086325444734977,
-    "clearness_r2_gain": -0.0068404900974528005,
-    "turbidity_rmse_change": -0.5073086341045361,
-    "clearness_rmse_change": 0.0005078971220194989
+    "turbidity_r2_gain": 0.034553283553358294,
+    "clearness_r2_gain": 0.01508353366044124,
+    "turbidity_rmse_change": -1.870903620871161,
+    "clearness_rmse_change": -0.001081296347725344
   },
   "vs_ridge_test_delta": {
-    "turbidity_r2_gain": 1.3473881205640665,
-    "clearness_r2_gain": 2.0322938892059312
+    "turbidity_r2_gain": 1.345222948985826,
+    "clearness_r2_gain": 2.0244057880025608
   },
   "vs_persistence_test_delta": {
-    "turbidity_r2_gain": 0.08544188749328407,
-    "clearness_r2_gain": 0.08569874995704718
+    "turbidity_r2_gain": 0.08327671591504349,
+    "clearness_r2_gain": 0.07781064875367705
   }
 }

@@ -111,7 +111,7 @@
       "scenario": "external_input",
       "risk_band": "high",
       "primary_score": 1.1864,
-      "predicted_critical_transition_prob": 0.7126,
+      "predicted_critical_transition_prob": 0.8854,
       "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (203.4 mm); flushing potential remained below empirical threshold (2.689)",
       "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
       "monitoring_targets": [
@@ -125,8 +125,8 @@
       "target_date": "2024-09-20",
       "scenario": "external_input",
       "risk_band": "high",
-      "primary_score": 1.1342,
-      "predicted_critical_transition_prob": 0.0065,
+      "primary_score": 1.1344,
+      "predicted_critical_transition_prob": 0.0133,
       "evidence_summary": "3-day precipitation exceeded threshold (70.5 mm); 7-day precipitation exceeded threshold (141.6 mm); air temperature exceeded warm threshold (27.4 degC); flushing potential remained below empirical threshold (1.492)",
       "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
       "monitoring_targets": [
@@ -140,24 +140,9 @@
       "target_date": "2024-11-29",
       "scenario": "internal_release",
       "risk_band": "high",
-      "primary_score": 1.1314,
-      "predicted_critical_transition_prob": 0.1113,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.421); resuspension potential exceeded empirical threshold (1176.0); flushing potential was strong (8.026)",
-      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
-      "monitoring_targets": [
-        "bed_shear_proxy",
-        "songpu_resuspension_potential",
-        "erosion_source",
-        "songpu_flushing_potential"
-      ]
-    },
-    {
-      "target_date": "2024-09-13",
-      "scenario": "internal_release",
-      "risk_band": "high",
-      "primary_score": 1.1052,
-      "predicted_critical_transition_prob": 0.0029,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.406); resuspension potential exceeded empirical threshold (1688.4); air temperature exceeded warm threshold (29.8 degC); flushing potential was strong (21.309)",
+      "primary_score": 1.1227,
+      "predicted_critical_transition_prob": 0.1863,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.410); resuspension potential exceeded empirical threshold (1176.0); flushing potential was strong (8.026)",
       "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
       "monitoring_targets": [
         "bed_shear_proxy",
@@ -170,8 +155,8 @@
       "target_date": "2024-11-02",
       "scenario": "external_input",
       "risk_band": "high",
-      "primary_score": 1.1023,
-      "predicted_critical_transition_prob": 0.3309,
+      "primary_score": 1.1113,
+      "predicted_critical_transition_prob": 0.3995,
       "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (178.2 mm); resuspension potential exceeded empirical threshold (2630.2); flushing potential was strong (9.223)",
       "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
       "monitoring_targets": [
@@ -182,12 +167,27 @@
       ]
     },
     {
+      "target_date": "2024-09-13",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.0965,
+      "predicted_critical_transition_prob": 0.0057,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.395); resuspension potential exceeded empirical threshold (1688.4); air temperature exceeded warm threshold (29.8 degC); flushing potential was strong (21.309)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
       "target_date": "2024-11-28",
       "scenario": "internal_release",
       "risk_band": "high",
-      "primary_score": 1.0749,
-      "predicted_critical_transition_prob": 0.1131,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.393); resuspension potential exceeded empirical threshold (1253.2); flushing potential was strong (10.515)",
+      "primary_score": 1.0668,
+      "predicted_critical_transition_prob": 0.5582,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.382); resuspension potential exceeded empirical threshold (1253.2); flushing potential was strong (10.515)",
       "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
       "monitoring_targets": [
         "bed_shear_proxy",
@@ -200,24 +200,9 @@
       "target_date": "2024-11-26",
       "scenario": "internal_release",
       "risk_band": "high",
-      "primary_score": 1.0679,
-      "predicted_critical_transition_prob": 0.0269,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.397); resuspension potential exceeded empirical threshold (886.8); flushing potential was strong (10.170)",
-      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
-      "monitoring_targets": [
-        "bed_shear_proxy",
-        "songpu_resuspension_potential",
-        "erosion_source",
-        "songpu_flushing_potential"
-      ]
-    },
-    {
-      "target_date": "2024-10-25",
-      "scenario": "internal_release",
-      "risk_band": "high",
-      "primary_score": 1.031,
-      "predicted_critical_transition_prob": 0.0025,
-      "evidence_summary": "bed shear proxy exceeded threshold (0.388); resuspension potential exceeded empirical threshold (1075.6); flushing potential was strong (11.453)",
+      "primary_score": 1.0595,
+      "predicted_critical_transition_prob": 0.0128,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.386); resuspension potential exceeded empirical threshold (886.8); flushing potential was strong (10.170)",
       "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
       "monitoring_targets": [
         "bed_shear_proxy",
@@ -230,8 +215,8 @@
       "target_date": "2024-10-31",
       "scenario": "external_input",
       "risk_band": "high",
-      "primary_score": 1.026,
-      "predicted_critical_transition_prob": 0.6137,
+      "primary_score": 1.029,
+      "predicted_critical_transition_prob": 0.8446,
       "evidence_summary": "3-day precipitation exceeded threshold (111.8 mm); 7-day precipitation exceeded threshold (158.6 mm); flushing potential was strong (4.477)",
       "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
       "monitoring_targets": [
@@ -242,12 +227,27 @@
       ]
     },
     {
+      "target_date": "2024-10-25",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.0229,
+      "predicted_critical_transition_prob": 0.0014,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.378); resuspension potential exceeded empirical threshold (1075.6); flushing potential was strong (11.453)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
       "target_date": "2024-11-03",
       "scenario": "external_input",
       "risk_band": "high",
-      "primary_score": 1.0238,
-      "predicted_critical_transition_prob": 0.0249,
-      "evidence_summary": "3-day precipitation exceeded threshold (49.1 mm); 7-day precipitation exceeded threshold (160.9 mm); bed shear proxy exceeded threshold (0.368); resuspension potential exceeded empirical threshold (1201.8)",
+      "primary_score": 1.0223,
+      "predicted_critical_transition_prob": 0.0057,
+      "evidence_summary": "3-day precipitation exceeded threshold (49.1 mm); 7-day precipitation exceeded threshold (160.9 mm); resuspension potential exceeded empirical threshold (1201.8); flushing potential was strong (12.822)",
       "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
       "monitoring_targets": [
         "3-day cumulative precipitation",
@@ -310,7 +310,7 @@
     {
       "feature": "velocity_proxy",
       "agent_label": "hydrodynamic velocity proxy",
-      "threshold": 1.1005995273590088,
+      "threshold": 1.1011903285980225,
       "unit": "dimensionless",
       "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
     }
