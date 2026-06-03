@@ -1,0 +1,328 @@
+{
+  "artifact_name": "agent_response_playbook",
+  "scope": "wusongkou_daily_prototype",
+  "purpose": "Scenario-conditioned recommendation prototype for agent reasoning, follow-up monitoring, and guarded response drafting.",
+  "prototype_status": "Deterministic playbook derived from empirical scenario triage and threshold artifacts. It is an agent-facing recommendation scaffold, not a trained RL-TGRR policy.",
+  "scenario_response_playbook": {
+    "external_input": {
+      "scenario_definition": "Rainfall-runoff dominated turbidity stress, usually expressed as elevated cumulative precipitation together with stronger runoff-driven source loading.",
+      "occurrence_count": 9,
+      "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+      "recommended_actions": [
+        "Prioritize storm-event sampling, upstream inflow checks, and external-loading verification.",
+        "Track whether cumulative rainfall and runoff proxies remain above empirical stress levels over the next 1 to 3 days.",
+        "Review drainage, interception, or source-control records before attributing changes to in-channel restoration effects."
+      ],
+      "monitoring_targets": [
+        "3-day cumulative precipitation",
+        "7-day cumulative precipitation",
+        "runoff_source",
+        "predicted_turbidity_surge_prob"
+      ],
+      "required_follow_up_data": [
+        "event-scale inflow and suspended-sediment observations",
+        "upstream discharge or drainage-operation records",
+        "storm-linked pollutant and sediment loading observations"
+      ],
+      "forbidden_claims": [
+        "Do not claim rainfall alone determines the full turbidity response.",
+        "Do not claim intervention effectiveness without event-scale before/after evidence."
+      ]
+    },
+    "internal_release": {
+      "scenario_definition": "Hydrodynamic resuspension dominated stress, usually expressed as stronger bed shear, resuspension potential, and erosion-related source terms.",
+      "occurrence_count": 66,
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "recommended_actions": [
+        "Prioritize bed-shear, resuspension, and hydraulic disturbance checks near the affected reach.",
+        "Review whether strong flushing coincides with internal release, because export can mask short-term resuspension stress.",
+        "Flag the case for sediment-state inspection before recommending engineering disturbance controls."
+      ],
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ],
+      "required_follow_up_data": [
+        "near-bed suspended sediment and grain-size observations",
+        "cross-section velocity and depth measurements",
+        "ship traffic, dredging, or channel-disturbance records"
+      ],
+      "forbidden_claims": [
+        "Do not claim critical shear-stress exceedance has been physically calibrated.",
+        "Do not prescribe sediment engineering actions without direct sediment-state evidence."
+      ]
+    },
+    "algal_dominant": {
+      "scenario_definition": "Warm, nutrient-sensitive biological turbidity stress, usually expressed as elevated temperature together with stronger phytoplankton-growth proxy contributions.",
+      "occurrence_count": 14,
+      "response_focus": "check ecological amplification and weakened self-purification support",
+      "recommended_actions": [
+        "Prioritize warm-period nutrient and chlorophyll-linked checks before interpreting the case as purely hydraulic.",
+        "Review whether weak self-purification support coincides with elevated phytoplankton-related process contribution.",
+        "Treat the case as a biological-turbidity hypothesis that needs ecological confirmation rather than a verified bloom diagnosis."
+      ],
+      "monitoring_targets": [
+        "air_temp",
+        "phytoplankton_source",
+        "nutrient_risk_index",
+        "self_purification_index"
+      ],
+      "required_follow_up_data": [
+        "chlorophyll-a or phytoplankton biomass observations",
+        "nutrient speciation and dissolved oxygen observations",
+        "ecological field notes for warm-period bloom or decay conditions"
+      ],
+      "forbidden_claims": [
+        "Do not claim a bloom event has been directly observed from the current prototype outputs.",
+        "Do not recommend ecological intervention without supporting biological measurements."
+      ]
+    },
+    "chronic_composite": {
+      "scenario_definition": "Mixed or persistent compound stress, usually expressed as multiple moderate drivers, weaker self-purification support, and no single dominant forcing mode.",
+      "occurrence_count": 3,
+      "response_focus": "treat the case as multi-driver chronic stress requiring broader review",
+      "recommended_actions": [
+        "Escalate the case for compound-driver review rather than attributing it to a single dominant cause.",
+        "Check whether repeated threshold proximity, high auxiliary risk, and weak purification support persist across consecutive days.",
+        "Use this class to trigger broader data collection and analyst review instead of narrow one-factor responses."
+      ],
+      "monitoring_targets": [
+        "predicted_critical_transition_prob",
+        "predicted_self_purification_failure_prob",
+        "self_purification_index",
+        "songpu_flushing_potential"
+      ],
+      "required_follow_up_data": [
+        "multi-day multi-factor field observations",
+        "intervention and management log records",
+        "broader multi-station or spatial observations for persistent stress tracing"
+      ],
+      "forbidden_claims": [
+        "Do not collapse chronic composite cases into one-factor narratives without additional evidence.",
+        "Do not claim an optimal governance policy exists from the current prototype outputs."
+      ]
+    }
+  },
+  "prioritized_cases": [
+    {
+      "target_date": "2024-11-01",
+      "scenario": "external_input",
+      "risk_band": "high",
+      "primary_score": 1.1864,
+      "predicted_critical_transition_prob": 0.7126,
+      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (203.4 mm); flushing potential remained below empirical threshold (2.689)",
+      "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+      "monitoring_targets": [
+        "3-day cumulative precipitation",
+        "7-day cumulative precipitation",
+        "runoff_source",
+        "predicted_turbidity_surge_prob"
+      ]
+    },
+    {
+      "target_date": "2024-09-20",
+      "scenario": "external_input",
+      "risk_band": "high",
+      "primary_score": 1.1342,
+      "predicted_critical_transition_prob": 0.0065,
+      "evidence_summary": "3-day precipitation exceeded threshold (70.5 mm); 7-day precipitation exceeded threshold (141.6 mm); air temperature exceeded warm threshold (27.4 degC); flushing potential remained below empirical threshold (1.492)",
+      "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+      "monitoring_targets": [
+        "3-day cumulative precipitation",
+        "7-day cumulative precipitation",
+        "runoff_source",
+        "predicted_turbidity_surge_prob"
+      ]
+    },
+    {
+      "target_date": "2024-11-29",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.1314,
+      "predicted_critical_transition_prob": 0.1113,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.421); resuspension potential exceeded empirical threshold (1176.0); flushing potential was strong (8.026)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
+      "target_date": "2024-09-13",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.1052,
+      "predicted_critical_transition_prob": 0.0029,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.406); resuspension potential exceeded empirical threshold (1688.4); air temperature exceeded warm threshold (29.8 degC); flushing potential was strong (21.309)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
+      "target_date": "2024-11-02",
+      "scenario": "external_input",
+      "risk_band": "high",
+      "primary_score": 1.1023,
+      "predicted_critical_transition_prob": 0.3309,
+      "evidence_summary": "3-day precipitation exceeded threshold (160.9 mm); 7-day precipitation exceeded threshold (178.2 mm); resuspension potential exceeded empirical threshold (2630.2); flushing potential was strong (9.223)",
+      "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+      "monitoring_targets": [
+        "3-day cumulative precipitation",
+        "7-day cumulative precipitation",
+        "runoff_source",
+        "predicted_turbidity_surge_prob"
+      ]
+    },
+    {
+      "target_date": "2024-11-28",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.0749,
+      "predicted_critical_transition_prob": 0.1131,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.393); resuspension potential exceeded empirical threshold (1253.2); flushing potential was strong (10.515)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
+      "target_date": "2024-11-26",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.0679,
+      "predicted_critical_transition_prob": 0.0269,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.397); resuspension potential exceeded empirical threshold (886.8); flushing potential was strong (10.170)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
+      "target_date": "2024-10-25",
+      "scenario": "internal_release",
+      "risk_band": "high",
+      "primary_score": 1.031,
+      "predicted_critical_transition_prob": 0.0025,
+      "evidence_summary": "bed shear proxy exceeded threshold (0.388); resuspension potential exceeded empirical threshold (1075.6); flushing potential was strong (11.453)",
+      "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+      "monitoring_targets": [
+        "bed_shear_proxy",
+        "songpu_resuspension_potential",
+        "erosion_source",
+        "songpu_flushing_potential"
+      ]
+    },
+    {
+      "target_date": "2024-10-31",
+      "scenario": "external_input",
+      "risk_band": "high",
+      "primary_score": 1.026,
+      "predicted_critical_transition_prob": 0.6137,
+      "evidence_summary": "3-day precipitation exceeded threshold (111.8 mm); 7-day precipitation exceeded threshold (158.6 mm); flushing potential was strong (4.477)",
+      "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+      "monitoring_targets": [
+        "3-day cumulative precipitation",
+        "7-day cumulative precipitation",
+        "runoff_source",
+        "predicted_turbidity_surge_prob"
+      ]
+    },
+    {
+      "target_date": "2024-11-03",
+      "scenario": "external_input",
+      "risk_band": "high",
+      "primary_score": 1.0238,
+      "predicted_critical_transition_prob": 0.0249,
+      "evidence_summary": "3-day precipitation exceeded threshold (49.1 mm); 7-day precipitation exceeded threshold (160.9 mm); bed shear proxy exceeded threshold (0.368); resuspension potential exceeded empirical threshold (1201.8)",
+      "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+      "monitoring_targets": [
+        "3-day cumulative precipitation",
+        "7-day cumulative precipitation",
+        "runoff_source",
+        "predicted_turbidity_surge_prob"
+      ]
+    }
+  ],
+  "threshold_digest": [
+    {
+      "feature": "precipitation_3d",
+      "agent_label": "3-day cumulative precipitation",
+      "threshold": 49.1,
+      "unit": "mm",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "songpu_flushing_potential",
+      "agent_label": "Songpu flushing potential",
+      "threshold": 3.645621972305595,
+      "unit": "proxy",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "huangdu_flow_m3s_abs",
+      "agent_label": "Huangdu absolute flow",
+      "threshold": 22.9,
+      "unit": "m3/s",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "precipitation_7d",
+      "agent_label": "7-day cumulative precipitation",
+      "threshold": 141.6,
+      "unit": "mm",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "songpu_flow_m3s_abs",
+      "agent_label": "Songpu absolute flow",
+      "threshold": 878.0,
+      "unit": "m3/s",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "songpu_resuspension_potential",
+      "agent_label": "Songpu resuspension potential",
+      "threshold": 572.3999999999997,
+      "unit": "proxy",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "wind_speed",
+      "agent_label": "wind speed",
+      "threshold": 1.316667,
+      "unit": "m/s",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    },
+    {
+      "feature": "velocity_proxy",
+      "agent_label": "hydrodynamic velocity proxy",
+      "threshold": 1.1005995273590088,
+      "unit": "dimensionless",
+      "interpretation": "Higher-than-threshold values are associated with stronger net turbidity forcing or weaker self-purification in the current Wusongkou prototype."
+    }
+  ],
+  "guardrails": [
+    "Do not describe this artifact as a reinforcement-learning policy or optimal restoration controller.",
+    "Do not treat the recommended actions as validated intervention prescriptions.",
+    "Use this playbook for structured reasoning, triage, and follow-up planning only."
+  ],
+  "future_extensions": [
+    "Add counterfactual simulators only after intervention and response-outcome data are available.",
+    "Add Sobol or Saltelli-based sensitivity artifacts only after parameterized uncertainty experiments are implemented.",
+    "Upgrade to policy optimization only after action spaces, constraints, and reward definitions are explicitly validated."
+  ]
+}

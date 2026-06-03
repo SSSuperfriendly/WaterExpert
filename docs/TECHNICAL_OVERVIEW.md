@@ -86,6 +86,21 @@ The corresponding artifacts are:
 
 This layer is intended as a deterministic empirical abstraction for downstream agent reasoning and scenario retrieval. It is not yet a reinforcement-learning policy layer, a validated incident taxonomy, or a counterfactual governance simulator.
 
+## Recommendation Playbook Export
+
+The current prototype also exports a guarded recommendation scaffold:
+
+- `outputs/agent/response_playbook.json`
+
+This artifact maps scenario classes to:
+
+- response focus statements;
+- follow-up monitoring targets;
+- required missing evidence before stronger intervention claims;
+- explicit forbidden claims for safe agent drafting.
+
+It is designed as an agent-facing bridge toward future `RL-TGRR` style work, but it is not itself a reinforcement-learning controller, policy optimizer, or validated restoration recommendation engine.
+
 ## Key Outputs
 
 - `outputs/predictions/predictions.csv`
@@ -97,6 +112,7 @@ This layer is intended as a deterministic empirical abstraction for downstream a
 - `outputs/thresholds/mechanism_parameter_threshold_kg.json`
 - `outputs/agent/agent_context.json`
 - `outputs/agent/scenario_triage.json`
+- `outputs/agent/response_playbook.json`
 - `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
@@ -110,6 +126,7 @@ python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
 python scripts\export_threshold_knowledge_graph.py
 python scripts\export_scenario_triage.py
+python scripts\export_response_playbook.py
 python scripts\export_agent_context.py
 ```
 
@@ -119,5 +136,6 @@ python scripts\export_agent_context.py
 - Boundary detection is reserved in the model design but is not trained without raster/UAV labels.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included yet.
 - The current scenario triage layer is an empirical prototype classification and should not be described as an optimal policy, intervention recommendation, or validated governance label.
+- The current response playbook is a guarded recommendation scaffold and should not be described as a trained RL controller or validated restoration policy.
 - CMFBE-ST-GCN is useful for process explanation and empirical threshold screening, but it is not a calibrated 2D hydrodynamic solver.
 - The self-purification failure and critical-transition outputs are empirical auxiliary signals for diagnosis and agent reasoning, not physically calibrated risk probabilities.

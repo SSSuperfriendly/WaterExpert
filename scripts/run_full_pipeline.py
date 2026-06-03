@@ -26,6 +26,7 @@ from water_ai.data.multimodal_builder import build_multimodal_dataset
 from water_ai.interpretability.agent_exports import (
     build_threshold_knowledge_graph,
     save_agent_context,
+    save_response_playbook,
     save_scenario_triage,
 )
 from water_ai.interpretability.turbidity_diagnosis import diagnose_mscim_turbidity
@@ -984,6 +985,7 @@ def main() -> None:
     }
     save_json(summary_note, output_dir / "metrics" / "best_model_summary.json")
     scenario_triage: dict[str, Any] | None = None
+    response_playbook: dict[str, Any] | None = None
     threshold_summary_for_scenarios = output_dir / "thresholds" / "cmfbe_threshold_summary.csv"
     feature_dataset_path = output_dir / "intermediate" / "multimodal_daily_dataset.csv"
     if threshold_summary_for_scenarios.exists() and feature_dataset_path.exists():
@@ -994,6 +996,12 @@ def main() -> None:
             features=pd.read_csv(feature_dataset_path),
             threshold_summary=pd.read_csv(threshold_summary_for_scenarios),
         )
+    if scenario_triage is not None and threshold_kg:
+        _, response_playbook = save_response_playbook(
+            output_path=output_dir / "agent" / "response_playbook.json",
+            scenario_triage=scenario_triage,
+            threshold_kg=threshold_kg,
+        )
     if threshold_kg:
         save_agent_context(
             output_path=output_dir / "agent" / "agent_context.json",
@@ -1001,6 +1009,7 @@ def main() -> None:
             best_model_summary=summary_note,
             threshold_kg=threshold_kg,
             scenario_triage=scenario_triage,
+            response_playbook=response_playbook,
         )
 
     print(f"Pipeline completed. Outputs saved to: {output_dir}")

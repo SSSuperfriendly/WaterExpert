@@ -47,6 +47,101 @@ SCENARIO_AGENT_LABELS = {
     "chronic_composite": "chronic composite",
 }
 
+SCENARIO_RESPONSE_PLAYBOOK = {
+    "external_input": {
+        "response_focus": "reduce external loading pressure and verify runoff pulse persistence",
+        "recommended_actions": [
+            "Prioritize storm-event sampling, upstream inflow checks, and external-loading verification.",
+            "Track whether cumulative rainfall and runoff proxies remain above empirical stress levels over the next 1 to 3 days.",
+            "Review drainage, interception, or source-control records before attributing changes to in-channel restoration effects.",
+        ],
+        "monitoring_targets": [
+            "3-day cumulative precipitation",
+            "7-day cumulative precipitation",
+            "runoff_source",
+            "predicted_turbidity_surge_prob",
+        ],
+        "required_follow_up_data": [
+            "event-scale inflow and suspended-sediment observations",
+            "upstream discharge or drainage-operation records",
+            "storm-linked pollutant and sediment loading observations",
+        ],
+        "forbidden_claims": [
+            "Do not claim rainfall alone determines the full turbidity response.",
+            "Do not claim intervention effectiveness without event-scale before/after evidence.",
+        ],
+    },
+    "internal_release": {
+        "response_focus": "verify resuspension stress and channel-internal sediment mobilization",
+        "recommended_actions": [
+            "Prioritize bed-shear, resuspension, and hydraulic disturbance checks near the affected reach.",
+            "Review whether strong flushing coincides with internal release, because export can mask short-term resuspension stress.",
+            "Flag the case for sediment-state inspection before recommending engineering disturbance controls.",
+        ],
+        "monitoring_targets": [
+            "bed_shear_proxy",
+            "songpu_resuspension_potential",
+            "erosion_source",
+            "songpu_flushing_potential",
+        ],
+        "required_follow_up_data": [
+            "near-bed suspended sediment and grain-size observations",
+            "cross-section velocity and depth measurements",
+            "ship traffic, dredging, or channel-disturbance records",
+        ],
+        "forbidden_claims": [
+            "Do not claim critical shear-stress exceedance has been physically calibrated.",
+            "Do not prescribe sediment engineering actions without direct sediment-state evidence.",
+        ],
+    },
+    "algal_dominant": {
+        "response_focus": "check ecological amplification and weakened self-purification support",
+        "recommended_actions": [
+            "Prioritize warm-period nutrient and chlorophyll-linked checks before interpreting the case as purely hydraulic.",
+            "Review whether weak self-purification support coincides with elevated phytoplankton-related process contribution.",
+            "Treat the case as a biological-turbidity hypothesis that needs ecological confirmation rather than a verified bloom diagnosis.",
+        ],
+        "monitoring_targets": [
+            "air_temp",
+            "phytoplankton_source",
+            "nutrient_risk_index",
+            "self_purification_index",
+        ],
+        "required_follow_up_data": [
+            "chlorophyll-a or phytoplankton biomass observations",
+            "nutrient speciation and dissolved oxygen observations",
+            "ecological field notes for warm-period bloom or decay conditions",
+        ],
+        "forbidden_claims": [
+            "Do not claim a bloom event has been directly observed from the current prototype outputs.",
+            "Do not recommend ecological intervention without supporting biological measurements.",
+        ],
+    },
+    "chronic_composite": {
+        "response_focus": "treat the case as multi-driver chronic stress requiring broader review",
+        "recommended_actions": [
+            "Escalate the case for compound-driver review rather than attributing it to a single dominant cause.",
+            "Check whether repeated threshold proximity, high auxiliary risk, and weak purification support persist across consecutive days.",
+            "Use this class to trigger broader data collection and analyst review instead of narrow one-factor responses.",
+        ],
+        "monitoring_targets": [
+            "predicted_critical_transition_prob",
+            "predicted_self_purification_failure_prob",
+            "self_purification_index",
+            "songpu_flushing_potential",
+        ],
+        "required_follow_up_data": [
+            "multi-day multi-factor field observations",
+            "intervention and management log records",
+            "broader multi-station or spatial observations for persistent stress tracing",
+        ],
+        "forbidden_claims": [
+            "Do not collapse chronic composite cases into one-factor narratives without additional evidence.",
+            "Do not claim an optimal governance policy exists from the current prototype outputs.",
+        ],
+    },
+}
+
 SCENARIO_FEATURE_COLUMNS = [
     "air_temp",
     "precipitation",
@@ -500,11 +595,85 @@ def build_scenario_triage(
     return triage_df, summary
 
 
+def build_response_playbook(
+    scenario_triage: dict[str, Any],
+    threshold_kg: dict[str, Any],
+) -> dict[str, Any]:
+    scenario_counts = scenario_triage.get("scenario_counts", {})
+    high_priority_days = scenario_triage.get("high_priority_days", [])
+    threshold_nodes = threshold_kg.get("threshold_nodes", [])
+    threshold_digest = []
+    for node in threshold_nodes[:8]:
+        threshold_digest.append(
+            {
+                "feature": node.get("feature"),
+                "agent_label": node.get("agent_label"),
+                "threshold": node.get("threshold"),
+                "unit": node.get("unit"),
+                "interpretation": node.get("interpretation"),
+            }
+        )
+
+    scenario_responses = {}
+    for scenario_name, playbook in SCENARIO_RESPONSE_PLAYBOOK.items():
+        scenario_responses[scenario_name] = {
+            "scenario_definition": SCENARIO_DEFINITIONS[scenario_name],
+            "occurrence_count": int(scenario_counts.get(scenario_name, 0)),
+            **playbook,
+        }
+
+    prioritized_cases = []
+    for item in high_priority_days[:10]:
+        scenario_name = item.get("primary_scenario")
+        playbook = SCENARIO_RESPONSE_PLAYBOOK.get(scenario_name, {})
+        prioritized_cases.append(
+            {
+                "target_date": item.get("target_date"),
+                "scenario": scenario_name,
+                "risk_band": item.get("risk_band"),
+                "primary_score": item.get("primary_score"),
+                "predicted_critical_transition_prob": item.get(
+                    "predicted_critical_transition_prob"
+                ),
+                "evidence_summary": item.get("evidence_summary"),
+                "response_focus": playbook.get("response_focus"),
+                "monitoring_targets": playbook.get("monitoring_targets", []),
+            }
+        )
+
+    return {
+        "artifact_name": "agent_response_playbook",
+        "scope": "wusongkou_daily_prototype",
+        "purpose": (
+            "Scenario-conditioned recommendation prototype for agent reasoning, follow-up monitoring, "
+            "and guarded response drafting."
+        ),
+        "prototype_status": (
+            "Deterministic playbook derived from empirical scenario triage and threshold artifacts. "
+            "It is an agent-facing recommendation scaffold, not a trained RL-TGRR policy."
+        ),
+        "scenario_response_playbook": scenario_responses,
+        "prioritized_cases": prioritized_cases,
+        "threshold_digest": threshold_digest,
+        "guardrails": [
+            "Do not describe this artifact as a reinforcement-learning policy or optimal restoration controller.",
+            "Do not treat the recommended actions as validated intervention prescriptions.",
+            "Use this playbook for structured reasoning, triage, and follow-up planning only.",
+        ],
+        "future_extensions": [
+            "Add counterfactual simulators only after intervention and response-outcome data are available.",
+            "Add Sobol or Saltelli-based sensitivity artifacts only after parameterized uncertainty experiments are implemented.",
+            "Upgrade to policy optimization only after action spaces, constraints, and reward definitions are explicitly validated.",
+        ],
+    }
+
+
 def build_agent_context(
     metrics: dict[str, Any],
     best_model_summary: dict[str, Any],
     threshold_kg: dict[str, Any],
     scenario_triage: dict[str, Any] | None = None,
+    response_playbook: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     test_models = {}
     for model_name, model_metrics in metrics.items():
@@ -555,6 +724,14 @@ def build_agent_context(
         context["scenario_high_priority_days"] = scenario_triage.get(
             "high_priority_days", []
         )
+    if response_playbook:
+        context["response_playbook_path"] = "outputs/agent/response_playbook.json"
+        context["recommended_agent_queries"].extend(
+            [
+                "What follow-up monitoring actions fit the current empirical scenario?",
+                "Which guarded response template matches the latest high-priority case?",
+            ]
+        )
     return context
 
 
@@ -564,6 +741,7 @@ def save_agent_context(
     best_model_summary: dict[str, Any],
     threshold_kg: dict[str, Any],
     scenario_triage: dict[str, Any] | None = None,
+    response_playbook: dict[str, Any] | None = None,
 ) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -572,12 +750,31 @@ def save_agent_context(
         best_model_summary=best_model_summary,
         threshold_kg=threshold_kg,
         scenario_triage=scenario_triage,
+        response_playbook=response_playbook,
     )
     output_path.write_text(
         json.dumps(context, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     return output_path
+
+
+def save_response_playbook(
+    output_path: str | Path,
+    scenario_triage: dict[str, Any],
+    threshold_kg: dict[str, Any],
+) -> tuple[Path, dict[str, Any]]:
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    playbook = build_response_playbook(
+        scenario_triage=scenario_triage,
+        threshold_kg=threshold_kg,
+    )
+    output_path.write_text(
+        json.dumps(playbook, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return output_path, playbook
 
 
 def save_scenario_triage(

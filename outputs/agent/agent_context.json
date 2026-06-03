@@ -101,7 +101,9 @@
     "Which factors are currently closest to empirical self-purification failure thresholds?",
     "What are the top turbidity drivers in the latest verified test window?",
     "Does the current scenario resemble a rainfall-driven, flow-driven, or mixed turbidity surge?",
-    "What data or model gaps prevent stronger physical or spatial conclusions?"
+    "What data or model gaps prevent stronger physical or spatial conclusions?",
+    "What follow-up monitoring actions fit the current empirical scenario?",
+    "Which guarded response template matches the latest high-priority case?"
   ],
   "scenario_triage_path": "outputs/agent/scenario_triage.json",
   "scenario_counts": {
@@ -207,5 +209,6 @@
       "predicted_critical_transition_prob": 0.273,
       "evidence_summary": "resuspension potential exceeded empirical threshold (867.1); flushing potential was strong (8.806)"
     }
-  ]
+  ],
+  "response_playbook_path": "outputs/agent/response_playbook.json"
 }

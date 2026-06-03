@@ -12,7 +12,11 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from water_ai.interpretability.agent_exports import save_agent_context, save_scenario_triage
+from water_ai.interpretability.agent_exports import (
+    save_agent_context,
+    save_response_playbook,
+    save_scenario_triage,
+)
 
 
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
@@ -25,6 +29,7 @@ FEATURES_PATH = OUTPUT_DIR / "intermediate" / "multimodal_daily_dataset.csv"
 AGENT_CONTEXT_PATH = OUTPUT_DIR / "agent" / "agent_context.json"
 SCENARIO_TRIAGE_JSON_PATH = OUTPUT_DIR / "agent" / "scenario_triage.json"
 SCENARIO_TRIAGE_CSV_PATH = OUTPUT_DIR / "diagnosis" / "scenario_triage_daily.csv"
+RESPONSE_PLAYBOOK_PATH = OUTPUT_DIR / "agent" / "response_playbook.json"
 
 
 def main() -> None:
@@ -32,6 +37,7 @@ def main() -> None:
     best_model_summary = json.loads(BEST_MODEL_PATH.read_text(encoding="utf-8"))
     threshold_kg = json.loads(THRESHOLD_KG_PATH.read_text(encoding="utf-8"))
     scenario_triage = None
+    response_playbook = None
     if (
         THRESHOLD_SUMMARY_PATH.exists()
         and PREDICTIONS_PATH.exists()
@@ -44,12 +50,19 @@ def main() -> None:
             features=pd.read_csv(FEATURES_PATH),
             threshold_summary=pd.read_csv(THRESHOLD_SUMMARY_PATH),
         )
+    if scenario_triage is not None:
+        _, response_playbook = save_response_playbook(
+            output_path=RESPONSE_PLAYBOOK_PATH,
+            scenario_triage=scenario_triage,
+            threshold_kg=threshold_kg,
+        )
     save_agent_context(
         output_path=AGENT_CONTEXT_PATH,
         metrics=metrics,
         best_model_summary=best_model_summary,
         threshold_kg=threshold_kg,
         scenario_triage=scenario_triage,
+        response_playbook=response_playbook,
     )
     print(f"Saved agent context: {AGENT_CONTEXT_PATH}")
 

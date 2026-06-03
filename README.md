@@ -8,6 +8,8 @@ The current modeling goal is broader than extrapolating existing turbidity value
 
 The current handoff package also includes an agent-ready scenario triage layer. It groups daily test-window states into empirical forcing regimes such as `external_input`, `internal_release`, `algal_dominant`, and `chronic_composite` so that a downstream collaborator can build reasoning and orchestration tools on top of the current prototype outputs.
 
+This release now also exports a guarded recommendation playbook. It maps the empirical scenarios to reviewable follow-up actions, monitoring targets, and explicit no-overclaim rules so that a downstream agent can draft response suggestions without pretending that a validated RL controller already exists.
+
 ## Repository Scope
 
 - `src/water_ai/`: data processing, model definitions, physics-surrogate utilities, metrics, and diagnosis helpers.
@@ -69,6 +71,7 @@ Key output locations:
 - `outputs/thresholds/mechanism_parameter_threshold_kg.json`
 - `outputs/agent/agent_context.json`
 - `outputs/agent/scenario_triage.json`
+- `outputs/agent/response_playbook.json`
 - `outputs/diagnosis/scenario_triage_daily.csv`
 - `outputs/plots/cmfbe_threshold_response_20260430.png`
 - `outputs/models/`
@@ -99,6 +102,18 @@ The repository now exports an empirical scenario triage artifact for the `CMFBE-
 
 These labels are deterministic prototype classifications derived from current process outputs, auxiliary risk scores, and empirical threshold exceedance patterns. They are meant for agent reasoning, screening, and structured case retrieval. They are not validated operational incident labels or intervention policies.
 
+## Recommendation Playbook Layer
+
+The repository now exports `outputs/agent/response_playbook.json` as a scenario-conditioned recommendation scaffold for downstream agents.
+
+This artifact:
+
+- links each empirical scenario to a response focus, follow-up monitoring targets, and required missing data;
+- provides guarded action templates for draft recommendations;
+- records explicit forbidden claims so the agent does not overstate the current evidence.
+
+It is not a trained `RL-TGRR` policy, not a validated restoration controller, and not proof of intervention optimality.
+
 ## Environment
 
 The repository was last verified with Python 3.12.7. Install the pinned runtime dependencies:
@@ -120,6 +135,7 @@ python scripts\export_mscim_driver_overview.py
 python scripts\analyze_cmfbe_thresholds.py
 python scripts\export_threshold_knowledge_graph.py
 python scripts\export_scenario_triage.py
+python scripts\export_response_playbook.py
 python scripts\export_agent_context.py
 ```
 
@@ -130,7 +146,7 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 1. Install `requirements.txt`.
 2. Run `python -m compileall src scripts`.
 3. Run `python scripts\analyze_cmfbe_thresholds.py` to confirm committed predictions and threshold outputs are readable.
-4. Run `python scripts\export_scenario_triage.py` and `python scripts\export_agent_context.py` to confirm the agent-facing artifacts can be regenerated.
+4. Run `python scripts\export_scenario_triage.py`, `python scripts\export_response_playbook.py`, and `python scripts\export_agent_context.py` to confirm the agent-facing artifacts can be regenerated.
 5. Run `python scripts\run_full_pipeline.py` if retraining from included raw inputs is required.
 6. Review `docs/TECHNICAL_OVERVIEW.md` and `docs/HANDOFF_FOR_AGENT_MODEL.md` before extending the project.
 
@@ -140,5 +156,6 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 - Boundary detection is reserved in the model design but is not trained without raster or UAV labels.
 - Spatial threshold maps, Sobol sensitivity, and counterfactual intervention analysis are not included.
 - The exported scenario tags are empirical triage labels for the current prototype, not validated governance decisions or counterfactual intervention outcomes.
+- The exported recommendation playbook is an agent reasoning scaffold, not a trained RL policy or validated intervention optimizer.
 - The CMFBE process decomposition supports explanation and empirical screening, not physical calibration.
 - The current self-purification failure and critical-transition outputs are empirical prototype risks for screening and agent reasoning, not validated operational warning probabilities.
