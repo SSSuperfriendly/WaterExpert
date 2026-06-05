@@ -3,253 +3,104 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WaterExpert Software | 水体浊度诊断与预测平台</title>
-  <link rel="stylesheet" href="/ui/styles.css">
+  <title>WaterExpert | 总览</title>
+  <link rel="stylesheet" href="/ui/styles.css?v=20260605-modular-theme">
 </head>
-<body>
-  <div class="page-shell">
-    <header class="hero">
-      <div class="hero-copy reveal">
-        <p class="eyebrow">软件化算法运行时</p>
-        <div class="hero-title-group">
-          <h1>WaterExpert Software</h1>
-          <p class="hero-subtitle">吴淞口多模态水体浊度诊断与预测平台</p>
-        </div>
-        <p class="hero-text">
-          当前版本不再把 <code>WaterExpert</code> 当外部产品桥接，而是把其已有算法代码、建模逻辑、配置、数据与产物内置为软件内部运行时。
-          软件层在此基础上承接数据导入、预测任务、诊断查看、场景 triage、阈值检索、边界摘要与报告导出。
-        </p>
-        <p class="hero-note">默认中文界面展示，模型标识与研究产物文件名保留英文，便于与既有原型保持一致。</p>
-        <div class="hero-actions">
-          <button id="refreshButton" class="button button-primary">刷新全局状态</button>
-          <button id="exportReportButton" class="button button-secondary">导出报告</button>
-        </div>
-        <p id="runtimeMeta" class="muted runtime-meta"></p>
+<body data-page="dashboard">
+  <div class="workspace-shell">
+    <button id="sidebarScrim" class="sidebar-scrim" type="button" aria-label="关闭导航"></button>
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="/ui/index.html">
+          <span class="brand-mark">WE</span>
+          <span class="brand-text">WaterExpert</span>
+        </a>
       </div>
-      <aside class="hero-side reveal">
-        <p class="section-kicker">Scope Guardrails</p>
-        <h2>边界声明</h2>
-        <ul id="guardrailsList" class="guardrails"></ul>
-      </aside>
-    </header>
+      <nav class="side-nav" aria-label="主导航">
+        <a class="side-link active" href="/ui/index.html"><span class="side-link-index">01</span><span class="side-link-text">总览</span></a>
+        <a class="side-link" href="/ui/data.html"><span class="side-link-index">02</span><span class="side-link-text">数据</span></a>
+        <a class="side-link" href="/ui/jobs.html"><span class="side-link-index">03</span><span class="side-link-text">任务</span></a>
+        <a class="side-link" href="/ui/analysis.html"><span class="side-link-index">04</span><span class="side-link-text">诊断</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <p id="sidebarContext" class="sidebar-context">吴淞口</p>
+      </div>
+    </aside>
 
-    <div id="statusBanner" class="status-banner hidden"></div>
+    <button id="sidebarEdgeToggle" class="edge-toggle" type="button" aria-label="折叠侧栏" title="折叠侧栏" data-state="expanded">
+      <span class="toggle-glyph" aria-hidden="true"></span>
+      <span class="sr-only">折叠侧栏</span>
+    </button>
 
-    <main class="grid">
-      <section class="panel panel-span-2 reveal">
-        <div class="section-heading">
+    <div class="content-shell">
+      <header class="toolbar">
+        <div class="toolbar-main">
+          <button id="sidebarToggleMobile" class="sidebar-toggle mobile-only" type="button" aria-label="打开导航">导航</button>
           <div>
-            <p class="section-kicker">System Overview</p>
-            <h2>原型总览</h2>
-          </div>
-          <p id="scopeLabel" class="scope-label"></p>
-        </div>
-        <div id="overviewStats" class="stats-grid"></div>
-        <div id="modelBadges" class="badge-row"></div>
-        <div id="stationMeta" class="meta-grid"></div>
-      </section>
-
-      <section class="panel panel-span-2 reveal">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Data Management</p>
-            <h2>多源数据导入与管理</h2>
+            <h1>总览</h1>
           </div>
         </div>
-        <div class="subpanel">
-          <form id="importForm" class="form-grid">
-            <label class="field">
-              <span>数据类型</span>
-              <select id="importDataType" name="data_type">
-                <option value="water_quality">water_quality</option>
-                <option value="weather">weather</option>
-                <option value="hydrodynamics">hydrodynamics</option>
-                <option value="water_control">water_control</option>
-                <option value="boundary_labels">boundary_labels</option>
-                <option value="spatial">spatial</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>来源名称</span>
-              <input id="importSourceName" name="source_name" type="text" value="manual-import" required>
-            </label>
-            <label class="field field-wide">
-              <span>文件路径</span>
-              <input id="importFilePath" name="file_path" type="text" placeholder="例如 G:/AI4S/xxx.csv" required>
-            </label>
-            <label class="field">
-              <span>时间粒度</span>
-              <input id="importGranularity" name="time_granularity" type="text" value="daily" required>
-            </label>
-            <label class="field">
-              <span>站点</span>
-              <select id="importStationCode" name="station_code"></select>
-            </label>
-            <div class="field actions-row">
-              <span>&nbsp;</span>
-              <button type="submit" class="button button-primary">登记导入</button>
+        <div class="toolbar-actions">
+          <p id="runtimeMeta" class="runtime-meta"></p>
+          <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button" aria-label="切换到夜间模式" title="切换到夜间模式">夜间</button>
+          <button id="refreshButton" class="button button-secondary">刷新</button>
+          <button id="exportReportButton" class="button button-primary">导出报告</button>
+        </div>
+      </header>
+
+      <div id="statusBanner" class="status-banner hidden"></div>
+
+      <main class="dashboard-layout">
+        <section class="panel panel-wide">
+          <div class="panel-head">
+            <h2>系统状态</h2>
+            <p id="scopeLabel" class="scope-chip"></p>
+          </div>
+          <div id="overviewStats" class="stats-grid"></div>
+          <div id="modelBadges" class="badge-row"></div>
+          <div id="stationMeta" class="meta-grid"></div>
+        </section>
+
+        <div class="dashboard-detail-grid">
+          <section class="panel emphasis-panel">
+            <div class="panel-head">
+              <h2>高优先事件</h2>
             </div>
-          </form>
-          <p class="helper-text">当前版本支持按文件路径登记并复制入软件内部运行时目录，形成导入日志与副本记录。</p>
-        </div>
-        <div id="importsTable" class="table-wrap"></div>
-      </section>
+            <div id="scenarioCounts" class="badge-row"></div>
+            <div id="priorityFeed" class="priority-feed"></div>
+          </section>
 
-      <section class="panel panel-span-2 reveal">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Prediction Jobs</p>
-            <h2>预测任务配置与状态</h2>
-          </div>
+          <section class="panel panel-equal">
+            <div class="panel-head panel-head-inline">
+              <h2>风险解释</h2>
+              <a class="text-link" href="/ui/analysis.html">详情</a>
+            </div>
+            <div id="driverBars" class="bars"></div>
+          </section>
         </div>
-        <div class="subpanel">
-          <form id="jobForm" class="form-grid">
-            <label class="field">
-              <span>任务模式</span>
-              <select id="jobMode" name="mode">
-                <option value="inference">inference</option>
-                <option value="full_pipeline">full_pipeline</option>
-              </select>
-            </label>
-            <label class="field">
+
+        <section class="panel panel-wide chart-panel">
+          <div class="panel-head panel-head-inline">
+            <h2>预测快照</h2>
+            <label class="compact-field">
               <span>模型</span>
-              <select id="jobModelName" name="model_name"></select>
-            </label>
-            <label class="field">
-              <span>站点</span>
-              <select id="jobStationCode" name="station_code"></select>
-            </label>
-            <label class="field">
-              <span>起始日期</span>
-              <input id="jobStartDate" name="start_date" type="date">
-            </label>
-            <label class="field">
-              <span>结束日期</span>
-              <input id="jobEndDate" name="end_date" type="date">
-            </label>
-            <label class="field field-wide checkbox-row">
-              <input id="jobUseExisting" name="use_existing_artifacts" type="checkbox" checked>
-              <span>优先复用当前内置产物；取消勾选后将触发内部 `run_full_pipeline.py`。</span>
-            </label>
-            <div class="field actions-row">
-              <span>&nbsp;</span>
-              <button type="submit" class="button button-primary">创建预测任务</button>
-            </div>
-          </form>
-        </div>
-        <div class="section-heading compact section-heading-inline">
-          <div>
-            <p class="section-kicker">Artifact Scope</p>
-            <h3>查看哪一份产物</h3>
-          </div>
-          <div class="controls">
-            <label>
-              结果视图
-              <select id="jobViewSelect">
-                <option value="">当前内置基线产物</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div id="jobsTable" class="table-wrap"></div>
-      </section>
-
-      <section class="panel reveal">
-        <div class="section-heading compact">
-          <div>
-            <p class="section-kicker">Predictions</p>
-            <h2>预测与风险曲线</h2>
-          </div>
-          <div class="controls">
-            <label>
-              模型
               <select id="modelSelect"></select>
             </label>
           </div>
-        </div>
-        <div class="chart-legend">
-          <span><i class="swatch swatch-actual"></i>实测浊度</span>
-          <span><i class="swatch swatch-predicted"></i>预测浊度</span>
-          <span><i class="swatch swatch-risk"></i>临界转折概率</span>
-        </div>
-        <svg id="predictionChart" class="chart" viewBox="0 0 960 360" role="img" aria-label="Prediction chart"></svg>
-        <div id="predictionSummary" class="inline-metrics"></div>
-      </section>
-
-      <section class="panel reveal">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Diagnosis</p>
-            <h2>主导因子与机理分解</h2>
+          <div class="chart-legend">
+            <span><i class="swatch swatch-actual"></i>实测</span>
+            <span><i class="swatch swatch-predicted"></i>预测</span>
+            <span><i class="swatch swatch-risk"></i>风险</span>
           </div>
-        </div>
-        <div class="two-column">
-          <div>
-            <h3>主导驱动因子</h3>
-            <div id="driverBars" class="bars"></div>
-          </div>
-          <div>
-            <h3>CMFBE 过程分解</h3>
-            <div id="processTable" class="table-wrap"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel reveal">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Scenario Triage</p>
-            <h2>高优先级场景事件</h2>
-          </div>
-        </div>
-        <div id="scenarioCounts" class="badge-row"></div>
-        <div id="priorityTable" class="table-wrap"></div>
-      </section>
-
-      <section class="panel reveal">
-        <div class="section-heading compact">
-          <div>
-            <p class="section-kicker">Threshold Retrieval</p>
-            <h2>经验阈值检索</h2>
-          </div>
-          <div class="controls">
-            <label>
-              特征
-              <select id="thresholdSelect"></select>
-            </label>
-          </div>
-        </div>
-        <p id="thresholdSemantics" class="muted"></p>
-        <div id="thresholdSnapshot" class="inline-metrics"></div>
-        <div id="thresholdTable" class="table-wrap"></div>
-      </section>
-
-      <section class="panel reveal">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Boundary Detection</p>
-            <h2>边界识别摘要</h2>
-          </div>
-        </div>
-        <div id="boundaryMetrics" class="stats-grid"></div>
-        <div id="boundaryNotes" class="callout"></div>
-      </section>
-
-      <section class="panel reveal">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Playbook & Sobol</p>
-            <h2>后续监测与敏感因子</h2>
-          </div>
-        </div>
-        <div class="two-column">
-          <div id="playbookCards" class="stack"></div>
-          <div id="sobolTable" class="table-wrap"></div>
-        </div>
-      </section>
-    </main>
+          <svg id="predictionChart" class="chart" viewBox="0 0 960 360" role="img" aria-label="Prediction chart"></svg>
+          <div id="predictionSummary" class="inline-metrics"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
-  <script src="/ui/app.js" defer></script>
+  <script type="module" src="/ui/js/main.js?v=20260605-modular-theme" defer></script>
 </body>
 </html>
+

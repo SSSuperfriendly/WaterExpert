@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+ReportExportFormat = Literal["html", "md", "json", "pdf"]
+
 
 class DataImportRequest(BaseModel):
     data_type: Literal[
@@ -28,4 +30,3 @@ class PredictionJobCreateRequest(BaseModel):
     start_date: str | None = None
     end_date: str | None = None
     use_existing_artifacts: bool = True
-

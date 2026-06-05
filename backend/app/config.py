@@ -7,6 +7,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNTIME_ROOT = PROJECT_ROOT
+VAR_ROOT_NAME = "var"
+STATE_ROOT_NAME = "state"
+REPORT_ROOT_NAME = "reports"
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,10 @@ class Settings:
     def state_db_path(self) -> Path:
         return self.state_root / "app_state.sqlite3"
 
+    @property
+    def var_root(self) -> Path:
+        return self.project_root / VAR_ROOT_NAME
+
 
 def get_settings() -> Settings:
     runtime_root = Path(
@@ -55,6 +62,6 @@ def get_settings() -> Settings:
         project_root=PROJECT_ROOT,
         runtime_root=runtime_root,
         frontend_root=(PROJECT_ROOT / "frontend").resolve(),
-        report_root=(PROJECT_ROOT / "reports").resolve(),
-        state_root=(PROJECT_ROOT / "app_state").resolve(),
+        report_root=(PROJECT_ROOT / VAR_ROOT_NAME / REPORT_ROOT_NAME).resolve(),
+        state_root=(PROJECT_ROOT / VAR_ROOT_NAME / STATE_ROOT_NAME).resolve(),
     )

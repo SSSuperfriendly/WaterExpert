@@ -16,15 +16,20 @@ This release now also exports a guarded recommendation playbook. It maps the emp
 - `frontend/`: browser UI for overview, prediction, diagnostics, scenario triage, thresholds, boundary summary, and task state.
 - `tests/`: software regression tests for state, job scoping, and API-serving assumptions.
 - `src/water_ai/`: data processing, model definitions, physics-surrogate utilities, metrics, and diagnosis helpers.
-- `scripts/`: executable pipeline and post-analysis scripts.
+- `scripts/pipeline/`: full runtime entrypoints.
+- `scripts/analysis/`: threshold, sensitivity, and decomposition analysis.
+- `scripts/exports/`: agent-facing and reporting artifact exporters.
+- `scripts/boundary/`: boundary-label template and raster proxy tooling.
+- `scripts/preprocess/`: preprocessing entrypoints.
 - `configs/prototype_repo.yaml`: primary repository-relative configuration.
 - `configs/prototype.yaml`: equivalent portable default configuration.
 - `data/raw/`: minimum raw inputs required for the current Wusongkou enhanced run.
 - `data/knowledge_graph/`: lightweight relationship artifact used to build feature-graph priors.
 - `data/full_station_database/`: processed all-station reference tables.
 - `outputs/`: committed baseline outputs, including checkpoints, metrics, predictions, diagnosis tables, plots, and threshold analysis.
-- `docs/TECHNICAL_OVERVIEW.md`: external-facing technical overview.
-- `docs/HANDOFF_FOR_AGENT_MODEL.md`: guidance for building an agent layer on top of this repository.
+- `var/`: non-committed application state, job-scoped runtime outputs, logs, and exported reports.
+- `docs/architecture/technical_overview.md`: external-facing technical overview.
+- `docs/handoffs/agent_model_handoff.md`: guidance for building an agent layer on top of this repository.
 
 ## Current Model Scope
 
@@ -88,7 +93,7 @@ Key output locations:
 
 ## Empirical Thresholds
 
-`scripts/analyze_cmfbe_thresholds.py` estimates empirical nonlinear response thresholds from the current CMFBE-ST-GCN test outputs.
+`scripts/analysis/analyze_cmfbe_thresholds.py` estimates empirical nonlinear response thresholds from the current CMFBE-ST-GCN test outputs.
 
 | Factor | Empirical Threshold | Unit |
 | --- | ---: | --- |
@@ -130,7 +135,7 @@ The repository now includes a supervision-ready boundary-detection pathway for `
 
 - Boundary labels can be loaded through `configs/prototype_repo.yaml` and `configs/prototype.yaml`.
 - A fill-in template is provided at `data/raw/wusongkou_boundary_labels_template.csv`.
-- The repository also includes `scripts/generate_real_raster_boundary_labels.py`, which derives a real raster boundary-change proxy from DLR daily water masks for the Wusongkou AOI and writes `data/raw/wusongkou_boundary_labels.csv`.
+- The repository also includes `scripts/boundary/generate_real_raster_boundary_labels.py`, which derives a real raster boundary-change proxy from DLR daily water masks for the Wusongkou AOI and writes `data/raw/wusongkou_boundary_labels.csv`.
 - When raster/UAV-derived labels or the committed real-raster proxy labels are supplied, the pipeline trains the existing boundary head and exports `outputs/boundary/boundary_detection_summary.json`.
 
 These labels should be read as a real raster-derived boundary-change proxy for supervision, not as a manually curated governance-zone map.
@@ -153,12 +158,14 @@ These outputs are generated from the current learned CMFBE surrogate and are int
 The repository was last verified with Python 3.12.7. Install the pinned runtime dependencies:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+python -m venv .ai4s
+.\.ai4s\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
 If PyTorch installation requires a CPU/GPU-specific wheel, install the appropriate PyTorch build first, then run `pip install -r requirements.txt`.
+
+For collaborator-facing setup on the software branch, see `docs/handoffs/environment_reviewer_quickstart.md`.
 
 ## Software Launch
 
@@ -171,17 +178,17 @@ Then open `http://127.0.0.1:8000/`.
 ## Reproduce The Baseline
 
 ```powershell
-python scripts\run_full_pipeline.py
-python scripts\plot_cmfbe_process_decomposition.py
-python scripts\export_mscim_driver_overview.py
-python scripts\analyze_cmfbe_thresholds.py
-python scripts\export_threshold_knowledge_graph.py
-python scripts\export_scenario_triage.py
-python scripts\export_response_playbook.py
-python scripts\export_agent_context.py
-python scripts\create_boundary_label_template.py
-python scripts\generate_real_raster_boundary_labels.py
-python scripts\analyze_cmfbe_sobol_counterfactual.py
+python scripts\pipeline\run_full_pipeline.py
+python scripts\analysis\plot_cmfbe_process_decomposition.py
+python scripts\exports\export_mscim_driver_overview.py
+python scripts\analysis\analyze_cmfbe_thresholds.py
+python scripts\exports\export_threshold_knowledge_graph.py
+python scripts\exports\export_scenario_triage.py
+python scripts\exports\export_response_playbook.py
+python scripts\exports\export_agent_context.py
+python scripts\boundary\create_boundary_label_template.py
+python scripts\boundary\generate_real_raster_boundary_labels.py
+python scripts\analysis\analyze_cmfbe_sobol_counterfactual.py
 ```
 
 The scripts use repository-relative paths and write outputs under `outputs/`.
@@ -190,10 +197,10 @@ The scripts use repository-relative paths and write outputs under `outputs/`.
 
 1. Install `requirements.txt`.
 2. Run `python -m compileall src scripts`.
-3. Run `python scripts\analyze_cmfbe_thresholds.py` to confirm committed predictions and threshold outputs are readable.
-4. Run `python scripts\export_scenario_triage.py`, `python scripts\export_response_playbook.py`, and `python scripts\export_agent_context.py` to confirm the agent-facing artifacts can be regenerated.
-5. Run `python scripts\run_full_pipeline.py` if retraining from included raw inputs is required.
-6. Review `docs/TECHNICAL_OVERVIEW.md` and `docs/HANDOFF_FOR_AGENT_MODEL.md` before extending the project.
+3. Run `python scripts\analysis\analyze_cmfbe_thresholds.py` to confirm committed predictions and threshold outputs are readable.
+4. Run `python scripts\exports\export_scenario_triage.py`, `python scripts\exports\export_response_playbook.py`, and `python scripts\exports\export_agent_context.py` to confirm the agent-facing artifacts can be regenerated.
+5. Run `python scripts\pipeline\run_full_pipeline.py` if retraining from included raw inputs is required.
+6. Review `docs/architecture/technical_overview.md` and `docs/handoffs/agent_model_handoff.md` before extending the project.
 
 ## Known Boundaries
 

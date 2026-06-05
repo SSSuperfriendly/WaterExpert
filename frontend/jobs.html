@@ -1,0 +1,134 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WaterExpert | 预测任务</title>
+  <link rel="stylesheet" href="/ui/styles.css?v=20260605-modular-theme">
+</head>
+<body data-page="jobs">
+  <div class="workspace-shell">
+    <button id="sidebarScrim" class="sidebar-scrim" type="button" aria-label="关闭导航"></button>
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="/ui/index.html">
+          <span class="brand-mark">WE</span>
+          <span class="brand-text">WaterExpert</span>
+        </a>
+      </div>
+      <nav class="side-nav" aria-label="主导航">
+        <a class="side-link" href="/ui/index.html"><span class="side-link-index">01</span><span class="side-link-text">总览</span></a>
+        <a class="side-link" href="/ui/data.html"><span class="side-link-index">02</span><span class="side-link-text">数据</span></a>
+        <a class="side-link active" href="/ui/jobs.html"><span class="side-link-index">03</span><span class="side-link-text">任务</span></a>
+        <a class="side-link" href="/ui/analysis.html"><span class="side-link-index">04</span><span class="side-link-text">诊断</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <p id="sidebarContext" class="sidebar-context">预测任务</p>
+      </div>
+    </aside>
+
+    <button id="sidebarEdgeToggle" class="edge-toggle" type="button" aria-label="折叠侧栏" title="折叠侧栏" data-state="expanded">
+      <span class="toggle-glyph" aria-hidden="true"></span>
+      <span class="sr-only">折叠侧栏</span>
+    </button>
+
+    <div class="content-shell">
+      <header class="toolbar">
+        <div class="toolbar-main">
+          <button id="sidebarToggleMobile" class="sidebar-toggle mobile-only" type="button" aria-label="打开导航">导航</button>
+          <div>
+            <h1>预测任务</h1>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <p id="runtimeMeta" class="runtime-meta"></p>
+          <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button" aria-label="切换到夜间模式" title="切换到夜间模式">夜间</button>
+          <button id="refreshButton" class="button button-secondary">刷新</button>
+          <button id="exportReportButton" class="button button-primary">导出报告</button>
+        </div>
+      </header>
+
+      <div id="statusBanner" class="status-banner hidden"></div>
+
+      <main class="jobs-layout">
+        <section class="panel panel-wide focus-panel">
+          <div class="panel-head panel-head-inline">
+            <h2>任务预测结果</h2>
+            <div class="focus-controls">
+              <label class="compact-field">
+                <span>产物视图</span>
+                <select id="jobViewSelect">
+                  <option value="">基线产物</option>
+                </select>
+              </label>
+              <label class="compact-field">
+                <span>模型</span>
+                <select id="modelSelect"></select>
+              </label>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <span><i class="swatch swatch-actual"></i>实测</span>
+            <span><i class="swatch swatch-predicted"></i>预测</span>
+            <span><i class="swatch swatch-risk"></i>风险</span>
+          </div>
+          <svg id="predictionChart" class="chart" viewBox="0 0 960 360" role="img" aria-label="Prediction chart"></svg>
+          <div id="predictionSummary" class="inline-metrics"></div>
+        </section>
+
+        <div class="jobs-detail-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>创建任务</h2>
+            </div>
+            <form id="jobForm" class="form-grid">
+              <label class="field">
+                <span>任务模式</span>
+                <select id="jobMode" name="mode">
+                  <option value="inference">inference</option>
+                  <option value="full_pipeline">full_pipeline</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>模型</span>
+                <select id="jobModelName" name="model_name"></select>
+              </label>
+              <label class="field">
+                <span>站点</span>
+                <select id="jobStationCode" name="station_code"></select>
+              </label>
+              <label class="field">
+                <span>起始日期</span>
+                <input id="jobStartDate" name="start_date" type="date">
+              </label>
+              <label class="field">
+                <span>结束日期</span>
+                <input id="jobEndDate" name="end_date" type="date">
+              </label>
+              <label class="field field-wide checkbox-row">
+                <input id="jobUseExisting" name="use_existing_artifacts" type="checkbox" checked>
+                <span>优先复用现有产物</span>
+              </label>
+              <div class="field actions-row">
+                <span>&nbsp;</span>
+                <button type="submit" class="button button-primary">创建任务</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel panel-equal">
+            <div class="panel-head">
+              <h2>任务列表</h2>
+            </div>
+            <div id="jobsTable" class="table-wrap"></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="/ui/js/main.js?v=20260605-modular-theme" defer></script>
+</body>
+</html>
+

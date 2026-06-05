@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import copy
 import ctypes
@@ -7,7 +7,9 @@ import shutil
 import subprocess
 import sys
 import threading
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -20,13 +22,59 @@ from backend.app.schemas import DataImportRequest, PredictionJobCreateRequest
 from backend.app.services.artifact_repository import ArtifactRepository
 from backend.app.services.state_store import SqliteStateStore
 
+JOB_ID_LENGTH = 12
+LOG_PREVIEW_LINE_COUNT = 20
+RUNNING_STATUS = "running"
+COMPLETED_STATUS = "completed"
+FAILED_STATUS = "failed"
+ORPHANED_STATUS = "orphaned"
+TERMINAL_STATUSES = {COMPLETED_STATUS, FAILED_STATUS, ORPHANED_STATUS}
+DEFAULT_IMPORT_FAILURE_MESSAGE = "Source file does not exist."
+EXISTING_ARTIFACT_MESSAGE = "Snapshot created from currently integrated runtime artifacts."
+LAUNCHED_MESSAGE = "Pipeline launched in job-scoped runtime directory."
+DETACHED_WAIT_MESSAGE = "Job is still running in detached mode; waiting for status file completion."
+COMPLETED_MESSAGE = "Job completed with verified job-scoped artifacts."
+ORPHANED_MESSAGE = "Job process is no longer alive and no completion marker was found."
+ARTIFACT_VALIDATION_FAILURE_MESSAGE = (
+    "Job reported completion but required artifacts were missing or unreadable."
+)
+JOB_RUNNER_MODULE = "backend.app.tasks.job_runner"
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+HYDRODYNAMICS_OUTPUT_DIR_NAME = "hydrodynamics_preprocessed"
+HYDRODYNAMICS_WIDE_FILENAME = "shanghai_hydrodynamics_daily_wide.csv"
+NDTI_OUTPUT_DIR_NAME = "ndti_preprocessed"
+ACTIVE_PROCESS_EXIT_CODE = 259
+IMPORTED_STATUS = "imported"
+IMPORT_COPY_FAILURE_PREFIX = "Copy failed: "
+
+
+@dataclass(frozen=True)
+class JobRuntimePaths:
+    run_root: Path
+    output_root: Path
+    status_file: Path
+    stdout_log: Path
+    stderr_log: Path
+
+    @classmethod
+    def build(cls, job_runs_root: Path, job_id: str) -> "JobRuntimePaths":
+        run_root = job_runs_root / job_id
+        return cls(
+            run_root=run_root,
+            output_root=run_root / "outputs",
+            status_file=run_root / "run_status.json",
+            stdout_log=run_root / "logs" / "stdout.log",
+            stderr_log=run_root / "logs" / "stderr.log",
+        )
+
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class RuntimeJobService:
-    TERMINAL_STATUSES = {"completed", "failed", "orphaned"}
+    TERMINAL_STATUSES = TERMINAL_STATUSES
 
     def __init__(
         self,
@@ -45,49 +93,30 @@ class RuntimeJobService:
 
     def import_data(self, payload: DataImportRequest) -> dict[str, Any]:
         source = Path(payload.file_path).expanduser()
-        record = {
-            "import_id": uuid4().hex[:12],
-            "created_at": utc_now(),
-            "data_type": payload.data_type,
-            "source_name": payload.source_name,
-            "source_path": str(source),
-            "time_granularity": payload.time_granularity,
-            "station_code": payload.station_code,
-        }
+        record = self._build_import_record(payload, source)
         if not source.exists() or not source.is_file():
-            record.update(
-                {
-                    "status": "failed",
-                    "message": "Source file does not exist.",
-                }
-            )
-            return self.store.append_import(record)
+            return self._append_import_failure(record, DEFAULT_IMPORT_FAILURE_MESSAGE)
 
-        target_dir = self.settings.imports_root / payload.data_type
-        target_dir.mkdir(parents=True, exist_ok=True)
-        target_path = target_dir / f"{record['import_id']}-{source.name}"
+        target_path = self._import_target_path(payload.data_type, record["import_id"], source.name)
         try:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target_path)
         except OSError as exc:
-            record.update(
-                {
-                    "status": "failed",
-                    "message": f"Copy failed: {exc}",
-                }
+            return self._append_import_failure(
+                record,
+                f"{IMPORT_COPY_FAILURE_PREFIX}{exc}",
             )
-            return self.store.append_import(record)
 
-        record.update(
-            {
-                "status": "imported",
-                "stored_path": str(target_path),
-                "file_size_bytes": target_path.stat().st_size,
-            }
-        )
+        finalized_record = {
+            **record,
+            "status": IMPORTED_STATUS,
+            "stored_path": str(target_path),
+            "file_size_bytes": target_path.stat().st_size,
+        }
         rows_detected = self._detect_rows(target_path)
         if rows_detected is not None:
-            record["rows_detected"] = rows_detected
-        return self.store.append_import(record)
+            finalized_record["rows_detected"] = rows_detected
+        return self.store.append_import(finalized_record)
 
     def list_imports(self) -> list[dict[str, Any]]:
         return sorted(
@@ -99,142 +128,40 @@ class RuntimeJobService:
     def create_prediction_job(
         self, payload: PredictionJobCreateRequest
     ) -> dict[str, Any]:
-        job_id = uuid4().hex[:12]
-        config_path = (
-            Path(payload.config_path).expanduser().resolve()
-            if payload.config_path
-            else self.settings.default_config_path
-        )
-        if not config_path.exists() or not config_path.is_file():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
-
-        run_root = self.settings.job_runs_root / job_id
-        output_root = run_root / "outputs"
-        status_file = run_root / "run_status.json"
-        stdout_path = run_root / "logs" / "stdout.log"
-        stderr_path = run_root / "logs" / "stderr.log"
+        config_path = self._resolve_config_path(payload.config_path)
+        paths = self._reserve_job_paths()
+        job_id = paths.run_root.name
         config_snapshot_path = self._materialize_job_config(
-            run_root=run_root,
-            output_root=output_root,
+            run_root=paths.run_root,
+            output_root=paths.output_root,
             config_path=config_path,
         )
-
-        record = {
-            "job_id": job_id,
-            "created_at": utc_now(),
-            "updated_at": utc_now(),
-            "mode": payload.mode,
-            "model_name": payload.model_name,
-            "station_code": payload.station_code,
-            "config_path": str(config_path),
-            "config_snapshot_path": str(config_snapshot_path),
-            "start_date": payload.start_date,
-            "end_date": payload.end_date,
-            "use_existing_artifacts": payload.use_existing_artifacts,
-            "runtime_root": str(self.settings.runtime_root),
-            "run_root": str(run_root),
-            "artifact_root": str(output_root),
-            "status_file": str(status_file),
-            "stdout_log": str(stdout_path),
-            "stderr_log": str(stderr_path),
-        }
+        record = self._build_job_record(
+            job_id=job_id,
+            payload=payload,
+            config_path=config_path,
+            config_snapshot_path=config_snapshot_path,
+            paths=paths,
+        )
 
         if payload.use_existing_artifacts:
-            self._snapshot_integrated_outputs(output_root)
-            scoped_repo = self.repository.scoped(
-                outputs_root=output_root,
-                config_path=config_snapshot_path,
-            )
-            record.update(
-                {
-                    "status": "completed",
-                    "finished_at": utc_now(),
-                    "message": "Snapshot created from currently integrated runtime artifacts.",
-                    "artifacts": scoped_repo.artifact_manifest(),
-                }
-            )
-            self._write_status_file(
-                status_file,
-                {
-                    "status": "completed",
-                    "started_at": record["created_at"],
-                    "finished_at": record["finished_at"],
-                    "return_code": 0,
-                    "artifact_root": str(output_root),
-                },
-            )
-            return self.store.append_job(record)
-
-        stdout_path.parent.mkdir(parents=True, exist_ok=True)
-        command = [
-            sys.executable,
-            "-m",
-            "backend.app.tasks.job_runner",
-            "--runtime-root",
-            str(self.settings.runtime_root),
-            "--config",
-            str(config_snapshot_path),
-            "--status-file",
-            str(status_file),
-            "--artifact-root",
-            str(output_root),
-        ]
-        stdout_handle = stdout_path.open("w", encoding="utf-8")
-        stderr_handle = stderr_path.open("w", encoding="utf-8")
-        try:
-            process = subprocess.Popen(
-                command,
-                cwd=str(self.settings.project_root),
-                stdout=stdout_handle,
-                stderr=stderr_handle,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-        finally:
-            stdout_handle.close()
-            stderr_handle.close()
-
-        with self._process_lock:
-            self._processes[job_id] = process
-        record.update(
-            {
-                "status": "running",
-                "started_at": utc_now(),
-                "pid": process.pid,
-                "command": command,
-                "message": "Pipeline launched in job-scoped runtime directory.",
-            }
-        )
-        self._write_status_file(
-            status_file,
-            {
-                "status": "running",
-                "started_at": record["started_at"],
-                "artifact_root": str(output_root),
-                "pid": process.pid,
-            },
-        )
-        return self.store.append_job(record)
+            return self._complete_existing_artifact_job(record, paths, config_snapshot_path)
+        return self._launch_prediction_job(record, paths, config_snapshot_path)
 
     def list_jobs(self) -> list[dict[str, Any]]:
-        jobs = self.store.list_jobs()
         refreshed: list[dict[str, Any]] = []
-        for job in jobs:
+        for job in self.store.list_jobs():
             job_id = job.get("job_id")
             if not job_id:
                 continue
             try:
                 refreshed.append(self.refresh_job(job_id))
             except Exception as exc:
-                refreshed.append(
-                    {
-                        **job,
-                        "status": "failed",
-                        "updated_at": utc_now(),
-                        "message": f"Refresh failed: {type(exc).__name__}: {exc}",
-                    }
-                )
+                refreshed.append(self._failed_refresh_view(job, exc))
         return sorted(
-            refreshed, key=lambda item: item.get("created_at", ""), reverse=True
+            refreshed,
+            key=lambda item: item.get("created_at", ""),
+            reverse=True,
         )
 
     def refresh_job(self, job_id: str) -> dict[str, Any]:
@@ -243,22 +170,22 @@ class RuntimeJobService:
             raise KeyError(job_id)
 
         process = self._get_process(job_id)
-        if process is not None and record.get("status") == "running":
+        if process is not None and record.get("status") == RUNNING_STATUS:
             return_code = process.poll()
             if return_code is None:
                 return self._attach_log_preview(record)
             self._discard_process(job_id)
-            record = self._reconcile_job_state(record, observed_return_code=return_code)
-            return self._attach_log_preview(record)
+            return self._attach_log_preview(
+                self._reconcile_job_state(record, observed_return_code=return_code)
+            )
 
         if record.get("status") not in self.TERMINAL_STATUSES:
             record = self._reconcile_job_state(record)
-
         return self._attach_log_preview(record)
 
     def get_job_series(self, job_id: str) -> dict[str, Any]:
         record = self.refresh_job(job_id)
-        if record.get("status") != "completed":
+        if record.get("status") != COMPLETED_STATUS:
             raise RuntimeError("Job artifacts are not ready yet.")
         return self.get_job_repository(job_id, require_completed=True).predictions(
             model=record.get("model_name"),
@@ -269,9 +196,254 @@ class RuntimeJobService:
         self, job_id: str, require_completed: bool = False
     ) -> ArtifactRepository:
         record = self.refresh_job(job_id)
-        if require_completed and record.get("status") != "completed":
+        if require_completed and record.get("status") != COMPLETED_STATUS:
             raise RuntimeError("Job artifacts are not ready yet.")
         return self._repository_from_record(record)
+
+    def _build_import_record(
+        self,
+        payload: DataImportRequest,
+        source: Path,
+    ) -> dict[str, Any]:
+        return {
+            "import_id": uuid4().hex[:JOB_ID_LENGTH],
+            "created_at": utc_now(),
+            "data_type": payload.data_type,
+            "source_name": payload.source_name,
+            "source_path": str(source),
+            "time_granularity": payload.time_granularity,
+            "station_code": payload.station_code,
+        }
+
+    def _append_import_failure(self, record: dict[str, Any], message: str) -> dict[str, Any]:
+        return self.store.append_import({**record, "status": FAILED_STATUS, "message": message})
+
+    def _import_target_path(self, data_type: str, import_id: str, source_name: str) -> Path:
+        return self.settings.imports_root / data_type / f"{import_id}-{source_name}"
+
+    def _resolve_config_path(self, config_path: str | None) -> Path:
+        resolved = (
+            Path(config_path).expanduser().resolve()
+            if config_path
+            else self.settings.default_config_path
+        )
+        if not resolved.exists() or not resolved.is_file():
+            raise FileNotFoundError(f"Config file not found: {resolved}")
+        return resolved
+
+    def _reserve_job_paths(self) -> JobRuntimePaths:
+        for _ in range(8):
+            candidate = uuid4().hex[:JOB_ID_LENGTH]
+            paths = self._job_paths(candidate)
+            try:
+                paths.run_root.mkdir(parents=True, exist_ok=False)
+            except FileExistsError:
+                continue
+            return paths
+        raise RuntimeError("Unable to allocate a unique job id.")
+
+    def _job_paths(self, job_id: str) -> JobRuntimePaths:
+        paths = JobRuntimePaths.build(self.settings.job_runs_root, job_id)
+        self._assert_managed_path(paths.run_root)
+        return paths
+
+    def _assert_managed_path(self, path: Path) -> Path:
+        resolved = path.resolve()
+        managed_root = self.settings.job_runs_root.resolve()
+        if resolved == managed_root or managed_root not in resolved.parents:
+            raise ValueError(f"Refusing to operate outside job runs root: {resolved}")
+        return resolved
+
+    def _build_job_record(
+        self,
+        *,
+        job_id: str,
+        payload: PredictionJobCreateRequest,
+        config_path: Path,
+        config_snapshot_path: Path,
+        paths: JobRuntimePaths,
+    ) -> dict[str, Any]:
+        timestamp = utc_now()
+        return {
+            "job_id": job_id,
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "mode": payload.mode,
+            "model_name": payload.model_name,
+            "station_code": payload.station_code,
+            "config_path": str(config_path),
+            "config_snapshot_path": str(config_snapshot_path),
+            "start_date": payload.start_date,
+            "end_date": payload.end_date,
+            "use_existing_artifacts": payload.use_existing_artifacts,
+            "runtime_root": str(self.settings.runtime_root),
+            "run_root": str(paths.run_root),
+            "artifact_root": str(paths.output_root),
+            "status_file": str(paths.status_file),
+            "stdout_log": str(paths.stdout_log),
+            "stderr_log": str(paths.stderr_log),
+        }
+
+    def _complete_existing_artifact_job(
+        self,
+        record: dict[str, Any],
+        paths: JobRuntimePaths,
+        config_snapshot_path: Path,
+    ) -> dict[str, Any]:
+        self._snapshot_integrated_outputs(paths.output_root)
+        scoped_repo = self.repository.scoped(
+            outputs_root=paths.output_root,
+            config_path=config_snapshot_path,
+        )
+        finished_at = utc_now()
+        completed_record = {
+            **record,
+            "status": COMPLETED_STATUS,
+            "finished_at": finished_at,
+            "message": EXISTING_ARTIFACT_MESSAGE,
+            "artifacts": scoped_repo.artifact_manifest(),
+        }
+        self._write_status_file(
+            paths.status_file,
+            {
+                "status": COMPLETED_STATUS,
+                "started_at": record["created_at"],
+                "finished_at": finished_at,
+                "return_code": 0,
+                "artifact_root": str(paths.output_root),
+                "message": EXISTING_ARTIFACT_MESSAGE,
+            },
+        )
+        return self.store.append_job(completed_record)
+
+    def _snapshot_integrated_outputs(self, output_root: Path) -> None:
+        safe_output_root = self._assert_managed_path(output_root)
+        source_root = self.settings.outputs_root
+        if not source_root.exists() or not source_root.is_dir():
+            raise FileNotFoundError(f"Integrated outputs root not found: {source_root}")
+
+        staging_root = safe_output_root.parent / f".{safe_output_root.name}.tmp-{uuid4().hex[:8]}"
+        if staging_root.exists():
+            shutil.rmtree(staging_root)
+
+        try:
+            shutil.copytree(source_root, staging_root)
+            if safe_output_root.exists():
+                shutil.rmtree(safe_output_root)
+            staging_root.replace(safe_output_root)
+        except Exception:
+            if staging_root.exists():
+                shutil.rmtree(staging_root, ignore_errors=True)
+            raise
+
+    def _launch_prediction_job(
+        self,
+        record: dict[str, Any],
+        paths: JobRuntimePaths,
+        config_snapshot_path: Path,
+    ) -> dict[str, Any]:
+        command = self._job_runner_command(config_snapshot_path, paths)
+        process = self._spawn_process(command, paths.stdout_log, paths.stderr_log)
+        job_id = str(record["job_id"])
+        started_at = utc_now()
+        running_record = {
+            **record,
+            "status": RUNNING_STATUS,
+            "started_at": started_at,
+            "pid": process.pid,
+            "command": command,
+            "message": LAUNCHED_MESSAGE,
+        }
+        with self._process_lock:
+            self._processes[job_id] = process
+        try:
+            self._write_status_file(
+                paths.status_file,
+                {
+                    "status": RUNNING_STATUS,
+                    "started_at": started_at,
+                    "artifact_root": str(paths.output_root),
+                    "pid": process.pid,
+                    "message": LAUNCHED_MESSAGE,
+                },
+            )
+            return self.store.append_job(running_record)
+        except Exception:
+            self._cleanup_failed_launch(job_id, process, paths.status_file)
+            raise
+
+    def _job_runner_command(
+        self,
+        config_snapshot_path: Path,
+        paths: JobRuntimePaths,
+    ) -> list[str]:
+        return [
+            sys.executable,
+            "-m",
+            JOB_RUNNER_MODULE,
+            "--runtime-root",
+            str(self.settings.runtime_root),
+            "--config",
+            str(config_snapshot_path),
+            "--status-file",
+            str(paths.status_file),
+            "--artifact-root",
+            str(paths.output_root),
+        ]
+
+    def _spawn_process(
+        self,
+        command: list[str],
+        stdout_log: Path,
+        stderr_log: Path,
+    ) -> subprocess.Popen[Any]:
+        stdout_log.parent.mkdir(parents=True, exist_ok=True)
+        stdout_handle = stdout_log.open("w", encoding="utf-8")
+        stderr_handle = stderr_log.open("w", encoding="utf-8")
+        try:
+            return subprocess.Popen(
+                command,
+                cwd=str(self.settings.project_root),
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                creationflags=CREATE_NO_WINDOW,
+            )
+        finally:
+            stdout_handle.close()
+            stderr_handle.close()
+
+    def _cleanup_failed_launch(
+        self,
+        job_id: str,
+        process: subprocess.Popen[Any],
+        status_file: Path,
+    ) -> None:
+        self._discard_process(job_id)
+        self._terminate_process(process)
+        try:
+            self._write_status_file(
+                status_file,
+                {
+                    "status": FAILED_STATUS,
+                    "finished_at": utc_now(),
+                    "return_code": -1,
+                    "message": "Job launch failed before state persistence completed.",
+                },
+            )
+        except OSError:
+            pass
+
+    def _terminate_process(self, process: subprocess.Popen[Any]) -> None:
+        if process.poll() is not None:
+            return
+        try:
+            process.terminate()
+            process.wait(timeout=5)
+        except Exception:
+            try:
+                process.kill()
+            except Exception:
+                pass
 
     def _materialize_job_config(
         self,
@@ -279,21 +451,10 @@ class RuntimeJobService:
         output_root: Path,
         config_path: Path,
     ) -> Path:
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-        resolved = copy.deepcopy(config)
+        resolved = copy.deepcopy(self._load_config_mapping(config_path))
         resolved["output_dir"] = str(output_root)
-
-        hydrodynamics = dict(resolved.get("hydrodynamics", {}))
-        hydrodynamics_output_dir = output_root / "hydrodynamics_preprocessed"
-        hydrodynamics["output_dir"] = str(hydrodynamics_output_dir)
-        hydrodynamics["wide_path"] = str(
-            hydrodynamics_output_dir / "shanghai_hydrodynamics_daily_wide.csv"
-        )
-        resolved["hydrodynamics"] = hydrodynamics
-
-        ndti = dict(resolved.get("ndti", {}))
-        ndti["output_dir"] = str(output_root / "ndti_preprocessed")
-        resolved["ndti"] = ndti
+        resolved["hydrodynamics"] = self._resolved_hydrodynamics_config(resolved, output_root)
+        resolved["ndti"] = self._resolved_ndti_config(resolved, output_root)
 
         snapshot_path = run_root / "configs" / f"{config_path.stem}-job.yaml"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -303,10 +464,40 @@ class RuntimeJobService:
         )
         return snapshot_path
 
-    def _snapshot_integrated_outputs(self, output_root: Path) -> None:
-        if output_root.exists():
-            shutil.rmtree(output_root)
-        shutil.copytree(self.settings.outputs_root, output_root)
+    def _load_config_mapping(self, config_path: Path) -> dict[str, Any]:
+        try:
+            loaded = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise ValueError(f"Failed to read config file: {config_path}: {exc}") from exc
+        except yaml.YAMLError as exc:
+            raise ValueError(f"Failed to parse config file: {config_path}: {exc}") from exc
+        if loaded is None:
+            return {}
+        if not isinstance(loaded, dict):
+            raise ValueError(f"Config file must decode to a mapping: {config_path}")
+        return loaded
+
+    def _resolved_hydrodynamics_config(
+        self,
+        config: dict[str, Any],
+        output_root: Path,
+    ) -> dict[str, Any]:
+        hydrodynamics = dict(config.get("hydrodynamics", {}))
+        hydrodynamics_output_dir = output_root / HYDRODYNAMICS_OUTPUT_DIR_NAME
+        hydrodynamics["output_dir"] = str(hydrodynamics_output_dir)
+        hydrodynamics["wide_path"] = str(
+            hydrodynamics_output_dir / HYDRODYNAMICS_WIDE_FILENAME
+        )
+        return hydrodynamics
+
+    def _resolved_ndti_config(
+        self,
+        config: dict[str, Any],
+        output_root: Path,
+    ) -> dict[str, Any]:
+        ndti = dict(config.get("ndti", {}))
+        ndti["output_dir"] = str(output_root / NDTI_OUTPUT_DIR_NAME)
+        return ndti
 
     def _write_status_file(self, path: Path, payload: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -322,7 +513,7 @@ class RuntimeJobService:
             return None
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, UnicodeDecodeError, JSONDecodeError):
             return None
 
     def _reconcile_job_state(
@@ -330,80 +521,129 @@ class RuntimeJobService:
         record: dict[str, Any],
         observed_return_code: int | None = None,
     ) -> dict[str, Any]:
-        status_file = Path(record.get("status_file", "")) if record.get("status_file") else None
-        status_payload = self._read_status_file(status_file) if status_file else None
+        status_payload = self._status_payload(record)
         if status_payload and status_payload.get("status") in self.TERMINAL_STATUSES:
-            final_status = str(status_payload.get("status"))
-            updates = {
-                "status": final_status,
-                "finished_at": status_payload.get("finished_at") or utc_now(),
-                "updated_at": status_payload.get("finished_at") or utc_now(),
-                "return_code": int(status_payload.get("return_code", 0)),
-                "message": status_payload.get("message")
-                or status_payload.get("error")
-                or record.get("message")
-                or f"Job {final_status}.",
-            }
-            if (
-                final_status == "completed"
-                and record.get("artifact_root")
-                and Path(str(record["artifact_root"])).exists()
-            ):
-                try:
-                    updates["artifacts"] = self._repository_from_record(
-                        record
-                    ).artifact_manifest()
-                except Exception:
-                    pass
-            return self.store.update_job(str(record["job_id"]), updates)
+            return self.store.update_job(
+                str(record["job_id"]),
+                self._terminal_status_updates(record, status_payload),
+            )
 
         if observed_return_code is not None:
-            final_status = "completed" if observed_return_code == 0 else "failed"
-            updates = {
-                "status": final_status,
-                "finished_at": utc_now(),
-                "updated_at": utc_now(),
-                "return_code": observed_return_code,
-                "message": (
-                    "Job completed with verified job-scoped artifacts."
-                    if final_status == "completed"
-                    else f"Job {final_status}."
-                ),
-            }
-            if final_status == "completed":
-                try:
-                    updates["artifacts"] = self._repository_from_record(
-                        record
-                    ).artifact_manifest()
-                except Exception:
-                    pass
-            return self.store.update_job(str(record["job_id"]), updates)
+            return self.store.update_job(
+                str(record["job_id"]),
+                self._process_exit_updates(record, observed_return_code),
+            )
 
-        pid = record.get("pid")
-        if isinstance(pid, int) and self._pid_exists(pid):
-            detached_message = record.get("message") or "Job is running."
-            if "detached" not in detached_message.lower() and self._get_process(str(record["job_id"])) is None:
-                return self.store.update_job(
-                    str(record["job_id"]),
-                    {
-                        "updated_at": utc_now(),
-                        "message": "Job is still running in detached mode; waiting for status file completion.",
-                    },
-                )
-            return record
+        if self._is_detached_running(record):
+            return self._detached_running_record(record)
 
-        if record.get("status") == "running":
+        if record.get("status") == RUNNING_STATUS:
             return self.store.update_job(
                 str(record["job_id"]),
                 {
-                    "status": "orphaned",
+                    "status": ORPHANED_STATUS,
                     "finished_at": utc_now(),
                     "updated_at": utc_now(),
                     "return_code": -1,
-                    "message": "Job process is no longer alive and no completion marker was found.",
+                    "message": ORPHANED_MESSAGE,
                 },
             )
         return record
+
+    def _status_payload(self, record: dict[str, Any]) -> dict[str, Any] | None:
+        status_file = record.get("status_file")
+        if not status_file:
+            return None
+        return self._read_status_file(Path(str(status_file)))
+
+    def _terminal_status_updates(
+        self,
+        record: dict[str, Any],
+        status_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        final_status = str(status_payload.get("status"))
+        finished_at = status_payload.get("finished_at") or utc_now()
+        updates = {
+            "status": final_status,
+            "finished_at": finished_at,
+            "updated_at": finished_at,
+            "return_code": self._coerce_return_code(status_payload.get("return_code"), default=0),
+            "message": status_payload.get("message")
+            or status_payload.get("error")
+            or record.get("message")
+            or f"Job {final_status}.",
+        }
+        return self._validated_completion_updates(record, updates)
+
+    def _process_exit_updates(
+        self,
+        record: dict[str, Any],
+        return_code: int,
+    ) -> dict[str, Any]:
+        final_status = COMPLETED_STATUS if return_code == 0 else FAILED_STATUS
+        updates = {
+            "status": final_status,
+            "finished_at": utc_now(),
+            "updated_at": utc_now(),
+            "return_code": return_code,
+            "message": COMPLETED_MESSAGE if final_status == COMPLETED_STATUS else f"Job {final_status}.",
+        }
+        return self._validated_completion_updates(record, updates)
+
+    def _validated_completion_updates(
+        self,
+        record: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        if updates.get("status") != COMPLETED_STATUS:
+            return updates
+        manifest = self._verified_artifact_manifest(record)
+        if manifest is None:
+            return {
+                **updates,
+                "status": FAILED_STATUS,
+                "return_code": updates.get("return_code", -1) if updates.get("return_code", -1) != 0 else -1,
+                "message": ARTIFACT_VALIDATION_FAILURE_MESSAGE,
+            }
+        return {**updates, "artifacts": manifest}
+
+    def _verified_artifact_manifest(self, record: dict[str, Any]) -> dict[str, str] | None:
+        artifact_root = record.get("artifact_root")
+        if not artifact_root:
+            return None
+        artifact_path = Path(str(artifact_root))
+        if not artifact_path.exists():
+            return None
+        try:
+            repository = self._repository_from_record(record)
+            repository.assert_source_ready()
+            return repository.artifact_manifest()
+        except Exception:
+            return None
+
+    def _is_detached_running(self, record: dict[str, Any]) -> bool:
+        pid = record.get("pid")
+        return isinstance(pid, int) and self._pid_exists(pid)
+
+    def _detached_running_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        current_message = record.get("message") or "Job is running."
+        if "detached" in current_message.lower() or self._get_process(str(record["job_id"])) is not None:
+            return record
+        return self.store.update_job(
+            str(record["job_id"]),
+            {
+                "updated_at": utc_now(),
+                "message": DETACHED_WAIT_MESSAGE,
+            },
+        )
+
+    def _failed_refresh_view(self, record: dict[str, Any], exc: Exception) -> dict[str, Any]:
+        return {
+            **record,
+            "status": FAILED_STATUS,
+            "updated_at": utc_now(),
+            "message": f"Refresh failed: {type(exc).__name__}: {exc}",
+        }
 
     def _get_process(self, job_id: str) -> subprocess.Popen[Any] | None:
         with self._process_lock:
@@ -414,16 +654,14 @@ class RuntimeJobService:
             self._processes.pop(job_id, None)
 
     def _attach_log_preview(self, record: dict[str, Any]) -> dict[str, Any]:
-        preview = {}
-        for key in ("stdout_log", "stderr_log"):
-            path_value = record.get(key)
-            if path_value:
-                preview[key.replace("_log", "_preview")] = self._tail(Path(path_value))
-        if preview:
-            return {**record, **preview}
-        return record
+        previews = {
+            key.replace("_log", "_preview"): self._tail(Path(str(path_value)))
+            for key in ("stdout_log", "stderr_log")
+            if (path_value := record.get(key))
+        }
+        return {**record, **previews} if previews else record
 
-    def _tail(self, path: Path, line_count: int = 20) -> list[str]:
+    def _tail(self, path: Path, line_count: int = LOG_PREVIEW_LINE_COUNT) -> list[str]:
         if not path.exists():
             return []
         try:
@@ -441,9 +679,7 @@ class RuntimeJobService:
                 return int(len(pd.read_excel(path)))
             if suffix == ".json":
                 payload = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(payload, list):
-                    return len(payload)
-                return 1
+                return len(payload) if isinstance(payload, list) else 1
         except Exception:
             return None
         return None
@@ -453,11 +689,18 @@ class RuntimeJobService:
             return False
         if sys.platform == "win32":
             synchronize = 0x00100000
-            process = ctypes.windll.kernel32.OpenProcess(synchronize, 0, pid)
+            query_limited_information = 0x1000
+            process = ctypes.windll.kernel32.OpenProcess(
+                synchronize | query_limited_information,
+                0,
+                pid,
+            )
             if process == 0:
                 return False
+            exit_code = ctypes.c_ulong()
+            ctypes.windll.kernel32.GetExitCodeProcess(process, ctypes.byref(exit_code))
             ctypes.windll.kernel32.CloseHandle(process)
-            return True
+            return int(exit_code.value) == ACTIVE_PROCESS_EXIT_CODE
         try:
             import os
 
@@ -479,3 +722,9 @@ class RuntimeJobService:
                 else self.settings.default_config_path
             ),
         )
+
+    def _coerce_return_code(self, value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default

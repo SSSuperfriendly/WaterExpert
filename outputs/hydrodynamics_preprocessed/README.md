@@ -3,7 +3,7 @@
 ## Source
 
 - Raw file: `data/raw/shanghai_hydrodynamics.xls`
-- Script: `scripts/preprocess_shanghai_hydrodynamics.py`
+- Script: `scripts/preprocess/preprocess_shanghai_hydrodynamics.py`
 
 The source workbook contains daily flow and water-level sheets for Huangdu and Songpu Bridge. The available date range is `2022-01-01` to `2024-12-31`.
 

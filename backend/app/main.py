@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -8,9 +8,13 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.config import get_settings
-from backend.app.schemas import DataImportRequest, PredictionJobCreateRequest
-from backend.app.services.artifact_repository import ArtifactRepository
-from backend.app.services.report_builder import write_report
+from backend.app.schemas import (
+    DataImportRequest,
+    PredictionJobCreateRequest,
+    ReportExportFormat,
+)
+from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
+from backend.app.services.report_builder import get_report_media_type, write_report
 from backend.app.services.runtime_jobs import RuntimeJobService
 from backend.app.services.state_store import SqliteStateStore
 
@@ -37,6 +41,25 @@ app.add_middleware(
 app.mount("/ui", StaticFiles(directory=settings.frontend_root), name="ui")
 
 
+def artifact_error_to_http(exc: Exception) -> HTTPException:
+    if isinstance(exc, FileNotFoundError):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, ArtifactReadError):
+        return HTTPException(status_code=500, detail=str(exc))
+    return HTTPException(status_code=500, detail="Unexpected application error.")
+
+
+def run_repository_call(operation, *, bad_request_errors: tuple[type[Exception], ...] = ()):
+    try:
+        return operation()
+    except HTTPException:
+        raise
+    except bad_request_errors as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise artifact_error_to_http(exc) from exc
+
+
 def resolve_repository(job_id: str | None, require_completed: bool = False) -> ArtifactRepository:
     if not job_id:
         return repository
@@ -55,21 +78,24 @@ def index() -> RedirectResponse:
 
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
-    try:
-        repository.assert_source_ready()
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return run_repository_call(_healthz_payload)
+
+
+def _healthz_payload() -> dict[str, str]:
+    repository.assert_source_ready()
     return {"status": "ok"}
 
 
 @app.get("/api/v1/meta")
 def meta(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).metadata()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).metadata()
+    )
 
 
 @app.get("/api/v1/stations")
 def stations() -> list[dict]:
-    return repository.stations()
+    return run_repository_call(repository.stations)
 
 
 @app.post("/api/v1/data/import")
@@ -117,7 +143,9 @@ def get_prediction_job_series(job_id: str) -> dict:
 
 @app.get("/api/v1/dashboard")
 def dashboard(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).dashboard()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).dashboard()
+    )
 
 
 @app.get("/api/v1/predictions")
@@ -126,28 +154,34 @@ def predictions(
     split: str = Query(default="test"),
     job_id: str | None = Query(default=None),
 ) -> dict:
-    try:
-        return resolve_repository(job_id, require_completed=bool(job_id)).predictions(
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).predictions(
             model=model,
             split=split,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        ),
+        bad_request_errors=(ValueError,),
+    )
 
 
 @app.get("/api/v1/diagnostics")
 def diagnostics(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).diagnostics()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).diagnostics()
+    )
 
 
 @app.get("/api/v1/scenario-triage")
 def scenario_triage(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).scenario_triage()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).scenario_triage()
+    )
 
 
 @app.get("/api/v1/response-playbook")
 def response_playbook(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).response_playbook()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).response_playbook()
+    )
 
 
 @app.get("/api/v1/thresholds")
@@ -155,27 +189,47 @@ def thresholds(
     feature: str | None = Query(default=None),
     job_id: str | None = Query(default=None),
 ) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).thresholds(feature=feature)
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).thresholds(
+            feature=feature
+        )
+    )
 
 
 @app.get("/api/v1/boundary")
 def boundary(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).boundary()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).boundary()
+    )
 
 
 @app.get("/api/v1/sensitivity")
 def sensitivity(job_id: str | None = Query(default=None)) -> dict:
-    return resolve_repository(job_id, require_completed=bool(job_id)).sensitivity()
+    return run_repository_call(
+        lambda: resolve_repository(job_id, require_completed=bool(job_id)).sensitivity()
+    )
 
 
 @app.post("/api/v1/report/export")
-def export_report(job_id: str | None = Query(default=None)) -> dict[str, str]:
-    scoped_repository = resolve_repository(job_id, require_completed=bool(job_id))
-    report_path = write_report(scoped_repository, settings.report_root)
-    return {
-        "report_path": str(report_path),
-        "download_url": f"/api/v1/report/files/{report_path.name}",
-    }
+def export_report(
+    job_id: str | None = Query(default=None),
+    format: ReportExportFormat = Query(default="html"),
+) -> dict[str, str]:
+    def operation() -> dict[str, str]:
+        scoped_repository = resolve_repository(job_id, require_completed=bool(job_id))
+        report_path = write_report(
+            scoped_repository,
+            settings.report_root,
+            export_format=format,
+        )
+        return {
+            "report_path": str(report_path),
+            "filename": report_path.name,
+            "format": format,
+            "download_url": f"/api/v1/report/files/{report_path.name}",
+        }
+
+    return run_repository_call(operation)
 
 
 @app.get("/api/v1/report/files/{filename}")
@@ -183,4 +237,4 @@ def download_report(filename: str) -> FileResponse:
     path = settings.report_root / Path(filename).name
     if not path.exists():
         raise HTTPException(status_code=404, detail="Report file not found.")
-    return FileResponse(path, media_type="text/html", filename=path.name)
+    return FileResponse(path, media_type=get_report_media_type(path), filename=path.name)

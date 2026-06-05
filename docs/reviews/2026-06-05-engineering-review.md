@@ -1,4 +1,4 @@
-﻿# 2026-06-05 Engineering Review
+# 2026-06-05 Engineering Review
 
 ## Scope And Review Basis
 
@@ -10,7 +10,11 @@ Implementation basis:
 - `backend/app/services/state_store.py`
 - `backend/app/services/artifact_repository.py`
 - `backend/app/services/report_builder.py`
-- `frontend/app.js`
+- `frontend/js/main.js`
+- `frontend/js/shared.js`
+- `frontend/js/dashboard.js`
+- `frontend/js/jobs.js`
+- `frontend/js/analysis.js`
 
 Guardrails preserved in this review:
 - Current product scope is still the Wusongkou single-station, multimodal, daily-scale prototype.
@@ -24,7 +28,7 @@ The current MVP is an integrated-runtime web application, not a dual-product bri
 
 - The backend mounts a static frontend and exposes FastAPI endpoints for metadata, artifact-backed read views, import records, prediction job records, and report export.
 - The algorithm core is the repository root runtime itself; repository reads operate directly on integrated WaterExpert outputs.
-- Lightweight application state is persisted in JSON files under `app_state/`.
+- SQLite-backed application state is persisted under `var/state/`, alongside job-scoped run directories and job logs.
 - Runtime task execution is split into two paths:
   - `use_existing_artifacts=true`: bind a job record directly to already-integrated outputs.
   - `use_existing_artifacts=false`: spawn `run_full_pipeline.py` as a subprocess and later refresh status by polling the stored `Popen` handle.
@@ -41,7 +45,7 @@ flowchart LR
       A --> M[main.py routers]
       M --> R[ArtifactRepository]
       M --> J[RuntimeJobService]
-      M --> S[JsonStateStore]
+      M --> S[SqliteStateStore]
       M --> B[Report Builder]
     end
 
@@ -71,7 +75,7 @@ flowchart LR
     J --> L
 
     B --> R
-    B --> H[reports/*.html]
+    B --> H[var/reports/*.html]
     U -->|download report| H
 ```
 

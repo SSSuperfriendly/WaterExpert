@@ -8,7 +8,7 @@ The agent should treat the project as a diagnosis and decision-support prototype
 
 ## What The Agent Can Rely On
 
-- Runnable prototype: `python scripts\run_full_pipeline.py`
+- Runnable prototype: `python scripts\pipeline\run_full_pipeline.py`
 - Main config: `configs/prototype_repo.yaml`
 - Current prediction table: `outputs/predictions/predictions.csv`
 - Current metrics: `outputs/metrics/model_comparison.csv`, `outputs/metrics/metrics.json`

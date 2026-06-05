@@ -11,3 +11,6 @@ tigramite==5.2.10.1
 xlrd==2.0.1
 Pillow==11.1.0
 rasterio==1.4.3
+reportlab>=4.2,<5
+pypdf>=6.13,<7
+pytest>=8.3,<9

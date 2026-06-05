@@ -59,7 +59,7 @@ See `outputs/metrics/model_comparison.csv` and `outputs/run_summary.md` for repr
 
 ## Threshold Analysis
 
-`scripts/analyze_cmfbe_thresholds.py` estimates empirical nonlinear response thresholds from the current CMFBE-ST-GCN test outputs. Current strongest threshold candidates include:
+`scripts/analysis/analyze_cmfbe_thresholds.py` estimates empirical nonlinear response thresholds from the current CMFBE-ST-GCN test outputs. Current strongest threshold candidates include:
 
 | Factor | Empirical Threshold | Unit |
 | --- | ---: | --- |
@@ -109,7 +109,7 @@ The `MSCIM` boundary head is now connected to an optional supervision pathway ra
 
 - Expected label interface: a date-aligned boundary label table configured in `configs/prototype_repo.yaml`.
 - Template file: `data/raw/wusongkou_boundary_labels_template.csv`.
-- Real-raster proxy generator: `scripts/generate_real_raster_boundary_labels.py`.
+- Real-raster proxy generator: `scripts/boundary/generate_real_raster_boundary_labels.py`.
 - Exported status and evaluation artifact: `outputs/boundary/boundary_detection_summary.json`.
 - Exported label-generation audit: `outputs/boundary/boundary_label_generation_summary.json`.
 
@@ -154,17 +154,17 @@ These artifacts provide Monte Carlo Sobol-style sensitivity indices, one-factor 
 ## Reproduction
 
 ```powershell
-python scripts\run_full_pipeline.py
-python scripts\plot_cmfbe_process_decomposition.py
-python scripts\export_mscim_driver_overview.py
-python scripts\analyze_cmfbe_thresholds.py
-python scripts\export_threshold_knowledge_graph.py
-python scripts\export_scenario_triage.py
-python scripts\export_response_playbook.py
-python scripts\export_agent_context.py
-python scripts\create_boundary_label_template.py
-python scripts\generate_real_raster_boundary_labels.py
-python scripts\analyze_cmfbe_sobol_counterfactual.py
+python scripts\pipeline\run_full_pipeline.py
+python scripts\analysis\plot_cmfbe_process_decomposition.py
+python scripts\exports\export_mscim_driver_overview.py
+python scripts\analysis\analyze_cmfbe_thresholds.py
+python scripts\exports\export_threshold_knowledge_graph.py
+python scripts\exports\export_scenario_triage.py
+python scripts\exports\export_response_playbook.py
+python scripts\exports\export_agent_context.py
+python scripts\boundary\create_boundary_label_template.py
+python scripts\boundary\generate_real_raster_boundary_labels.py
+python scripts\analysis\analyze_cmfbe_sobol_counterfactual.py
 ```
 
 ## Current Boundaries

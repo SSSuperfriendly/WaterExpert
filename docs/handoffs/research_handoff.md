@@ -42,18 +42,18 @@
 
 当前主要脚本包括：
 
-- `scripts/run_full_pipeline.py`
-- `scripts/preprocess_shanghai_hydrodynamics.py`
-- `scripts/plot_cmfbe_process_decomposition.py`
-- `scripts/export_mscim_driver_overview.py`
-- `scripts/analyze_cmfbe_thresholds.py`
-- `scripts/export_threshold_knowledge_graph.py`
-- `scripts/export_scenario_triage.py`
-- `scripts/export_response_playbook.py`
-- `scripts/export_agent_context.py`
-- `scripts/create_boundary_label_template.py`
-- `scripts/generate_real_raster_boundary_labels.py`
-- `scripts/analyze_cmfbe_sobol_counterfactual.py`
+- `scripts/pipeline/run_full_pipeline.py`
+- `scripts/preprocess/preprocess_shanghai_hydrodynamics.py`
+- `scripts/analysis/plot_cmfbe_process_decomposition.py`
+- `scripts/exports/export_mscim_driver_overview.py`
+- `scripts/analysis/analyze_cmfbe_thresholds.py`
+- `scripts/exports/export_threshold_knowledge_graph.py`
+- `scripts/exports/export_scenario_triage.py`
+- `scripts/exports/export_response_playbook.py`
+- `scripts/exports/export_agent_context.py`
+- `scripts/boundary/create_boundary_label_template.py`
+- `scripts/boundary/generate_real_raster_boundary_labels.py`
+- `scripts/analysis/analyze_cmfbe_sobol_counterfactual.py`
 
 ## 3. 当前数据与运行范围
 
