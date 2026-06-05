@@ -3,19 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WaterExpert Software</title>
+  <title>WaterExpert Software | 水体浊度诊断与预测平台</title>
   <link rel="stylesheet" href="/ui/styles.css">
 </head>
 <body>
   <div class="page-shell">
     <header class="hero">
       <div class="hero-copy reveal">
-        <p class="eyebrow">Integrated algorithm runtime</p>
-        <h1>WaterExpert Software</h1>
+        <p class="eyebrow">软件化算法运行时</p>
+        <div class="hero-title-group">
+          <h1>WaterExpert Software</h1>
+          <p class="hero-subtitle">吴淞口多模态水体浊度诊断与预测平台</p>
+        </div>
         <p class="hero-text">
           当前版本不再把 <code>WaterExpert</code> 当外部产品桥接，而是把其已有算法代码、建模逻辑、配置、数据与产物内置为软件内部运行时。
           软件层在此基础上承接数据导入、预测任务、诊断查看、场景 triage、阈值检索、边界摘要与报告导出。
         </p>
+        <p class="hero-note">默认中文界面展示，模型标识与研究产物文件名保留英文，便于与既有原型保持一致。</p>
         <div class="hero-actions">
           <button id="refreshButton" class="button button-primary">刷新全局状态</button>
           <button id="exportReportButton" class="button button-secondary">导出报告</button>
@@ -23,7 +27,8 @@
         <p id="runtimeMeta" class="muted runtime-meta"></p>
       </div>
       <aside class="hero-side reveal">
-        <h2>Guardrails</h2>
+        <p class="section-kicker">Scope Guardrails</p>
+        <h2>边界声明</h2>
         <ul id="guardrailsList" class="guardrails"></ul>
       </aside>
     </header>
@@ -34,7 +39,7 @@
       <section class="panel panel-span-2 reveal">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">Overview</p>
+            <p class="section-kicker">System Overview</p>
             <h2>原型总览</h2>
           </div>
           <p id="scopeLabel" class="scope-label"></p>
@@ -180,11 +185,11 @@
         </div>
         <div class="two-column">
           <div>
-            <h3>Top driver features</h3>
+            <h3>主导驱动因子</h3>
             <div id="driverBars" class="bars"></div>
           </div>
           <div>
-            <h3>CMFBE process decomposition</h3>
+            <h3>CMFBE 过程分解</h3>
             <div id="processTable" class="table-wrap"></div>
           </div>
         </div>
