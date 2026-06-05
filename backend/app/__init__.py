@@ -1,2 +1,1 @@
-"""WaterTurbiditySoftware backend package."""
-
+"""WaterExpert Software backend package."""

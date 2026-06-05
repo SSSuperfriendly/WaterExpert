@@ -45,10 +45,13 @@ class Settings:
 
 def get_settings() -> Settings:
     runtime_root = Path(
-        os.environ.get("WATERTURBIDITY_RUNTIME_ROOT", str(DEFAULT_RUNTIME_ROOT))
+        os.environ.get(
+            "WATEREXPERT_RUNTIME_ROOT",
+            os.environ.get("WATERTURBIDITY_RUNTIME_ROOT", str(DEFAULT_RUNTIME_ROOT)),
+        )
     ).resolve()
     return Settings(
-        app_name="WaterTurbiditySoftware",
+        app_name="WaterExpert Software",
         project_root=PROJECT_ROOT,
         runtime_root=runtime_root,
         frontend_root=(PROJECT_ROOT / "frontend").resolve(),

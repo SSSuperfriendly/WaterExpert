@@ -80,6 +80,49 @@ class ArtifactRepository:
             )
         )
 
+    def _process_decomposition_summary(self) -> pd.DataFrame:
+        path = self.outputs_root / "diagnosis" / "cmfbe_process_decomposition_summary.csv"
+        if path.exists():
+            return pd.read_csv(path)
+
+        predictions = self._read_csv("predictions/predictions.csv")
+        if "model" in predictions.columns:
+            filtered = predictions[predictions["model"] == "cmfbe_stgcn"].copy()
+        else:
+            filtered = predictions.copy()
+        if "split" in filtered.columns:
+            test_filtered = filtered[filtered["split"] == "test"].copy()
+            if not test_filtered.empty:
+                filtered = test_filtered
+
+        process_specs = [
+            ("runoff_source", "径流输入", "source"),
+            ("erosion_source", "再悬浮", "source"),
+            ("tidal_source", "潮汐滞留", "source"),
+            ("phytoplankton_source", "生态增殖", "source"),
+            ("krone_deposition_sink", "沉降絮凝", "sink"),
+            ("flushing_sink", "冲刷外输", "sink"),
+            ("purification_sink", "自净恢复", "sink"),
+        ]
+        rows: list[dict[str, Any]] = []
+        for column, label, direction in process_specs:
+            if column not in filtered.columns:
+                continue
+            series = pd.to_numeric(filtered[column], errors="coerce").dropna()
+            if series.empty:
+                continue
+            rows.append(
+                {
+                    "process_key": column,
+                    "process_label": label,
+                    "direction": direction,
+                    "mean_contribution": float(series.mean()),
+                    "std_contribution": float(series.std(ddof=0)),
+                    "max_contribution": float(series.max()),
+                }
+            )
+        return pd.DataFrame(rows)
+
     def artifact_manifest(self) -> dict[str, str]:
         return {
             "outputs_root": str(self.outputs_root),
@@ -152,7 +195,7 @@ class ArtifactRepository:
         hydrodynamics = dataset_summary.get("hydrodynamics", {})
 
         return {
-            "product_name": "WaterTurbiditySoftware",
+            "product_name": "WaterExpert Software",
             "algorithm_core": "embedded WaterExpert runtime",
             "prototype_scope": dataset_summary["notes"]["current_scope"],
             "purpose": agent_context.get("purpose"),
@@ -252,9 +295,7 @@ class ArtifactRepository:
         factor_summary = self._read_json(
             "diagnosis/mscim_turbidity_factor_diagnosis_summary.json"
         )
-        process_summary = self._read_csv(
-            "diagnosis/cmfbe_process_decomposition_summary.csv"
-        )
+        process_summary = self._process_decomposition_summary()
         domain_summary = self._read_csv(
             "diagnosis/mscim_turbidity_domain_diagnosis.csv"
         )
@@ -299,9 +340,25 @@ class ArtifactRepository:
     def boundary(self) -> dict[str, Any]:
         summary = self._read_json("boundary/boundary_detection_summary.json")
         predictions = self._read_csv("boundary/boundary_predictions.csv")
-        label_summary = self._read_json(
-            "boundary/boundary_label_generation_summary.json"
-        )
+        try:
+            label_summary = self._read_json(
+                "boundary/boundary_label_generation_summary.json"
+            )
+        except FileNotFoundError:
+            overall = summary.get("overall", {}).get("test", {})
+            label_summary = {
+                "status": summary.get("status", "evaluated"),
+                "source_path": str(
+                    self.outputs_root / "boundary" / "merged_boundary_labels.csv"
+                ),
+                "labeled_days": overall.get("labeled_samples"),
+                "positive_days": None,
+                "label_column": "boundary_label",
+                "notes": [
+                    "Boundary label generation summary was not present for this artifact set.",
+                    "The current boundary label is a raster-derived proxy label, not a validated physical boundary product.",
+                ],
+            }
         if "split" in predictions.columns:
             predictions = predictions[predictions["split"] == "test"].copy()
         if "target_date" in predictions.columns:

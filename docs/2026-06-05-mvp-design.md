@@ -1,8 +1,8 @@
-﻿# Design: WaterTurbiditySoftware Phase-1 Integrated Product
+﻿# Design: WaterExpert Software Phase-1 Integrated Product
 
 ## Problem Statement
 
-`WaterTurbiditySoftware` must not treat `WaterExpert` as an external product bridge. The correct direction is to inherit its existing algorithm code, modeling logic, configs, data, and validated outputs into the software repository itself, then continue product development on top of that integrated runtime.
+`WaterExpert Software` must not treat `WaterExpert` as an external product bridge. The correct direction is to inherit its existing algorithm code, modeling logic, configs, data, and validated outputs into the software repository itself, then continue product development on top of that integrated runtime.
 
 ## Core Decision
 

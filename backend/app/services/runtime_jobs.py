@@ -176,6 +176,8 @@ class RuntimeJobService:
             str(config_snapshot_path),
             "--status-file",
             str(status_file),
+            "--artifact-root",
+            str(output_root),
         ]
         stdout_handle = stdout_path.open("w", encoding="utf-8")
         stderr_handle = stderr_path.open("w", encoding="utf-8")
@@ -337,11 +339,16 @@ class RuntimeJobService:
                 "finished_at": status_payload.get("finished_at") or utc_now(),
                 "updated_at": status_payload.get("finished_at") or utc_now(),
                 "return_code": int(status_payload.get("return_code", 0)),
-                "message": status_payload.get("error")
+                "message": status_payload.get("message")
+                or status_payload.get("error")
                 or record.get("message")
                 or f"Job {final_status}.",
             }
-            if record.get("artifact_root") and Path(str(record["artifact_root"])).exists():
+            if (
+                final_status == "completed"
+                and record.get("artifact_root")
+                and Path(str(record["artifact_root"])).exists()
+            ):
                 try:
                     updates["artifacts"] = self._repository_from_record(
                         record
@@ -357,7 +364,11 @@ class RuntimeJobService:
                 "finished_at": utc_now(),
                 "updated_at": utc_now(),
                 "return_code": observed_return_code,
-                "message": record.get("message") or f"Job {final_status}.",
+                "message": (
+                    "Job completed with verified job-scoped artifacts."
+                    if final_status == "completed"
+                    else f"Job {final_status}."
+                ),
             }
             if final_status == "completed":
                 try:

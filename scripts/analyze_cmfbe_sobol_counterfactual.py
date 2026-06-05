@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -33,6 +34,53 @@ COUNTERFACTUAL_CSV_PATH = COUNTERFACTUAL_DIR / "cmfbe_counterfactual_summary.csv
 JOINT_COUNTERFACTUAL_CSV_PATH = COUNTERFACTUAL_DIR / "cmfbe_joint_counterfactual_summary.csv"
 REPORT_MD_PATH = COUNTERFACTUAL_DIR / "cmfbe_sobol_counterfactual_report.md"
 AGENT_SUMMARY_PATH = AGENT_DIR / "cmfbe_mechanism_intervention_digest.json"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Export Sobol and counterfactual analysis artifacts."
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=str(OUTPUT_DIR),
+        help="Artifact output root. Defaults to repository outputs/.",
+    )
+    return parser.parse_args()
+
+
+def configure_output_root(output_root: Path) -> None:
+    global OUTPUT_DIR
+    global FEATURES_PATH
+    global PREDICTIONS_PATH
+    global COEFFICIENTS_PATH
+    global THRESHOLD_SUMMARY_PATH
+    global SENSITIVITY_DIR
+    global COUNTERFACTUAL_DIR
+    global AGENT_DIR
+    global SOBOL_CSV_PATH
+    global SOBOL_JSON_PATH
+    global COUNTERFACTUAL_CSV_PATH
+    global JOINT_COUNTERFACTUAL_CSV_PATH
+    global REPORT_MD_PATH
+    global AGENT_SUMMARY_PATH
+
+    OUTPUT_DIR = output_root.resolve()
+    FEATURES_PATH = OUTPUT_DIR / "intermediate" / "multimodal_daily_dataset.csv"
+    PREDICTIONS_PATH = OUTPUT_DIR / "predictions" / "predictions.csv"
+    COEFFICIENTS_PATH = OUTPUT_DIR / "physics" / "physics_coefficients.json"
+    THRESHOLD_SUMMARY_PATH = OUTPUT_DIR / "thresholds" / "cmfbe_threshold_summary.csv"
+    SENSITIVITY_DIR = OUTPUT_DIR / "sensitivity"
+    COUNTERFACTUAL_DIR = OUTPUT_DIR / "counterfactual"
+    AGENT_DIR = OUTPUT_DIR / "agent"
+    SOBOL_CSV_PATH = SENSITIVITY_DIR / "cmfbe_sobol_indices.csv"
+    SOBOL_JSON_PATH = SENSITIVITY_DIR / "cmfbe_sobol_indices.json"
+    COUNTERFACTUAL_CSV_PATH = COUNTERFACTUAL_DIR / "cmfbe_counterfactual_summary.csv"
+    JOINT_COUNTERFACTUAL_CSV_PATH = (
+        COUNTERFACTUAL_DIR / "cmfbe_joint_counterfactual_summary.csv"
+    )
+    REPORT_MD_PATH = COUNTERFACTUAL_DIR / "cmfbe_sobol_counterfactual_report.md"
+    AGENT_SUMMARY_PATH = AGENT_DIR / "cmfbe_mechanism_intervention_digest.json"
 
 SOBOL_FACTORS = [
     "precipitation_3d",
@@ -462,6 +510,8 @@ def write_report(
 
 
 def main() -> None:
+    args = parse_args()
+    configure_output_root(Path(args.output_root))
     ensure_dir(SENSITIVITY_DIR)
     ensure_dir(COUNTERFACTUAL_DIR)
     ensure_dir(AGENT_DIR)

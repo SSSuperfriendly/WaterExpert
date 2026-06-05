@@ -596,6 +596,7 @@ def save_prediction_plots(predictions: pd.DataFrame, output_dir: Path) -> None:
 
 def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: Path) -> None:
     boundary_dir = ensure_dir(output_dir / "boundary")
+    merged_labels_path = boundary_dir / "merged_boundary_labels.csv"
     available_mask = predictions["boundary_label_available"].fillna(0.0) > 0.0
     available = predictions.loc[available_mask].copy()
     if available.empty:
@@ -604,6 +605,25 @@ def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: P
             "message": "Boundary supervision path is implemented, but no labeled samples were available in this run.",
         }
         save_json(summary, boundary_dir / "boundary_detection_summary.json")
+        if merged_labels_path.exists():
+            merged_labels = pd.read_csv(merged_labels_path)
+            labeled = merged_labels[
+                merged_labels["boundary_label_available"].fillna(0.0) > 0.0
+            ].copy()
+            label_summary = {
+                "status": "loaded" if not labeled.empty else "no_supervised_boundary_labels",
+                "source_path": str(merged_labels_path),
+                "labeled_days": int(len(labeled)),
+                "positive_days": int(labeled["boundary_label"].fillna(0.0).sum())
+                if "boundary_label" in labeled.columns
+                else 0,
+                "label_column": "boundary_label",
+                "extent_ratio_threshold": None,
+            }
+            save_json(
+                label_summary,
+                boundary_dir / "boundary_label_generation_summary.json",
+            )
         return
 
     available.to_csv(
@@ -625,6 +645,29 @@ def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: P
         )
         summary["overall"][split_name]["labeled_samples"] = int(len(split_df))
     save_json(summary, boundary_dir / "boundary_detection_summary.json")
+    if merged_labels_path.exists():
+        merged_labels = pd.read_csv(merged_labels_path)
+        labeled = merged_labels[
+            merged_labels["boundary_label_available"].fillna(0.0) > 0.0
+        ].copy()
+        label_summary = {
+            "status": "loaded",
+            "source_path": str(merged_labels_path),
+            "labeled_days": int(len(labeled)),
+            "positive_days": int(labeled["boundary_label"].fillna(0.0).sum())
+            if "boundary_label" in labeled.columns
+            else 0,
+            "label_column": "boundary_label",
+            "extent_ratio_threshold": None,
+        }
+        if "label_source" in labeled.columns:
+            label_summary["label_source_counts"] = (
+                labeled["label_source"].fillna("unknown").value_counts().to_dict()
+            )
+        save_json(
+            label_summary,
+            boundary_dir / "boundary_label_generation_summary.json",
+        )
 
 
 def save_model_comparison(metrics: dict[str, Any], output_dir: Path) -> pd.DataFrame:

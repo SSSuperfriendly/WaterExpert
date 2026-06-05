@@ -45,7 +45,7 @@ def build_report_html(repository: ArtifactRepository) -> str:
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>WaterTurbiditySoftware MVP Report</title>
+  <title>WaterExpert Software Report</title>
   <style>
     :root {{
       --ink: #122033;
@@ -152,7 +152,7 @@ def build_report_html(repository: ArtifactRepository) -> str:
   <main>
     <section class="hero">
       <div class="panel">
-        <h1>WaterTurbiditySoftware MVP</h1>
+        <h1>WaterExpert Software Report</h1>
         <p>This report summarizes the current Wusongkou single-station prototype from the repository-root runtime inside the WaterExpert software branch. It is intended for result review, not for operational control claims.</p>
         <div class="meta">
           <div><strong>Station</strong>{escape(str(dashboard["station_profile"]["station_name"]))}</div>
@@ -282,6 +282,6 @@ def build_report_html(repository: ArtifactRepository) -> str:
 def write_report(repository: ArtifactRepository, report_root: Path) -> Path:
     report_root.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    path = report_root / f"water-turbidity-mvp-report-{timestamp}.html"
+    path = report_root / f"waterexpert-software-report-{timestamp}.html"
     path.write_text(build_report_html(repository), encoding="utf-8")
     return path

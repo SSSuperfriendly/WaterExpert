@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import warnings
@@ -20,6 +21,41 @@ SUMMARY_CSV = THRESHOLD_DIR / "cmfbe_threshold_summary.csv"
 CONTEXT_CSV = THRESHOLD_DIR / "cmfbe_thresholds_by_context.csv"
 REPORT_MD = THRESHOLD_DIR / "cmfbe_threshold_report.md"
 PLOT_PATH = PLOT_DIR / "cmfbe_threshold_response_20260430.png"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Export CMFBE threshold analysis artifacts."
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=str(OUTPUT_DIR),
+        help="Artifact output root. Defaults to repository outputs/.",
+    )
+    return parser.parse_args()
+
+
+def configure_output_root(output_root: Path) -> None:
+    global OUTPUT_DIR
+    global PREDICTIONS_PATH
+    global FEATURES_PATH
+    global THRESHOLD_DIR
+    global PLOT_DIR
+    global SUMMARY_CSV
+    global CONTEXT_CSV
+    global REPORT_MD
+    global PLOT_PATH
+
+    OUTPUT_DIR = output_root.resolve()
+    PREDICTIONS_PATH = OUTPUT_DIR / "predictions" / "predictions.csv"
+    FEATURES_PATH = OUTPUT_DIR / "intermediate" / "multimodal_daily_dataset.csv"
+    THRESHOLD_DIR = OUTPUT_DIR / "thresholds"
+    PLOT_DIR = OUTPUT_DIR / "plots"
+    SUMMARY_CSV = THRESHOLD_DIR / "cmfbe_threshold_summary.csv"
+    CONTEXT_CSV = THRESHOLD_DIR / "cmfbe_thresholds_by_context.csv"
+    REPORT_MD = THRESHOLD_DIR / "cmfbe_threshold_report.md"
+    PLOT_PATH = PLOT_DIR / "cmfbe_threshold_response_20260430.png"
 
 
 @dataclass(frozen=True)
@@ -356,6 +392,8 @@ def plot_threshold_response(frame: pd.DataFrame, summary_df: pd.DataFrame) -> No
 
 
 def main() -> None:
+    args = parse_args()
+    configure_output_root(Path(args.output_root))
     frame = load_analysis_frame()
     summary_df, context_df = build_threshold_tables(frame)
     write_report(frame, summary_df, context_df)

@@ -67,7 +67,7 @@
 建议新软件仓库采用下面结构：
 
 ```text
-WaterTurbiditySoftware/
+WaterExpert Software/
 ├── README.md
 ├── AGENTS.md
 ├── docs/

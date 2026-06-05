@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -33,7 +34,50 @@ RESPONSE_PLAYBOOK_PATH = OUTPUT_DIR / "agent" / "response_playbook.json"
 MECHANISM_DIGEST_PATH = OUTPUT_DIR / "agent" / "cmfbe_mechanism_intervention_digest.json"
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Export agent context artifacts."
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=str(OUTPUT_DIR),
+        help="Artifact output root. Defaults to repository outputs/.",
+    )
+    return parser.parse_args()
+
+
+def configure_output_root(output_root: Path) -> None:
+    global OUTPUT_DIR
+    global METRICS_PATH
+    global BEST_MODEL_PATH
+    global THRESHOLD_KG_PATH
+    global THRESHOLD_SUMMARY_PATH
+    global PREDICTIONS_PATH
+    global FEATURES_PATH
+    global AGENT_CONTEXT_PATH
+    global SCENARIO_TRIAGE_JSON_PATH
+    global SCENARIO_TRIAGE_CSV_PATH
+    global RESPONSE_PLAYBOOK_PATH
+    global MECHANISM_DIGEST_PATH
+
+    OUTPUT_DIR = output_root.resolve()
+    METRICS_PATH = OUTPUT_DIR / "metrics" / "metrics.json"
+    BEST_MODEL_PATH = OUTPUT_DIR / "metrics" / "best_model_summary.json"
+    THRESHOLD_KG_PATH = OUTPUT_DIR / "thresholds" / "mechanism_parameter_threshold_kg.json"
+    THRESHOLD_SUMMARY_PATH = OUTPUT_DIR / "thresholds" / "cmfbe_threshold_summary.csv"
+    PREDICTIONS_PATH = OUTPUT_DIR / "predictions" / "predictions.csv"
+    FEATURES_PATH = OUTPUT_DIR / "intermediate" / "multimodal_daily_dataset.csv"
+    AGENT_CONTEXT_PATH = OUTPUT_DIR / "agent" / "agent_context.json"
+    SCENARIO_TRIAGE_JSON_PATH = OUTPUT_DIR / "agent" / "scenario_triage.json"
+    SCENARIO_TRIAGE_CSV_PATH = OUTPUT_DIR / "diagnosis" / "scenario_triage_daily.csv"
+    RESPONSE_PLAYBOOK_PATH = OUTPUT_DIR / "agent" / "response_playbook.json"
+    MECHANISM_DIGEST_PATH = OUTPUT_DIR / "agent" / "cmfbe_mechanism_intervention_digest.json"
+
+
 def main() -> None:
+    args = parse_args()
+    configure_output_root(Path(args.output_root))
     metrics = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
     best_model_summary = json.loads(BEST_MODEL_PATH.read_text(encoding="utf-8"))
     threshold_kg = json.loads(THRESHOLD_KG_PATH.read_text(encoding="utf-8"))

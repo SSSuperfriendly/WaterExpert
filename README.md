@@ -1,6 +1,6 @@
 # WaterExpert
 
-`WaterExpert` remains the research runtime repository for the Wusongkou prototype, and on the `software/waterturbidity-app` branch it also carries the product-layer code for `WaterTurbiditySoftware`. The repository root itself is now the runtime root for the software stack.
+`WaterExpert` remains the research runtime repository for the Wusongkou prototype, and on the `software/waterturbidity-app` branch it also carries the product-layer code for `WaterExpert Software`. The repository root itself is now the runtime root for the software stack.
 
 The current release is intended for scientific review and prototype extension. It is not a production water-quality forecasting service and it is not a calibrated two-dimensional hydrodynamic solver.
 
