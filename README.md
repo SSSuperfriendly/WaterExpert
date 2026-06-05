@@ -1,6 +1,6 @@
 # WaterExpert
 
-`WaterExpert` is a self-contained research handoff repository for a water-clarity diagnosis prototype. It provides runnable code, portable configuration, minimum raw inputs, current model outputs, and concise technical documentation for external collaboration.
+`WaterExpert` remains the research runtime repository for the Wusongkou prototype, and on the `software/waterturbidity-app` branch it also carries the product-layer code for `WaterTurbiditySoftware`. The repository root itself is now the runtime root for the software stack.
 
 The current release is intended for scientific review and prototype extension. It is not a production water-quality forecasting service and it is not a calibrated two-dimensional hydrodynamic solver.
 
@@ -12,6 +12,9 @@ This release now also exports a guarded recommendation playbook. It maps the emp
 
 ## Repository Scope
 
+- `backend/`: FastAPI service layer for import, prediction jobs, artifact reads, and report export.
+- `frontend/`: browser UI for overview, prediction, diagnostics, scenario triage, thresholds, boundary summary, and task state.
+- `tests/`: software regression tests for state, job scoping, and API-serving assumptions.
 - `src/water_ai/`: data processing, model definitions, physics-surrogate utilities, metrics, and diagnosis helpers.
 - `scripts/`: executable pipeline and post-analysis scripts.
 - `configs/prototype_repo.yaml`: primary repository-relative configuration.
@@ -156,6 +159,14 @@ pip install -r requirements.txt
 ```
 
 If PyTorch installation requires a CPU/GPU-specific wheel, install the appropriate PyTorch build first, then run `pip install -r requirements.txt`.
+
+## Software Launch
+
+```powershell
+uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Then open `http://127.0.0.1:8000/`.
 
 ## Reproduce The Baseline
 

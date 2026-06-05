@@ -35,3 +35,10 @@ scratch/
 
 # Internal working notes should stay local.
 key notes*.pdf
+
+# Software branch runtime state
+app_state/
+reports/
+backend/app/__pycache__/
+backend/app/services/__pycache__/
+tests/__pycache__/
