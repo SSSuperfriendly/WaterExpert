@@ -4,6 +4,19 @@ __pycache__/
 venv/
 .env
 .ipynb_checkpoints/
+.DS_Store
+
+# LaTeX / Beamer build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.snm
+*.synctex.gz
+*.toc
+*.xdv
 
 # Local-only raw archives and heavy generated artifacts
 *.zip
