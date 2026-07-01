@@ -2,18 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.config import get_settings
 from backend.app.schemas import (
     DataImportRequest,
+    LoginRequest,
     PredictionJobCreateRequest,
     ReportExportFormat,
 )
+from backend.app.services.auth_service import DemoAuthService
 from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
+from backend.app.services.data_explorer import DataExplorerService
 from backend.app.services.report_builder import get_report_media_type, write_report
 from backend.app.services.runtime_jobs import RuntimeJobService
 from backend.app.services.state_store import SqliteStateStore
@@ -23,6 +28,8 @@ settings = get_settings()
 repository = ArtifactRepository(settings)
 store = SqliteStateStore(settings.state_root)
 runtime_jobs = RuntimeJobService(settings, repository, store)
+auth_service = DemoAuthService()
+data_explorer = DataExplorerService(settings)
 
 app = FastAPI(
     title=settings.app_name,
@@ -39,6 +46,11 @@ app.add_middleware(
 )
 
 app.mount("/ui", StaticFiles(directory=settings.frontend_root), name="ui")
+
+
+def _frontend_error_page(filename: str, status_code: int) -> FileResponse:
+    path = settings.frontend_root / filename
+    return FileResponse(path, media_type="text/html", status_code=status_code)
 
 
 def artifact_error_to_http(exc: Exception) -> HTTPException:
@@ -73,7 +85,40 @@ def resolve_repository(job_id: str | None, require_completed: bool = False) -> A
 
 @app.get("/", include_in_schema=False)
 def index() -> RedirectResponse:
-    return RedirectResponse(url="/ui/index.html")
+    return RedirectResponse(url="/ui/login.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> Response:
+    return Response(status_code=204)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> Response:
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
+    accepts_html = "text/html" in request.headers.get("accept", "")
+    if accepts_html and exc.status_code == 404:
+        return _frontend_error_page("404.html", 404)
+    return Response(
+        content=str(exc.detail),
+        status_code=exc.status_code,
+        media_type="text/plain",
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> Response:
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "Internal server error."}, status_code=500)
+    accepts_html = "text/html" in request.headers.get("accept", "")
+    if accepts_html:
+        return _frontend_error_page("500.html", 500)
+    return Response(
+        content="Internal server error.",
+        status_code=500,
+        media_type="text/plain",
+    )
 
 
 @app.get("/healthz")
@@ -84,6 +129,23 @@ def healthz() -> dict[str, str]:
 def _healthz_payload() -> dict[str, str]:
     repository.assert_source_ready()
     return {"status": "ok"}
+
+
+@app.post("/api/v1/auth/login")
+def login(payload: LoginRequest) -> dict:
+    profile = auth_service.authenticate(payload.username, payload.password)
+    if profile is None:
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+    return {
+        "username": profile.username,
+        "display_name": profile.display_name,
+        "role": profile.role,
+    }
+
+
+@app.get("/api/v1/auth/hint")
+def auth_hint() -> dict[str, str]:
+    return auth_service.credential_hint()
 
 
 @app.get("/api/v1/meta")
@@ -103,9 +165,78 @@ def import_data(payload: DataImportRequest) -> dict:
     return runtime_jobs.import_data(payload)
 
 
+@app.post("/api/v1/data/upload")
+def upload_data_files(
+    data_type: str = Form(...),
+    station_code: str = Form(default="2586"),
+    time_granularity: str = Form(default="daily"),
+    files: list[UploadFile] = File(...),
+) -> dict:
+    try:
+        return runtime_jobs.upload_data_files(
+            data_type=data_type,
+            station_code=station_code,
+            time_granularity=time_granularity,
+            files=files,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/api/v1/data/imports")
 def list_imports() -> list[dict]:
     return runtime_jobs.list_imports()
+
+
+@app.get("/api/v1/database/summary")
+def database_summary() -> dict:
+    return run_repository_call(data_explorer.database_summary)
+
+
+@app.get("/api/v1/database/stations")
+def database_stations() -> list[dict]:
+    return run_repository_call(data_explorer.database_stations)
+
+
+@app.get("/api/v1/database/query")
+def database_query(
+    station_code: str | None = Query(default=None),
+    keyword: str | None = Query(default=None),
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+) -> dict:
+    return run_repository_call(
+        lambda: data_explorer.query_records(
+            station_code=station_code,
+            keyword=keyword,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
+@app.get("/api/v1/preprocess/summary")
+def preprocess_summary(station_code: str = Query(default="2586")) -> dict:
+    return run_repository_call(lambda: data_explorer.preprocessing_summary(station_code))
+
+
+@app.get("/api/v1/visualization/summary")
+def visualization_summary(
+    station_code: str = Query(default="2586"),
+    indicator: str = Query(default="turbidity"),
+    limit: int = Query(default=180, ge=30, le=720),
+) -> dict:
+    return run_repository_call(
+        lambda: data_explorer.visualization_payload(
+            station_code=station_code,
+            indicator=indicator,
+            limit=limit,
+        )
+    )
 
 
 @app.post("/api/v1/prediction-jobs")

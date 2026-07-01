@@ -241,16 +241,22 @@ export function renderAnalysisSummary() {
 }
 
 export function setActiveAnalysisTab(tabName = ANALYSIS_DEFAULT_TAB) {
+  const normalizedTab = ["diagnosis", "thresholds", "response"].includes(tabName)
+    ? tabName
+    : ANALYSIS_DEFAULT_TAB;
   document.querySelectorAll("[data-analysis-tab]").forEach((button) => {
-    const isActive = button.dataset.analysisTab === tabName;
+    const isActive = button.dataset.analysisTab === normalizedTab;
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
   document.querySelectorAll(".analysis-section").forEach((section) => {
-    const isActive = section.id === `analysisSection-${tabName}`;
+    const isActive = section.id === `analysisSection-${normalizedTab}`;
     section.classList.toggle("is-active", isActive);
     section.hidden = !isActive;
   });
+  const url = new URL(window.location.href);
+  url.searchParams.set("tab", normalizedTab);
+  window.history.replaceState({}, "", url);
 }
 
 export function initAnalysisPage() {
@@ -262,7 +268,8 @@ export function initAnalysisPage() {
       setActiveAnalysisTab(button.dataset.analysisTab || ANALYSIS_DEFAULT_TAB);
     });
   });
-  setActiveAnalysisTab(ANALYSIS_DEFAULT_TAB);
+  const initialTab = new URL(window.location.href).searchParams.get("tab") || ANALYSIS_DEFAULT_TAB;
+  setActiveAnalysisTab(initialTab);
 }
 
 export function renderDiagnostics() {

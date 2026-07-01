@@ -10,6 +10,8 @@ The current handoff package also includes an agent-ready scenario triage layer. 
 
 This release now also exports a guarded recommendation playbook. It maps the empirical scenarios to reviewable follow-up actions, monitoring targets, and explicit no-overclaim rules so that a downstream agent can draft response suggestions without pretending that a validated RL controller already exists.
 
+The software-facing UI now also includes a demo login page plus goal-aligned pages for home, database query, data upload, preprocessing, visualization, and integrated prediction/diagnosis.
+
 ## Repository Scope
 
 - `backend/`: FastAPI service layer for import, prediction jobs, artifact reads, and report export.
@@ -174,6 +176,20 @@ uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Then open `http://127.0.0.1:8000/`.
+
+The root route now opens the login page first. Default demo credentials are:
+
+- Username: `2510709`
+- Password: `AI4S666`
+
+After login, the main navigation is:
+
+- `首页`
+- `水质综合数据库`
+- `数据上传`
+- `数据预处理`
+- `数据可视化`
+- `透明度预测与致因诊断`
 
 ## Reproduce The Baseline
 

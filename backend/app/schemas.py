@@ -7,6 +7,11 @@ from pydantic import BaseModel, Field
 ReportExportFormat = Literal["html", "md", "json", "pdf"]
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
+
+
 class DataImportRequest(BaseModel):
     data_type: Literal[
         "water_quality",

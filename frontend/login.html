@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WaterExpert | 登录</title>
+  <link rel="stylesheet" href="/ui/styles.css?v=20260625-feedback">
+</head>
+<body data-page="login">
+  <main class="login-shell">
+    <section class="login-hero">
+      <p class="eyebrow">P1 登录页面</p>
+      <h1>基于多源水质数据融合的水体透明度预测系统</h1>
+      <p class="login-subtitle">WaterExpert Software V1.0</p>
+      <p class="home-lead">
+        当前软件基于 WaterExpert 研究原型封装，面向上海市水环境监测与透明度诊断场景，
+        支持数据库查询、数据上传、预处理、可视化、透明度预测与致因诊断。
+      </p>
+      <p id="loginHint" class="login-hint">正在加载演示账号提示...</p>
+    </section>
+
+    <section class="login-card">
+      <div class="login-card-head">
+        <h2>登录</h2>
+        <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button">夜间</button>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label class="field">
+          <span>账号</span>
+          <input id="loginUsername" type="text" autocomplete="username" required>
+        </label>
+        <label class="field">
+          <span>密码</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
+        </label>
+        <div class="button-row">
+          <button id="fillDemoButton" type="button" class="button button-secondary">一键填入演示账号</button>
+          <button id="loginSubmitButton" type="submit" class="button button-primary">进入系统</button>
+        </div>
+      </form>
+      <p id="loginStatus" class="login-status" aria-live="polite"></p>
+      <p id="loginError" class="login-error" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script type="module" src="/ui/js/login.js?v=20260625-feedback" defer></script>
+</body>
+</html>

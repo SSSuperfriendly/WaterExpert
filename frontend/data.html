@@ -1,106 +1,14 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0; url=/ui/upload.html">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WaterExpert | 数据治理</title>
-  <link rel="stylesheet" href="/ui/styles.css?v=20260605-modular-theme">
+  <title>Redirecting...</title>
 </head>
-<body data-page="data">
-  <div class="workspace-shell">
-    <button id="sidebarScrim" class="sidebar-scrim" type="button" aria-label="关闭导航"></button>
-
-    <aside class="sidebar">
-      <div class="sidebar-top">
-        <a class="brand" href="/ui/index.html">
-          <span class="brand-mark">WE</span>
-          <span class="brand-text">WaterExpert</span>
-        </a>
-      </div>
-      <nav class="side-nav" aria-label="主导航">
-        <a class="side-link" href="/ui/index.html"><span class="side-link-index">01</span><span class="side-link-text">总览</span></a>
-        <a class="side-link active" href="/ui/data.html"><span class="side-link-index">02</span><span class="side-link-text">数据</span></a>
-        <a class="side-link" href="/ui/jobs.html"><span class="side-link-index">03</span><span class="side-link-text">任务</span></a>
-        <a class="side-link" href="/ui/analysis.html"><span class="side-link-index">04</span><span class="side-link-text">诊断</span></a>
-      </nav>
-      <div class="sidebar-foot">
-        <p id="sidebarContext" class="sidebar-context">导入与记录</p>
-      </div>
-    </aside>
-
-    <button id="sidebarEdgeToggle" class="edge-toggle" type="button" aria-label="折叠侧栏" title="折叠侧栏" data-state="expanded">
-      <span class="toggle-glyph" aria-hidden="true"></span>
-      <span class="sr-only">折叠侧栏</span>
-    </button>
-
-    <div class="content-shell">
-      <header class="toolbar">
-        <div class="toolbar-main">
-          <button id="sidebarToggleMobile" class="sidebar-toggle mobile-only" type="button" aria-label="打开导航">导航</button>
-          <div>
-            <h1>数据治理</h1>
-          </div>
-        </div>
-        <div class="toolbar-actions">
-          <p id="runtimeMeta" class="runtime-meta"></p>
-          <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button" aria-label="切换到夜间模式" title="切换到夜间模式">夜间</button>
-          <button id="refreshButton" class="button button-secondary">刷新</button>
-        </div>
-      </header>
-
-      <div id="statusBanner" class="status-banner hidden"></div>
-
-      <main class="page-grid single-column">
-        <section class="panel">
-          <div class="panel-head">
-            <h2>导入登记</h2>
-          </div>
-          <form id="importForm" class="form-grid">
-            <label class="field">
-              <span>数据类型</span>
-              <select id="importDataType" name="data_type">
-                <option value="water_quality">water_quality</option>
-                <option value="weather">weather</option>
-                <option value="hydrodynamics">hydrodynamics</option>
-                <option value="water_control">water_control</option>
-                <option value="boundary_labels">boundary_labels</option>
-                <option value="spatial">spatial</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>来源名称</span>
-              <input id="importSourceName" name="source_name" type="text" value="manual-import" required>
-            </label>
-            <label class="field field-wide">
-              <span>文件路径</span>
-              <input id="importFilePath" name="file_path" type="text" placeholder="例如 G:/AI4S/xxx.csv" required>
-            </label>
-            <label class="field">
-              <span>时间粒度</span>
-              <input id="importGranularity" name="time_granularity" type="text" value="daily" required>
-            </label>
-            <label class="field">
-              <span>站点</span>
-              <select id="importStationCode" name="station_code"></select>
-            </label>
-            <div class="field actions-row">
-              <span>&nbsp;</span>
-              <button type="submit" class="button button-primary">提交</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>导入记录</h2>
-          </div>
-          <div id="importsTable" class="table-wrap"></div>
-        </section>
-      </main>
-    </div>
-  </div>
-
-  <script type="module" src="/ui/js/main.js?v=20260605-modular-theme" defer></script>
+<body>
+  <script>
+    window.location.replace("/ui/upload.html");
+  </script>
 </body>
 </html>
-

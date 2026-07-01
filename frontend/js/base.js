@@ -34,6 +34,7 @@ export const state = {
   activeJobId: "",
   pendingJobSelectionId: "",
   pollTimer: null,
+  databaseQuery: null,
 };
 
 export function getElement(id) {
@@ -45,8 +46,7 @@ export function hasElement(id) {
 }
 
 export function getValue(id, fallback = "") {
-  const element = getElement(id);
-  return element ? element.value : fallback;
+  return getElement(id)?.value ?? fallback;
 }
 
 export function getChecked(id) {
@@ -63,9 +63,7 @@ export function escapeHtml(value) {
 }
 
 export function maxNumeric(values, fallback = 1) {
-  const numericValues = values
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value));
+  const numericValues = values.map(Number).filter(Number.isFinite);
   return numericValues.length ? Math.max(...numericValues) : fallback;
 }
 
@@ -77,8 +75,7 @@ export function formatNumber(value, digits = 3) {
 }
 
 export function formatMaybeDate(value) {
-  if (!value) return "N/A";
-  return String(value).slice(0, 10);
+  return value ? String(value).slice(0, 10) : "N/A";
 }
 
 export function formatPriorityDate(value) {
@@ -97,13 +94,13 @@ export function formatPriorityDate(value) {
 }
 
 export function formatPriorityScenario(item) {
-  const fallbackLabels = {
+  const labels = {
     external_input: "外源输入",
     internal_release: "内源释放",
     algal_dominant: "藻类主导",
     chronic_composite: "复合慢性压力",
   };
-  return item.primary_scenario_label || fallbackLabels[item.primary_scenario] || item.primary_scenario || "未知场景";
+  return item.primary_scenario_label || labels[item.primary_scenario] || item.primary_scenario || "未知场景";
 }
 
 export function formatRiskBandLabel(value) {
@@ -120,7 +117,7 @@ export function formatProcessDirection(value) {
 }
 
 export function formatFactorLabel(value) {
-  const fallbackLabels = {
+  const labels = {
     runoff_sediment_pulse: "径流泥沙脉冲",
     "runoff sediment pulse": "径流泥沙脉冲",
     songpu_flushing_potential: "松浦冲刷外输潜力",
@@ -138,7 +135,7 @@ export function formatFactorLabel(value) {
     water_temp: "水温",
     "water temperature": "水温",
   };
-  return fallbackLabels[value] || value || "未标注因子";
+  return labels[value] || value || "未标注因子";
 }
 
 export function summarizeEvidence(summary, previewCount = 2) {
@@ -153,7 +150,7 @@ export function summarizeEvidence(summary, previewCount = 2) {
 }
 
 export function formatDomainLabel(domain, providedLabel) {
-  const fallbackLabels = {
+  const labels = {
     rainfall: "降雨过程",
     flow: "水动力过程",
     wind: "风场扰动",
@@ -164,7 +161,7 @@ export function formatDomainLabel(domain, providedLabel) {
     self_purification: "自净沉降",
     agriculture: "农业面源",
   };
-  return providedLabel || fallbackLabels[domain] || domain || "未标注机制";
+  return providedLabel || labels[domain] || domain || "未标注机制";
 }
 
 export function formatDomainNarrative(domain, direction = "driver") {
@@ -219,10 +216,7 @@ export function formatRelativeContribution(score, maxScore) {
 }
 
 export function buildDriverLeadTitle(driverDomains) {
-  if (!driverDomains.length) {
-    return "";
-  }
-  return formatDomainLabel(driverDomains[0].domain, driverDomains[0].domain_label);
+  return driverDomains.length ? formatDomainLabel(driverDomains[0].domain, driverDomains[0].domain_label) : "";
 }
 
 export function setHtml(id, html) {
@@ -240,7 +234,15 @@ export function setText(id, text) {
 }
 
 export function renderMutedMessage(id, message) {
-  setHtml(id, `<p class='muted'>${escapeHtml(message)}</p>`);
+  setHtml(id, `<p class="muted">${escapeHtml(message)}</p>`);
+}
+
+export function setLoadingState(id, lines = 3) {
+  const element = getElement(id);
+  if (!element) {
+    return;
+  }
+  element.innerHTML = `<div class="skeleton-stack">${Array.from({ length: lines }).map(() => `<span class="skeleton-line"></span>`).join("")}</div>`;
 }
 
 export function flash(message, type = "success") {
@@ -287,7 +289,7 @@ export function renderTable(targetId, rows, columns, emptyMessage = "暂无数�
     return;
   }
   if (!rows || !rows.length) {
-    container.innerHTML = `<p class='muted'>${escapeHtml(emptyMessage)}</p>`;
+    container.innerHTML = `<p class="muted">${escapeHtml(emptyMessage)}</p>`;
     return;
   }
   const thead = `<thead><tr>${columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("")}</tr></thead>`;
@@ -350,16 +352,21 @@ export function renderImports() {
 }
 
 export function renderJobs() {
-  renderTable("jobsTable", state.jobs, [
-    { key: "created_at", label: "时间" },
-    { key: "mode", label: "模式" },
-    { key: "model_name", label: "模型" },
-    { key: "status", label: "状态" },
-    { key: "use_existing_artifacts", label: "复用" },
-    { key: "artifact_root", label: "产物" },
-    { key: "finished_at", label: "完成" },
-    { key: "message", label: "消息" },
-  ], "当前没有任务记录。");
+  renderTable(
+    "jobsTable",
+    state.jobs,
+    [
+      { key: "created_at", label: "时间" },
+      { key: "mode", label: "模式" },
+      { key: "model_name", label: "模型" },
+      { key: "status", label: "状态" },
+      { key: "use_existing_artifacts", label: "复用" },
+      { key: "artifact_root", label: "产物" },
+      { key: "finished_at", label: "完成" },
+      { key: "message", label: "消息" },
+    ],
+    "当前没有任务记录。"
+  );
   populateJobScopeSelector();
 }
 
@@ -374,4 +381,31 @@ export function bindAsyncEvent(element, eventName, handler, errorPrefix) {
       flash(`${errorPrefix}: ${error.message}`, "error");
     }
   });
+}
+
+let sharedTooltip = null;
+
+export function ensureChartTooltip() {
+  if (sharedTooltip) {
+    return sharedTooltip;
+  }
+  sharedTooltip = document.createElement("div");
+  sharedTooltip.className = "chart-tooltip";
+  document.body.appendChild(sharedTooltip);
+  return sharedTooltip;
+}
+
+export function showChartTooltip(html, x, y) {
+  const tooltip = ensureChartTooltip();
+  tooltip.innerHTML = html;
+  tooltip.classList.add("is-visible");
+  tooltip.style.left = `${x + 14}px`;
+  tooltip.style.top = `${y + 14}px`;
+}
+
+export function hideChartTooltip() {
+  if (!sharedTooltip) {
+    return;
+  }
+  sharedTooltip.classList.remove("is-visible");
 }

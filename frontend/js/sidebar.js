@@ -13,7 +13,10 @@ export function closeSidebar() {
 }
 
 export function clampSidebarWidth(width) {
-  return Math.min(SIDEBAR_WIDTH_MAX_PX, Math.max(SIDEBAR_WIDTH_MIN_PX, Math.round(Number(width) || SIDEBAR_WIDTH_MIN_PX)));
+  return Math.min(
+    SIDEBAR_WIDTH_MAX_PX,
+    Math.max(SIDEBAR_WIDTH_MIN_PX, Math.round(Number(width) || SIDEBAR_WIDTH_MIN_PX))
+  );
 }
 
 export function setSidebarWidth(width) {
@@ -43,6 +46,16 @@ export function persistSidebarCollapsed(collapsed) {
   } catch {
     // ignore storage failures
   }
+}
+
+function bindCollapsedTitles() {
+  document.querySelectorAll(".side-link").forEach((link) => {
+    const label = link.querySelector(".side-link-text")?.textContent?.trim();
+    if (label) {
+      link.title = label;
+      link.setAttribute("aria-label", label);
+    }
+  });
 }
 
 export function updateSidebarControls() {
@@ -96,6 +109,7 @@ export function initSidebar() {
     // ignore storage failures
   }
 
+  bindCollapsedTitles();
   updateSidebarControls();
 
   const sidebarToggleMobile = getElement("sidebarToggleMobile");
@@ -118,7 +132,9 @@ export function initSidebar() {
       }
 
       const startX = event.clientX;
-      const startWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width")) || SIDEBAR_WIDTH_MIN_PX;
+      const startWidth =
+        parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width")) ||
+        SIDEBAR_WIDTH_MIN_PX;
       let dragged = false;
 
       const finishInteraction = () => {
@@ -160,7 +176,9 @@ export function initSidebar() {
           toggleSidebar();
           return;
         }
-        const appliedWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width")) || startWidth;
+        const appliedWidth =
+          parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width")) ||
+          startWidth;
         persistSidebarWidth(appliedWidth);
       };
 

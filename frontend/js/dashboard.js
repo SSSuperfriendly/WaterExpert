@@ -40,7 +40,7 @@ export function renderDiagnosticsOverview() {
           <div class="driver-lead-copy">
             <h3>${escapeHtml(buildDriverLeadTitle(topDrivers))}</h3>
           </div>
-          <a class="text-link" href="/ui/analysis.html">详情</a>
+          <a class="text-link" href="/ui/prediction.html">详情</a>
         </article>
 
         <section class="driver-group">
@@ -113,6 +113,11 @@ export function renderOverview() {
   setText("sidebarContext", station.station_name || "吴淞口");
   setText("scopeLabel", "");
   setText("runtimeMeta", "");
+  setText("entryDatabaseMeta", `已集成 ${formatNumber(dashboard.station_profile?.matched_model_rows, 0)} 个建模样本，支持多站点查询。`);
+  setText("entryUploadMeta", `${formatNumber((state.imports || []).length, 0)} 条导入记录，可继续追加监测文件。`);
+  setText("entryPreprocessMeta", `当前重点站点 ${station.station_name || "吴淞口"} 已生成质量摘要。`);
+  setText("entryVisualMeta", `最近测试窗口可直接查看趋势图和相关性。`);
+  setText("entryPredictionMeta", `当前最佳浊度模型为 ${dashboard.best_model_summary?.best_test_turbidity_model || "N/A"}。`);
   setHtml(
     "overviewStats",
     [

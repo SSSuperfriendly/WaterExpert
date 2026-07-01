@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WaterExpert | 总览</title>
-  <link rel="stylesheet" href="/ui/styles.css?v=20260605-modular-theme">
+  <title>WaterExpert | 系统总览</title>
+  <link rel="stylesheet" href="/ui/styles.css?v=20260625-feedback">
 </head>
 <body data-page="dashboard">
   <div class="workspace-shell">
@@ -17,14 +17,16 @@
           <span class="brand-text">WaterExpert</span>
         </a>
       </div>
-      <nav class="side-nav" aria-label="主导航">
-        <a class="side-link active" href="/ui/index.html"><span class="side-link-index">01</span><span class="side-link-text">总览</span></a>
-        <a class="side-link" href="/ui/data.html"><span class="side-link-index">02</span><span class="side-link-text">数据</span></a>
-        <a class="side-link" href="/ui/jobs.html"><span class="side-link-index">03</span><span class="side-link-text">任务</span></a>
-        <a class="side-link" href="/ui/analysis.html"><span class="side-link-index">04</span><span class="side-link-text">诊断</span></a>
+      <nav class="side-nav" aria-label="系统菜单">
+        <a class="side-link active" href="/ui/index.html"><span class="side-link-index">01</span><span class="side-link-text">系统总览</span></a>
+        <a class="side-link" href="/ui/database.html"><span class="side-link-index">02</span><span class="side-link-text">水质综合数据库</span></a>
+        <a class="side-link" href="/ui/upload.html"><span class="side-link-index">03</span><span class="side-link-text">数据上传</span></a>
+        <a class="side-link" href="/ui/preprocess.html"><span class="side-link-index">04</span><span class="side-link-text">数据预处理</span></a>
+        <a class="side-link" href="/ui/visualization.html"><span class="side-link-index">05</span><span class="side-link-text">数据可视化</span></a>
+        <a class="side-link" href="/ui/prediction.html"><span class="side-link-index">06</span><span class="side-link-text">透明度预测与致因诊断</span></a>
       </nav>
       <div class="sidebar-foot">
-        <p id="sidebarContext" class="sidebar-context">吴淞口</p>
+        <p id="sidebarContext" class="sidebar-context">WaterExpert Software V1.0</p>
       </div>
     </aside>
 
@@ -38,24 +40,41 @@
         <div class="toolbar-main">
           <button id="sidebarToggleMobile" class="sidebar-toggle mobile-only" type="button" aria-label="打开导航">导航</button>
           <div>
-            <h1>总览</h1>
+            <p class="eyebrow">系统总览</p>
+            <h1>系统总览</h1>
           </div>
         </div>
         <div class="toolbar-actions">
-          <p id="runtimeMeta" class="runtime-meta"></p>
-          <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button" aria-label="切换到夜间模式" title="切换到夜间模式">夜间</button>
+          <p id="accountLabel" class="runtime-meta"></p>
+          <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button">夜间</button>
           <button id="refreshButton" class="button button-secondary">刷新</button>
           <button id="exportReportButton" class="button button-primary">导出报告</button>
+          <button id="logoutButton" class="button button-secondary">退出</button>
         </div>
       </header>
 
       <div id="statusBanner" class="status-banner hidden"></div>
 
       <main class="dashboard-layout">
+        <section class="panel panel-wide home-hero">
+          <div class="home-hero-copy">
+            <p class="home-lead">
+              系统提供上海市水质综合数据库查询、水质监测数据上传与预处理、数据可视化展示、水体透明度预测及关键致因分析等功能，
+              为水环境监测与水质评价提供技术支持。
+            </p>
+          </div>
+          <div class="home-entry-grid">
+            <a class="home-entry-card" href="/ui/database.html"><span>数据库查询</span><strong>进入查询</strong><p id="entryDatabaseMeta">查询全市重点监测站点水质数据，支持多指标检索与导出。</p></a>
+            <a class="home-entry-card" href="/ui/upload.html"><span>数据上传</span><strong>进入上传</strong><p id="entryUploadMeta">支持 Excel、CSV、JSON 文件上传，形成软件侧导入记录。</p></a>
+            <a class="home-entry-card" href="/ui/preprocess.html"><span>数据预处理</span><strong>进入预处理</strong><p id="entryPreprocessMeta">查看缺失值、异常值和标准化建议。</p></a>
+            <a class="home-entry-card" href="/ui/visualization.html"><span>数据可视化</span><strong>进入可视化</strong><p id="entryVisualMeta">查看指标趋势、变化范围和相关关系。</p></a>
+            <a class="home-entry-card" href="/ui/prediction.html"><span>透明度预测与致因</span><strong>进入预测</strong><p id="entryPredictionMeta">复用现有模型产物，查看预测结果、诊断、阈值与建议。</p></a>
+          </div>
+        </section>
+
         <section class="panel panel-wide">
           <div class="panel-head">
-            <h2>系统状态</h2>
-            <p id="scopeLabel" class="scope-chip"></p>
+            <h2>系统概览</h2>
           </div>
           <div id="overviewStats" class="stats-grid"></div>
           <div id="modelBadges" class="badge-row"></div>
@@ -74,7 +93,7 @@
           <section class="panel panel-equal">
             <div class="panel-head panel-head-inline">
               <h2>风险解释</h2>
-              <a class="text-link" href="/ui/analysis.html">详情</a>
+              <a class="text-link" href="/ui/prediction.html">详情</a>
             </div>
             <div id="driverBars" class="bars"></div>
           </section>
@@ -93,14 +112,13 @@
             <span><i class="swatch swatch-predicted"></i>预测</span>
             <span><i class="swatch swatch-risk"></i>风险</span>
           </div>
-          <svg id="predictionChart" class="chart" viewBox="0 0 960 360" role="img" aria-label="Prediction chart"></svg>
+          <svg id="predictionChart" class="chart" viewBox="0 0 960 360" role="img" aria-label="prediction chart"></svg>
           <div id="predictionSummary" class="inline-metrics"></div>
         </section>
       </main>
     </div>
   </div>
 
-  <script type="module" src="/ui/js/main.js?v=20260605-modular-theme" defer></script>
+  <script type="module" src="/ui/js/main.js?v=20260625-feedback" defer></script>
 </body>
 </html>
-

@@ -1,5 +1,6 @@
-﻿import { bindAsyncEvent, flash, getElement, state, summarizeIssues } from "./base.js";
+import { bindAsyncEvent, flash, getElement, state, summarizeIssues } from "./base.js";
 import { buildApiUrl, fetchJsonSafe } from "./api.js";
+import { initAuthenticatedShell } from "./app-shell.js";
 import { renderPredictionChart, renderPredictionControls } from "./chart.js";
 import { renderOverview } from "./dashboard.js";
 import { openReportExportDialog } from "./export.js";
@@ -11,8 +12,6 @@ import {
   renderPlaybookAndSobol,
   renderTriage,
 } from "./analysis.js";
-import { initSidebar } from "./sidebar.js";
-import { initThemeToggle } from "./theme.js";
 import {
   createJobPoller,
   handleImportSubmit,
@@ -22,6 +21,7 @@ import {
 } from "./jobs.js";
 
 let jobPoller = null;
+const profile = initAuthenticatedShell();
 
 async function loadPredictions(model = null, jobId = state.activeJobId) {
   const params = { split: "test" };
@@ -90,45 +90,76 @@ async function loadAll({ silent = false } = {}) {
   }
 }
 
-jobPoller = createJobPoller({
-  refreshOperationalData: (options) => refreshOperationalData(jobPoller, options),
-  loadArtifactData,
-});
+if (profile) {
+  jobPoller = createJobPoller({
+    refreshOperationalData: (options) => refreshOperationalData(jobPoller, options),
+    loadArtifactData,
+  });
 
-bindAsyncEvent(getElement("refreshButton"), "click", async () => {
-  await loadAll();
-}, "刷新失败");
+  bindAsyncEvent(
+    getElement("refreshButton"),
+    "click",
+    async () => {
+      await loadAll();
+    },
+    "刷新失败"
+  );
 
-const exportReportButton = getElement("exportReportButton");
-if (exportReportButton) {
-  exportReportButton.addEventListener("click", () => {
-    openReportExportDialog();
+  const exportReportButton = getElement("exportReportButton");
+  if (exportReportButton) {
+    exportReportButton.addEventListener("click", () => {
+      openReportExportDialog();
+    });
+  }
+
+  bindAsyncEvent(
+    getElement("importForm"),
+    "submit",
+    (event) => handleImportSubmit(event, () => refreshOperationalData(jobPoller, { silent: true })),
+    "导入失败"
+  );
+  bindAsyncEvent(
+    getElement("jobForm"),
+    "submit",
+    (event) =>
+      handleJobSubmit(event, {
+        refreshOperationalData: () => refreshOperationalData(jobPoller, { silent: true }),
+        loadArtifactData,
+      }),
+    "任务创建失败"
+  );
+  bindAsyncEvent(
+    getElement("modelSelect"),
+    "change",
+    async (event) => {
+      const result = await loadPredictions(event.target.value, state.activeJobId);
+      summarizeIssues(result.ok ? [] : [result], "模型切换成功。");
+    },
+    "模型切换失败"
+  );
+  bindAsyncEvent(
+    getElement("thresholdSelect"),
+    "change",
+    async (event) => {
+      const result = await loadThresholds(state.activeJobId, event.target.value);
+      summarizeIssues(result.ok ? [] : [result], "阈值加载成功。");
+    },
+    "阈值加载失败"
+  );
+  bindAsyncEvent(
+    getElement("jobViewSelect"),
+    "change",
+    async (event) => {
+      state.activeJobId = event.target.value;
+      await loadArtifactData(state.activeJobId, { silent: false });
+    },
+    "任务产物切换失败"
+  );
+
+  initAnalysisPage();
+
+  loadAll().catch((error) => {
+    console.error(error);
+    flash(`加载失败: ${error.message}`, "error");
   });
 }
-
-bindAsyncEvent(getElement("importForm"), "submit", (event) => handleImportSubmit(event, () => refreshOperationalData(jobPoller, { silent: true })), "导入失败");
-bindAsyncEvent(getElement("jobForm"), "submit", (event) => handleJobSubmit(event, {
-  refreshOperationalData: () => refreshOperationalData(jobPoller, { silent: true }),
-  loadArtifactData,
-}), "任务创建失败");
-bindAsyncEvent(getElement("modelSelect"), "change", async (event) => {
-  const result = await loadPredictions(event.target.value, state.activeJobId);
-  summarizeIssues(result.ok ? [] : [result], "模型切换成功。");
-}, "模型切换失败");
-bindAsyncEvent(getElement("thresholdSelect"), "change", async (event) => {
-  const result = await loadThresholds(state.activeJobId, event.target.value);
-  summarizeIssues(result.ok ? [] : [result], "阈值加载成功。");
-}, "阈值加载失败");
-bindAsyncEvent(getElement("jobViewSelect"), "change", async (event) => {
-  state.activeJobId = event.target.value;
-  await loadArtifactData(state.activeJobId, { silent: false });
-}, "任务产物切换失败");
-
-initThemeToggle();
-initAnalysisPage();
-initSidebar();
-
-loadAll().catch((error) => {
-  console.error(error);
-  flash(`加载失败: ${error.message}`, "error");
-});

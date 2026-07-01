@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WaterExpert | 水质综合数据库</title>
+  <link rel="stylesheet" href="/ui/styles.css?v=20260625-feedback">
+</head>
+<body data-page="database">
+  <div class="workspace-shell">
+    <button id="sidebarScrim" class="sidebar-scrim" type="button" aria-label="关闭导航"></button>
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="/ui/index.html"><span class="brand-mark">WE</span><span class="brand-text">WaterExpert</span></a>
+      </div>
+      <nav class="side-nav" aria-label="系统菜单">
+        <a class="side-link" href="/ui/index.html"><span class="side-link-index">01</span><span class="side-link-text">系统总览</span></a>
+        <a class="side-link active" href="/ui/database.html"><span class="side-link-index">02</span><span class="side-link-text">水质综合数据库</span></a>
+        <a class="side-link" href="/ui/upload.html"><span class="side-link-index">03</span><span class="side-link-text">数据上传</span></a>
+        <a class="side-link" href="/ui/preprocess.html"><span class="side-link-index">04</span><span class="side-link-text">数据预处理</span></a>
+        <a class="side-link" href="/ui/visualization.html"><span class="side-link-index">05</span><span class="side-link-text">数据可视化</span></a>
+        <a class="side-link" href="/ui/prediction.html"><span class="side-link-index">06</span><span class="side-link-text">透明度预测与致因诊断</span></a>
+      </nav>
+      <div class="sidebar-foot"><p id="sidebarContext" class="sidebar-context">全站数据库</p></div>
+    </aside>
+    <button id="sidebarEdgeToggle" class="edge-toggle" type="button" aria-label="折叠侧栏" title="折叠侧栏" data-state="expanded"><span class="toggle-glyph" aria-hidden="true"></span><span class="sr-only">折叠侧栏</span></button>
+
+    <div class="content-shell">
+      <header class="toolbar">
+        <div class="toolbar-main">
+          <button id="sidebarToggleMobile" class="sidebar-toggle mobile-only" type="button" aria-label="打开导航">导航</button>
+          <div>
+            <p class="eyebrow">系统总览 &gt; 水质综合数据库</p>
+            <h1>水质综合数据库查询</h1>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <p id="accountLabel" class="runtime-meta"></p>
+          <button id="themeToggleButton" class="button button-secondary theme-toggle" type="button">夜间</button>
+          <button id="databaseRefreshButton" class="button button-secondary">刷新</button>
+          <button id="logoutButton" class="button button-secondary">退出</button>
+        </div>
+      </header>
+
+      <div id="databaseStatus" class="status-banner hidden"></div>
+
+      <main class="page-grid single-column">
+        <section class="panel panel-wide">
+          <div class="panel-head"><h2>数据库概览</h2></div>
+          <div id="databaseStats" class="stats-grid"></div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-head"><h2>查询条件</h2></div>
+          <form id="databaseFilterForm" class="form-grid">
+            <label class="field">
+              <span>站点</span>
+              <select id="databaseStationCode"></select>
+            </label>
+            <label class="field">
+              <span>关键字</span>
+              <input id="databaseKeyword" type="text" placeholder="站点 / 河流 / 城市">
+            </label>
+            <label class="field">
+              <span>开始日期</span>
+              <input id="databaseStartDate" type="date">
+            </label>
+            <label class="field">
+              <span>结束日期</span>
+              <input id="databaseEndDate" type="date">
+            </label>
+            <div class="field actions-row">
+              <span>&nbsp;</span>
+              <button type="submit" class="button button-primary">执行查询</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-head">
+            <h2>查询结果</h2>
+            <div id="databaseQuerySummary" class="inline-metrics"></div>
+          </div>
+          <div id="databaseTable" class="table-wrap"></div>
+          <div id="databasePager" class="pager"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="/ui/js/database.js?v=20260625-feedback" defer></script>
+</body>
+</html>

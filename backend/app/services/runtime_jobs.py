@@ -16,6 +16,7 @@ from uuid import uuid4
 
 import pandas as pd
 import yaml
+from fastapi import UploadFile
 
 from backend.app.config import Settings
 from backend.app.schemas import DataImportRequest, PredictionJobCreateRequest
@@ -46,6 +47,15 @@ NDTI_OUTPUT_DIR_NAME = "ndti_preprocessed"
 ACTIVE_PROCESS_EXIT_CODE = 259
 IMPORTED_STATUS = "imported"
 IMPORT_COPY_FAILURE_PREFIX = "Copy failed: "
+SUPPORTED_IMPORT_TYPES = {
+    "water_quality",
+    "weather",
+    "hydrodynamics",
+    "water_control",
+    "boundary_labels",
+    "spatial",
+}
+SUPPORTED_UPLOAD_SUFFIXES = {".csv", ".xls", ".xlsx", ".json"}
 
 
 @dataclass(frozen=True)
@@ -124,6 +134,80 @@ class RuntimeJobService:
             key=lambda item: item.get("created_at", ""),
             reverse=True,
         )
+
+    def upload_data_files(
+        self,
+        *,
+        data_type: str,
+        station_code: str,
+        time_granularity: str,
+        files: list[UploadFile],
+    ) -> dict[str, Any]:
+        normalized_type = str(data_type or "").strip()
+        if normalized_type not in SUPPORTED_IMPORT_TYPES:
+            raise ValueError(f"Unsupported data_type '{data_type}'.")
+        if not files:
+            raise ValueError("No files were uploaded.")
+
+        records: list[dict[str, Any]] = []
+        for upload in files:
+            filename = Path(upload.filename or "uploaded-file").name
+            record = {
+                "import_id": uuid4().hex[:JOB_ID_LENGTH],
+                "created_at": utc_now(),
+                "data_type": normalized_type,
+                "source_name": filename,
+                "source_path": "browser-upload",
+                "time_granularity": time_granularity,
+                "station_code": station_code or "2586",
+            }
+            suffix = Path(filename).suffix.lower()
+            if suffix not in SUPPORTED_UPLOAD_SUFFIXES:
+                records.append(
+                    self.store.append_import(
+                        {
+                            **record,
+                            "status": FAILED_STATUS,
+                            "message": "Unsupported file format.",
+                        }
+                    )
+                )
+                continue
+
+            target_path = self._import_target_path(normalized_type, record["import_id"], filename)
+            try:
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                with target_path.open("wb") as handle:
+                    shutil.copyfileobj(upload.file, handle)
+            except OSError as exc:
+                records.append(
+                    self.store.append_import(
+                        {
+                            **record,
+                            "status": FAILED_STATUS,
+                            "message": f"{IMPORT_COPY_FAILURE_PREFIX}{exc}",
+                        }
+                    )
+                )
+                continue
+            finally:
+                upload.file.close()
+
+            finalized_record = {
+                **record,
+                "status": IMPORTED_STATUS,
+                "stored_path": str(target_path),
+                "file_size_bytes": target_path.stat().st_size,
+            }
+            rows_detected = self._detect_rows(target_path)
+            if rows_detected is not None:
+                finalized_record["rows_detected"] = rows_detected
+            records.append(self.store.append_import(finalized_record))
+
+        return {
+            "uploaded_count": len([item for item in records if item.get("status") == IMPORTED_STATUS]),
+            "records": records,
+        }
 
     def create_prediction_job(
         self, payload: PredictionJobCreateRequest
