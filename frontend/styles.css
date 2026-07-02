@@ -1361,8 +1361,8 @@ input.is-invalid {
 }
 
 .jobs-form-actions {
-  margin-top: auto;
-  padding-top: 20px;
+  margin-top: 24px;
+  padding-top: 0;
 }
 
 .jobs-form-actions .button {
@@ -1371,13 +1371,15 @@ input.is-invalid {
 
 .jobs-list-panel #jobsTable .data-table th,
 .jobs-list-panel #jobsTable .data-table td {
-  padding: 8px 12px;
-  font-size: 0.84rem;
-  line-height: 1.35;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .jobs-list-panel #jobsTable .data-table th {
-  font-size: 0.74rem;
+  font-size: 0.8rem;
 }
 
 .stack {
