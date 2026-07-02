@@ -1,6 +1,6 @@
 # WaterExpert 研究原型交接说明
 
-本文件把同级目录 `G:\AI4S\WaterExpert` 的研究原型，翻译成软件开发可以直接复用的能力清单。
+本文件把当前仓库根目录下的 `WaterExpert` 研究原型，翻译成软件开发可以直接复用的能力清单。
 
 ## 1. 原型目标
 
@@ -79,7 +79,7 @@
 
 主配置文件为：
 
-- `G:\AI4S\WaterExpert\configs\prototype_repo.yaml`
+- `configs/prototype_repo.yaml`
 
 其中已经定义：
 

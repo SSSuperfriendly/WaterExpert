@@ -161,21 +161,32 @@ The repository was last verified with Python 3.12.7. Install the pinned runtime 
 
 ```powershell
 python -m venv .ai4s
-.\.ai4s\Scripts\Activate.ps1
-pip install -r requirements.txt
+.\.ai4s\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-If PyTorch installation requires a CPU/GPU-specific wheel, install the appropriate PyTorch build first, then run `pip install -r requirements.txt`.
+If a stale `.ai4s` already exists because the repository was moved to a new directory, rebuild it first:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dev\rebuild_venv.ps1
+```
+
+If PyTorch installation requires a CPU/GPU-specific wheel, install the appropriate PyTorch build first, then run `python -m pip install -r requirements.txt`.
 
 For collaborator-facing setup on the software branch, see `docs/handoffs/environment_reviewer_quickstart.md`.
 
 ## Software Launch
 
 ```powershell
-uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+.\.ai4s\Scripts\python.exe -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Then open `http://127.0.0.1:8000/`.
+
+To avoid launcher path issues after moving the repository between drives, you can also use the repo-managed startup script:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dev\start_local.ps1
+```
 
 The root route now opens the login page first. Default demo credentials are:
 
