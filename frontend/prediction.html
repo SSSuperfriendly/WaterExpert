@@ -80,45 +80,43 @@
         </section>
 
         <div class="jobs-detail-grid">
-          <section class="panel">
+          <section class="panel jobs-form-panel">
             <div class="panel-head"><h2>创建预测任务</h2></div>
-            <form id="jobForm" class="form-grid">
-              <label class="field">
-                <span>任务模式</span>
-                <select id="jobMode" name="mode">
-                  <option value="inference">快速推理（复用现有模型参数）</option>
-                  <option value="full_pipeline">完整流水线（重跑训练与导出）</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>模型</span>
-                <select id="jobModelName" name="model_name"></select>
-              </label>
-              <label class="field">
-                <span>站点</span>
-                <select id="jobStationCode" name="station_code"></select>
-              </label>
-              <label class="field">
-                <span>起始日期</span>
-                <input id="jobStartDate" name="start_date" type="date">
-              </label>
-              <label class="field">
-                <span>结束日期</span>
-                <input id="jobEndDate" name="end_date" type="date">
-              </label>
-              <label class="field field-wide checkbox-row">
-                <input id="jobUseExisting" name="use_existing_artifacts" type="checkbox" checked>
-                <span>优先复用现有产物，适合先验证页面与报告输出。</span>
-              </label>
-              <p class="muted">推荐先使用“快速推理”检查页面和指标，再按需运行完整流水线。</p>
-              <div class="field actions-row">
+            <form id="jobForm" class="jobs-form-layout">
+              <div class="form-grid jobs-form-grid">
+                <label class="field">
+                  <span>任务模式</span>
+                  <select id="jobMode" name="mode">
+                    <option value="inference">快速推理（复用现有模型参数）</option>
+                    <option value="full_pipeline">完整流水线（重跑训练与导出）</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>模型</span>
+                  <select id="jobModelName" name="model_name"></select>
+                </label>
+                <label class="field">
+                  <span>站点</span>
+                  <select id="jobStationCode" name="station_code"></select>
+                </label>
+                <label class="field">
+                  <span>起始日期</span>
+                  <input id="jobStartDate" name="start_date" type="date">
+                </label>
+                <label class="field">
+                  <span>结束日期</span>
+                  <input id="jobEndDate" name="end_date" type="date">
+                </label>
+              </div>
+              <input id="jobUseExisting" name="use_existing_artifacts" type="checkbox" checked hidden>
+              <div class="field actions-row jobs-form-actions">
                 <span>&nbsp;</span>
                 <button type="submit" class="button button-primary">创建任务</button>
               </div>
             </form>
           </section>
 
-          <section class="panel">
+          <section class="panel jobs-list-panel">
             <div class="panel-head"><h2>任务列表</h2></div>
             <div id="jobsTable" class="table-wrap"></div>
           </section>

@@ -1340,6 +1340,46 @@ input.is-invalid {
   align-items: stretch;
 }
 
+.jobs-detail-grid > .panel {
+  height: 100%;
+}
+
+.jobs-form-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.jobs-form-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.jobs-form-grid {
+  align-content: start;
+}
+
+.jobs-form-actions {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.jobs-form-actions .button {
+  min-width: 180px;
+}
+
+.jobs-list-panel #jobsTable .data-table th,
+.jobs-list-panel #jobsTable .data-table td {
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.jobs-list-panel #jobsTable .data-table th {
+  font-size: 0.74rem;
+}
+
 .stack {
   display: grid;
   gap: 12px;
