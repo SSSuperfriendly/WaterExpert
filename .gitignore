@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 venv/
 .ai4s/
+node_modules/
 .env
 .ipynb_checkpoints/
 .DS_Store
