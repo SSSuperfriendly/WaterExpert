@@ -443,6 +443,31 @@ export function renderPlaybookAndSobol() {
   renderAnalysisSummary();
 }
 
+export function renderRealtimeValidation() {
+  if (!hasElement("realtimeValidationSuccessRate") && !hasElement("realtimeValidationSimilarDay")) {
+    return;
+  }
+  const payload = state.realtimeValidation;
+  if (!payload || payload.status !== "ok") {
+    setText("realtimeValidationSuccessRate", "--");
+    setText("realtimeValidationSimilarDay", "--");
+    setText("realtimeValidationSuccessRateNote", payload?.message || "请先运行最新数据检验脚本。");
+    setText("realtimeValidationSimilarDayNote", "");
+    setHtml("realtimeValidationNotes", "");
+    return;
+  }
+  const summary = payload.summary_metrics || {};
+  setText("realtimeValidationSuccessRate", summary.prediction_success_rate_label || "--");
+  setText("realtimeValidationSimilarDay", summary.historical_similar_day || "--");
+  setText("realtimeValidationSuccessRateNote", summary.prediction_success_rate_note || "");
+  setText("realtimeValidationSimilarDayNote", summary.historical_similar_day_note || "");
+
+  setHtml(
+    "realtimeValidationNotes",
+    (payload.caveats || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+  );
+}
+
 export async function loadThresholds(jobId = state.activeJobId, feature = state.currentThresholdFeature) {
   state.currentThresholdFeature = feature;
   const params = {};

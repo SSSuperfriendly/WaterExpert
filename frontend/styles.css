@@ -833,6 +833,40 @@ h3 {
   gap: 18px;
 }
 
+.realtime-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.realtime-summary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.metric-spotlight {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-soft);
+}
+
+.metric-spotlight span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metric-spotlight strong {
+  font-size: 1.6rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
 .analysis-hero {
   display: grid;
   gap: 18px;
@@ -1800,6 +1834,10 @@ html[data-theme="dark"] .analysis-hero {
     linear-gradient(180deg, rgba(14, 21, 30, 0.94), rgba(11, 17, 25, 0.98));
 }
 
+html[data-theme="dark"] .metric-spotlight {
+  background: rgba(20, 29, 40, 0.94);
+}
+
 html[data-theme="dark"] .home-hero,
 html[data-theme="dark"] .home-entry-card {
   background: linear-gradient(180deg, rgba(17, 25, 35, 0.96), rgba(11, 17, 25, 0.98));
@@ -1956,6 +1994,7 @@ body.sidebar-collapsed .edge-toggle {
   .page-grid,
   .analysis-section-grid,
   .analysis-evidence-grid,
+  .realtime-summary-row,
   .analysis-hero-stats,
   .analysis-action-grid,
   .home-entry-grid,

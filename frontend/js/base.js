@@ -29,6 +29,7 @@ export const state = {
   boundary: null,
   playbook: null,
   sensitivity: null,
+  realtimeValidation: null,
   thresholdOptions: null,
   currentThresholdFeature: "",
   activeJobId: "",

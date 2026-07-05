@@ -19,6 +19,7 @@ from backend.app.schemas import (
 from backend.app.services.auth_service import DemoAuthService
 from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
 from backend.app.services.data_explorer import DataExplorerService
+from backend.app.services.realtime_validation import RealtimeValidationService
 from backend.app.services.report_builder import get_report_media_type, write_report
 from backend.app.services.runtime_jobs import RuntimeJobService
 from backend.app.services.state_store import SqliteStateStore
@@ -30,6 +31,7 @@ store = SqliteStateStore(settings.state_root)
 runtime_jobs = RuntimeJobService(settings, repository, store)
 auth_service = DemoAuthService()
 data_explorer = DataExplorerService(settings)
+realtime_validation_service = RealtimeValidationService(settings)
 
 app = FastAPI(
     title=settings.app_name,
@@ -339,6 +341,11 @@ def sensitivity(job_id: str | None = Query(default=None)) -> dict:
     return run_repository_call(
         lambda: resolve_repository(job_id, require_completed=bool(job_id)).sensitivity()
     )
+
+
+@app.get("/api/v1/realtime-validation")
+def realtime_validation() -> dict:
+    return realtime_validation_service.latest()
 
 
 @app.post("/api/v1/report/export")

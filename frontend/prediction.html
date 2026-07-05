@@ -79,6 +79,25 @@
           <div id="predictionSummary" class="inline-metrics"></div>
         </section>
 
+        <section class="panel panel-wide realtime-panel">
+          <div class="panel-head">
+            <h2>最新国控数据检验</h2>
+          </div>
+          <div id="realtimeValidationSummary" class="realtime-summary-row">
+            <article class="metric-spotlight">
+              <span>预测成功率</span>
+              <strong id="realtimeValidationSuccessRate">--</strong>
+              <p id="realtimeValidationSuccessRateNote" class="muted"></p>
+            </article>
+            <article class="metric-spotlight">
+              <span>历史相似日</span>
+              <strong id="realtimeValidationSimilarDay">--</strong>
+              <p id="realtimeValidationSimilarDayNote" class="muted"></p>
+            </article>
+          </div>
+          <ul id="realtimeValidationNotes" class="simple-list"></ul>
+        </section>
+
         <div class="jobs-detail-grid">
           <section class="panel jobs-form-panel">
             <div class="panel-head"><h2>创建预测任务</h2></div>

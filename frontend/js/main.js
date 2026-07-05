@@ -10,6 +10,7 @@ import {
   renderBoundary,
   renderDiagnostics,
   renderPlaybookAndSobol,
+  renderRealtimeValidation,
   renderTriage,
 } from "./analysis.js";
 import {
@@ -36,7 +37,7 @@ async function loadPredictions(model = null, jobId = state.activeJobId) {
 
 async function loadArtifactData(jobId = state.activeJobId, { silent = false } = {}) {
   const params = jobId ? { job_id: jobId } : {};
-  const [metaResult, dashboardResult, diagnosticsResult, triageResult, boundaryResult, playbookResult, sensitivityResult] = await Promise.all([
+  const [metaResult, dashboardResult, diagnosticsResult, triageResult, boundaryResult, playbookResult, sensitivityResult, realtimeValidationResult] = await Promise.all([
     fetchJsonSafe("meta", buildApiUrl("/api/v1/meta", params)),
     fetchJsonSafe("dashboard", buildApiUrl("/api/v1/dashboard", params)),
     fetchJsonSafe("diagnostics", buildApiUrl("/api/v1/diagnostics", params)),
@@ -44,6 +45,7 @@ async function loadArtifactData(jobId = state.activeJobId, { silent = false } = 
     fetchJsonSafe("boundary", buildApiUrl("/api/v1/boundary", params)),
     fetchJsonSafe("response-playbook", buildApiUrl("/api/v1/response-playbook", params)),
     fetchJsonSafe("sensitivity", buildApiUrl("/api/v1/sensitivity", params)),
+    fetchJsonSafe("realtime-validation", "/api/v1/realtime-validation"),
   ]);
 
   state.meta = metaResult.ok ? metaResult.data : null;
@@ -53,6 +55,7 @@ async function loadArtifactData(jobId = state.activeJobId, { silent = false } = 
   state.boundary = boundaryResult.ok ? boundaryResult.data : null;
   state.playbook = playbookResult.ok ? playbookResult.data : null;
   state.sensitivity = sensitivityResult.ok ? sensitivityResult.data : null;
+  state.realtimeValidation = realtimeValidationResult.ok ? realtimeValidationResult.data : null;
 
   const predictionResult = await loadPredictions(null, jobId);
   const thresholdResult = await loadThresholds(jobId, state.currentThresholdFeature);
@@ -62,6 +65,7 @@ async function loadArtifactData(jobId = state.activeJobId, { silent = false } = 
   renderTriage();
   renderBoundary();
   renderPlaybookAndSobol();
+  renderRealtimeValidation();
 
   const issues = [
     metaResult,
@@ -71,6 +75,7 @@ async function loadArtifactData(jobId = state.activeJobId, { silent = false } = 
     boundaryResult,
     playbookResult,
     sensitivityResult,
+    realtimeValidationResult,
     predictionResult,
     thresholdResult,
   ].filter((item) => !item.ok);
