@@ -1,7 +1,7 @@
 param(
     [switch]$RecreateVenv,
     [switch]$SkipInstall,
-    [string]$Host = "127.0.0.1",
+    [string]$BindHost = "127.0.0.1",
     [int]$Port = 8000
 )
 
@@ -119,10 +119,10 @@ if (-not $SkipInstall) {
     }
 }
 
-Write-Host "Starting WaterExpert on http://$Host`:$Port ..."
+Write-Host "Starting WaterExpert on http://$BindHost`:$Port ..."
 Push-Location $RepoRoot
 try {
-    & $VenvPython -m uvicorn backend.app.main:app --reload --host $Host --port $Port
+    & $VenvPython -m uvicorn backend.app.main:app --reload --host $BindHost --port $Port
 }
 finally {
     Pop-Location

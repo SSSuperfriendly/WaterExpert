@@ -177,7 +177,8 @@ For collaborator-facing setup on the software branch, see `docs/handoffs/environ
 ## Software Launch
 
 ```powershell
-.\.ai4s\Scripts\python.exe -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+.\.ai4s\Scripts\python.exe scripts\realtime\validate_latest_realtime.py
+powershell -ExecutionPolicy Bypass -File .\scripts\dev\start_local.ps1
 ```
 
 Then open `http://127.0.0.1:8000/`.

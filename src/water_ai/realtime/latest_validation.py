@@ -427,11 +427,6 @@ def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[
             "available_features": available_features,
         },
         "success_estimate": success_estimate,
-        "caveats": [
-            "预测成功率不是直接用未来真实值计算，而是用与最新状态最相似的一批历史样本做回测得到的估计值。",
-            "该指标反映模型在“当前状态附近”历史场景中的泛化表现，适合作为最新状态下的快速检验指标。",
-            "当前国控实时接口只提供水质观测，不提供同步气象与水动力，因此该指标是实时检验指标，不是完整运营级精度评估。",
-        ],
     }
 
     artifact_root = ensure_dir(config.artifact_root)
