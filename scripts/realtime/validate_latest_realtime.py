@@ -37,6 +37,21 @@ def parse_args() -> argparse.Namespace:
         default=str(PROJECT_ROOT / "var" / "realtime"),
         help="Directory for latest realtime validation artifacts.",
     )
+    parser.add_argument(
+        "--section-name",
+        default="吴淞口",
+        help="Target section name to validate.",
+    )
+    parser.add_argument(
+        "--as-of-time",
+        default=None,
+        help="Optional realtime snapshot time, for example '2026-07-05 13:00:00'.",
+    )
+    parser.add_argument(
+        "--check-section",
+        default="张家浜",
+        help="Additional station section name to check for catalog/realtime availability.",
+    )
     return parser.parse_args()
 
 
@@ -48,13 +63,22 @@ def main() -> None:
             draft_path=Path(args.draft).resolve(),
             outputs_root=Path(args.outputs_root).resolve(),
             artifact_root=Path(args.artifact_root).resolve(),
+            section_name=args.section_name,
+            as_of_time=args.as_of_time,
+            check_section_name=args.check_section,
         )
     )
     print("Latest realtime validation complete.")
     print(f"Station: {result['target_section']}")
     print(f"Monitor time: {result['latest_observation']['monitor_time']}")
-    print(f"Prediction success rate: {result['summary_metrics']['prediction_success_rate_label']}")
+    print(
+        f"{result['summary_metrics']['prediction_success_rate_title']}: "
+        f"{result['summary_metrics']['prediction_success_rate_label']}"
+    )
     print(f"Historical similar day: {result['summary_metrics']['historical_similar_day']}")
+    check = result.get("station_access_checks", {}).get(args.check_section)
+    if check:
+        print(f"{args.check_section} access status: {check['status']}")
 
 
 if __name__ == "__main__":

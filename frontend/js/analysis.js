@@ -449,6 +449,7 @@ export function renderRealtimeValidation() {
   }
   const payload = state.realtimeValidation;
   if (!payload || payload.status !== "ok") {
+    setText("realtimeValidationSuccessRateTitle", "预测成功率");
     setText("realtimeValidationSuccessRate", "--");
     setText("realtimeValidationSimilarDay", "--");
     setText("realtimeValidationSuccessRateNote", payload?.message || "请先运行最新数据检验脚本。");
@@ -457,6 +458,7 @@ export function renderRealtimeValidation() {
     return;
   }
   const summary = payload.summary_metrics || {};
+  setText("realtimeValidationSuccessRateTitle", summary.prediction_success_rate_title || "预测成功率");
   setText("realtimeValidationSuccessRate", summary.prediction_success_rate_label || "--");
   setText("realtimeValidationSimilarDay", summary.historical_similar_day || "--");
   setText("realtimeValidationSuccessRateNote", summary.prediction_success_rate_note || "");

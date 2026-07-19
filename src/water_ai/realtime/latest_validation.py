@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,6 +23,7 @@ REALTIME_HOST = "https://naswater.market.alicloudapi.com"
 REALTIME_STATIONS_PATH = "/api/stainfo/stations"
 REALTIME_SNAPSHOT_PATH = "/api/stainfo/station_realtime"
 DEFAULT_SECTION_NAME = "吴淞口"
+DEFAULT_CHECK_SECTION_NAME = "张家浜"
 REALTIME_PAGE_SIZE = 2000
 CORE_REALTIME_MAPPING = {
     "water_temp": "water_temp",
@@ -47,9 +49,15 @@ class LatestValidationConfig:
     outputs_root: Path
     artifact_root: Path
     section_name: str = DEFAULT_SECTION_NAME
+    as_of_time: str | None = None
+    check_section_name: str = DEFAULT_CHECK_SECTION_NAME
 
 
 def _parse_appcode(draft_path: Path) -> str:
+    for env_name in ("WATEREXPERT_REALTIME_APPCODE", "ALIYUN_APPCODE"):
+        appcode = os.getenv(env_name, "").strip()
+        if appcode:
+            return appcode
     raw_bytes = draft_path.read_bytes()
     text = raw_bytes.decode("utf-8", errors="replace")
     for line in text.splitlines():
@@ -116,12 +124,15 @@ def _fetch_station_catalog(appcode: str) -> list[dict[str, Any]]:
     return rows
 
 
-def _fetch_latest_snapshot(appcode: str) -> tuple[list[dict[str, Any]], int]:
-    payload = _fetch_json(
-        REALTIME_SNAPSHOT_PATH,
-        {"pageNum": 1, "pageSize": REALTIME_PAGE_SIZE, "returnTotalNum": "true"},
-        appcode,
-    )
+def _fetch_latest_snapshot(appcode: str, sta_time: str | None = None) -> tuple[list[dict[str, Any]], int]:
+    params: dict[str, Any] = {
+        "pageNum": 1,
+        "pageSize": REALTIME_PAGE_SIZE,
+        "returnTotalNum": "true",
+    }
+    if sta_time:
+        params["sta_time"] = sta_time
+    payload = _fetch_json(REALTIME_SNAPSHOT_PATH, params, appcode)
     container = _coerce_realtime_container(payload)
     rows = container.get("rows", [])
     if not isinstance(rows, list):
@@ -155,6 +166,63 @@ def _find_live_station_row(
         raise ValueError(f"Station catalog is missing coordinates for {section_name!r}.")
     distance_km = _haversine_km(31.392691, 121.522058, lat, lon)
     return row, station_meta, distance_km
+
+
+def _section_rows(rows: list[dict[str, Any]], section_name: str) -> list[dict[str, Any]]:
+    return [item for item in rows if str(item.get("section", "")).strip() == section_name]
+
+
+def _station_access_check(
+    stations: list[dict[str, Any]],
+    rows: list[dict[str, Any]],
+    section_name: str,
+) -> dict[str, Any]:
+    catalog_matches = [
+        station
+        for station in stations
+        if str(station.get("staname", "")).strip() == section_name
+    ]
+    realtime_matches = _section_rows(rows, section_name)
+    realtime_rows = []
+    for row in realtime_matches:
+        present_fields = [
+            target_key
+            for source_key, target_key in CORE_REALTIME_MAPPING.items()
+            if _safe_float(row.get(source_key)) is not None
+        ]
+        realtime_rows.append(
+            {
+                "section": str(row.get("section", "")).strip(),
+                "monitor_time": str(row.get("monitor_time", "")).strip(),
+                "present_field_count": len(present_fields),
+                "required_field_count": len(CORE_REALTIME_MAPPING),
+                "missing_fields": [
+                    target_key
+                    for target_key in CORE_REALTIME_MAPPING.values()
+                    if target_key not in present_fields
+                ],
+                "is_complete": len(present_fields) == len(CORE_REALTIME_MAPPING),
+            }
+        )
+
+    if realtime_rows:
+        status = "complete" if any(row["is_complete"] for row in realtime_rows) else "incomplete"
+    elif catalog_matches:
+        status = "catalog_only"
+    else:
+        status = "not_found"
+    return {
+        "section_name": section_name,
+        "status": status,
+        "catalog_match_count": len(catalog_matches),
+        "realtime_match_count": len(realtime_matches),
+        "realtime_rows": realtime_rows,
+        "note": (
+            "当前国控站点目录和本次实时快照均未命中该断面名。"
+            if status == "not_found"
+            else ""
+        ),
+    }
 
 
 def _load_historical_dataset(outputs_root: Path) -> pd.DataFrame:
@@ -307,6 +375,103 @@ def _predict_next_day_turbidity(
         return float(outputs["turbidity_pred"][0].item())
 
 
+def _build_live_feature_window(
+    historical_df: pd.DataFrame,
+    analog: dict[str, Any],
+    live_observation: dict[str, Any],
+    feature_columns: list[str],
+    history_days: int,
+) -> pd.DataFrame:
+    index = int(analog["index"])
+    start = index - history_days + 1
+    window_df = historical_df.iloc[start : index + 1].copy().reset_index(drop=True)
+    live_timestamp = pd.to_datetime(live_observation["monitor_time"])
+    last_index = len(window_df) - 1
+    window_df.loc[last_index, "date"] = live_timestamp.normalize()
+    for feature in CORE_FEATURES:
+        if feature in window_df.columns and live_observation.get(feature) is not None:
+            window_df.loc[last_index, feature] = float(live_observation[feature])
+
+    engineered = _engineer_features(window_df)
+    for feature in feature_columns:
+        if feature not in engineered.columns:
+            engineered[feature] = historical_df[feature].median()
+    engineered[feature_columns] = (
+        engineered[feature_columns]
+        .apply(pd.to_numeric, errors="coerce")
+        .interpolate(limit_direction="both")
+        .ffill()
+        .bfill()
+    )
+    return engineered
+
+
+def _predict_live_next_day(
+    historical_df: pd.DataFrame,
+    top_analog: dict[str, Any],
+    models: dict[str, torch.nn.Module],
+    feature_columns: list[str],
+    history_days: int,
+    live_observation: dict[str, Any],
+) -> dict[str, Any]:
+    window_df = _build_live_feature_window(
+        historical_df=historical_df,
+        analog=top_analog,
+        live_observation=live_observation,
+        feature_columns=feature_columns,
+        history_days=history_days,
+    )
+    x, x_raw = _build_inputs_from_window(window_df, historical_df, feature_columns)
+    predictions = {
+        model_name: _predict_next_day_turbidity(model, x, x_raw)
+        for model_name, model in models.items()
+    }
+    live_timestamp = pd.to_datetime(live_observation["monitor_time"])
+    return {
+        "context_analog_date": top_analog["date"],
+        "prediction_time": str(live_timestamp),
+        "target_time": str(live_timestamp + pd.Timedelta(days=1)),
+        "predictions": predictions,
+    }
+
+
+def _find_actual_target_observation(
+    appcode: str,
+    section_name: str,
+    target_time: str,
+) -> dict[str, Any] | None:
+    rows, _ = _fetch_latest_snapshot(appcode, target_time)
+    matches = _section_rows(rows, section_name)
+    if not matches:
+        return None
+    return _build_live_observation(matches[0])
+
+
+def _build_true_success_rate(
+    live_prediction: dict[str, Any],
+    actual_observation: dict[str, Any] | None,
+    best_model_name: str,
+    rmse_threshold: float,
+) -> dict[str, Any] | None:
+    if actual_observation is None or actual_observation.get("turbidity") is None:
+        return None
+    predicted_turbidity = float(live_prediction["predictions"][best_model_name])
+    actual_turbidity = float(actual_observation["turbidity"])
+    absolute_error = abs(predicted_turbidity - actual_turbidity)
+    return {
+        "best_model_name": best_model_name,
+        "success_rate": 1.0 if absolute_error <= rmse_threshold else 0.0,
+        "sample_count": 1,
+        "rmse_threshold": float(rmse_threshold),
+        "target_time": live_prediction["target_time"],
+        "actual_monitor_time": actual_observation.get("monitor_time"),
+        "actual_turbidity": actual_turbidity,
+        "predicted_turbidity": predicted_turbidity,
+        "absolute_error": float(absolute_error),
+        "success": bool(absolute_error <= rmse_threshold),
+    }
+
+
 def _estimate_success_rate(
     historical_df: pd.DataFrame,
     ranked_candidates: list[dict[str, Any]],
@@ -365,7 +530,7 @@ def _estimate_success_rate(
 def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[str, Any]:
     appcode = _parse_appcode(config.draft_path)
     stations = _fetch_station_catalog(appcode)
-    latest_rows, total_latest_station_count = _fetch_latest_snapshot(appcode)
+    latest_rows, total_latest_station_count = _fetch_latest_snapshot(appcode, config.as_of_time)
     station_lookup = _station_lookup(stations)
     live_row, station_meta, distance_km = _find_live_station_row(
         latest_rows,
@@ -398,27 +563,67 @@ def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[
 
     top_analog = ranked_candidates[0]
     live_timestamp = pd.to_datetime(live_observation["monitor_time"])
+    live_prediction = _predict_live_next_day(
+        historical_df,
+        top_analog,
+        models,
+        checkpoint_meta["feature_columns"],
+        int(checkpoint_meta["history_days"]),
+        live_observation,
+    )
+    best_model_name = success_estimate["best_model_name"]
+    target_actual = _find_actual_target_observation(
+        appcode,
+        config.section_name,
+        live_prediction["target_time"],
+    )
+    true_success = _build_true_success_rate(
+        live_prediction,
+        target_actual,
+        best_model_name,
+        float(success_estimate["rmse_threshold"]),
+    )
+    if true_success is not None:
+        success_rate = float(true_success["success_rate"])
+        success_rate_title = "真实成功率"
+        success_rate_type = "true"
+        success_rate_note = (
+            f"已回查 {true_success['actual_monitor_time']} 实测浊度 "
+            f"{true_success['actual_turbidity']:.1f}；{best_model_name} 预测 "
+            f"{true_success['predicted_turbidity']:.1f}，绝对误差 "
+            f"{true_success['absolute_error']:.1f}，RMSE 判定阈值 "
+            f"{true_success['rmse_threshold']:.1f}。"
+        )
+    else:
+        success_rate = float(success_estimate["success_rate"])
+        success_rate_title = "估计成功率"
+        success_rate_type = "estimated"
+        success_rate_note = (
+            f"目标时刻 {live_prediction['target_time']} 的真实观测尚未可用；"
+            f"当前显示基于最相似 {success_estimate['sample_count']} 个历史样本的回测估计。"
+        )
 
     result = {
         "status": "ok",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "methodology": "batch latest snapshot + nearest historical analogs + top-k analog backtest success estimation",
+        "methodology": "realtime snapshot + historical analog context + true next-day validation when target observation exists",
         "snapshot_station_count": int(total_latest_station_count),
         "target_section": config.section_name,
+        "requested_as_of_time": config.as_of_time,
         "latest_observation": {
             **live_observation,
             "distance_km_to_reference_station": round(distance_km, 3),
         },
         "summary_metrics": {
-            "prediction_success_rate": float(success_estimate["success_rate"]),
-            "prediction_success_rate_label": f"{round(success_estimate['success_rate'] * 100)}%",
-            "prediction_success_rate_note": (
-                f"基于最相似的 {success_estimate['sample_count']} 个历史样本回测，"
-                f"使用 {success_estimate['best_model_name']} 的次日浊度预测命中率"
-            ),
+            "prediction_success_rate": success_rate,
+            "prediction_success_rate_label": f"{round(success_rate * 100)}%",
+            "prediction_success_rate_title": success_rate_title,
+            "prediction_success_rate_type": success_rate_type,
+            "prediction_success_rate_note": success_rate_note,
             "historical_similar_day": top_analog["date"],
-            "historical_similar_day_note": f"与最新状态最接近的历史样本日，距离 {top_analog['distance']:.3f}",
+            "historical_similar_day_note": f"与预测时刻状态最接近的历史样本日，距离 {top_analog['distance']:.3f}",
             "projected_target_date": str((live_timestamp.normalize() + pd.Timedelta(days=1)).date()),
+            "projected_target_time": live_prediction["target_time"],
         },
         "analog_context": {
             "top_historical_similar_day": top_analog["date"],
@@ -426,7 +631,17 @@ def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[
             "history_days": int(checkpoint_meta["history_days"]),
             "available_features": available_features,
         },
+        "live_prediction": live_prediction,
+        "target_actual_observation": target_actual,
+        "true_success_rate": true_success,
         "success_estimate": success_estimate,
+        "station_access_checks": {
+            config.check_section_name: _station_access_check(
+                stations,
+                latest_rows,
+                config.check_section_name,
+            )
+        },
     }
 
     artifact_root = ensure_dir(config.artifact_root)

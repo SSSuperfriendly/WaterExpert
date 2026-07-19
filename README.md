@@ -183,6 +183,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\dev\start_local.ps1
 
 Then open `http://127.0.0.1:8000/`.
 
+To validate a realtime prediction after its next-day observation has become available, rerun the realtime script with the original prediction timestamp:
+
+```powershell
+.\.ai4s\Scripts\python.exe scripts\realtime\validate_latest_realtime.py --as-of-time "2026-07-05 13:00:00" --check-section "张家浜"
+```
+
+When the target observation exists, the prediction page shows `真实成功率`; otherwise it falls back to `估计成功率`.
+
 To avoid launcher path issues after moving the repository between drives, you can also use the repo-managed startup script:
 
 ```powershell
