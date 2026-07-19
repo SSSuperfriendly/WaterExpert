@@ -84,3 +84,14 @@ This is a proxy feature for modeling and screening. It should not be presented a
 - Treat this directory as a processed reference database.
 - Use `data/raw/` and `configs/prototype_repo.yaml` to reproduce the current Wusongkou enhanced model run.
 - Future multi-station modeling should first define station-level train/validation/test splits and hydrodynamic matching rules before training a joint model.
+
+## Zhangjiabang Proxy Dataset
+
+The repository now includes a Zhangjiabang East Gate proxy data build based on the existing full-station database:
+
+- Water-quality proxy: station `2198` Sanjiagang.
+- Weather proxy: station `58370` Pudong.
+- Outputs: `data/proxy/zhangjiabang_proxy/zhangjiabang_proxy_daily.csv` and `data/proxy/zhangjiabang_proxy/zhangjiabang_proxy_summary.json`.
+- Build script: `scripts/preprocess/build_zhangjiabang_proxy_dataset.py`.
+
+This is a substitute dataset for access validation and future transfer/retraining work. It is not direct Zhangjiabang East Gate measurement data.

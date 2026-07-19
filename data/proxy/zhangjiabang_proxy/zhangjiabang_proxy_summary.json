@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-07-19T10:41:10.102262+00:00",
+  "target_site": "张家浜东闸站",
+  "proxy_status": "substitute_not_direct_measurement",
+  "direct_local_data_status": "not_found_in_current_data_or_docs",
+  "water_quality_proxy": {
+    "station_code": "2198",
+    "station_name": "三甲港",
+    "province": "上海市",
+    "city": "浦东新区",
+    "basin": "太湖流域",
+    "river": "川杨河",
+    "longitude": 121.785769,
+    "latitude": 31.193231,
+    "rows": 1559,
+    "date_range": {
+      "start": "2020-12-17",
+      "end": "2025-10-31"
+    },
+    "source_path": "data/full_station_database/water_quality_daily_all_stations_with_secchi.csv"
+  },
+  "weather_proxy": {
+    "station_id": "58370",
+    "station_name": "浦东",
+    "district": "浦东新区",
+    "city": "上海市",
+    "province": "上海市",
+    "longitude": 121.5486,
+    "latitude": 31.2214,
+    "rows": 1886,
+    "date_range": {
+      "start": "2020-11-02",
+      "end": "2025-12-31"
+    },
+    "source_path": "data/raw/shanghai_weather_daily.csv"
+  },
+  "overlap": {
+    "rows": 1559,
+    "date_range": {
+      "start": "2020-12-17",
+      "end": "2025-10-31"
+    },
+    "coverage_against_water_quality_rows": 1.0,
+    "coverage_against_weather_rows": 0.8266171792152704,
+    "water_weather_distance_km": 22.772382634075953
+  },
+  "missingness": {
+    "water_quality": [
+      {
+        "field": "water_temp",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "ph",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "dissolved_oxygen",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "conductivity",
+        "missing_count": 1,
+        "missing_rate": 0.0006414368184733803
+      },
+      {
+        "field": "turbidity",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "codmn",
+        "missing_count": 13,
+        "missing_rate": 0.008338678640153944
+      },
+      {
+        "field": "nh3_n",
+        "missing_count": 21,
+        "missing_rate": 0.013470173187940988
+      },
+      {
+        "field": "toc",
+        "missing_count": 1559,
+        "missing_rate": 1.0
+      },
+      {
+        "field": "tp",
+        "missing_count": 3,
+        "missing_rate": 0.001924310455420141
+      },
+      {
+        "field": "tn",
+        "missing_count": 23,
+        "missing_rate": 0.014753046824887749
+      },
+      {
+        "field": "chlorophyll_a",
+        "missing_count": 1559,
+        "missing_rate": 1.0
+      },
+      {
+        "field": "algae_density",
+        "missing_count": 1559,
+        "missing_rate": 1.0
+      },
+      {
+        "field": "water_quality_class",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "station_status",
+        "missing_count": 1559,
+        "missing_rate": 1.0
+      },
+      {
+        "field": "secchi_depth_sd_m",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "secchi_formula",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      }
+    ],
+    "weather": [
+      {
+        "field": "weather_pressure",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "weather_air_temp",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "weather_humidity",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "weather_precipitation",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "weather_wind_speed",
+        "missing_count": 0,
+        "missing_rate": 0.0
+      },
+      {
+        "field": "weather_wind_dir",
+        "missing_count": 431,
+        "missing_rate": 0.2764592687620269
+      }
+    ]
+  },
+  "outputs": {
+    "daily_csv": "data/proxy/zhangjiabang_proxy/zhangjiabang_proxy_daily.csv",
+    "summary_json": "data/proxy/zhangjiabang_proxy/zhangjiabang_proxy_summary.json"
+  },
+  "limitations": [
+    "This is a proxy dataset for Zhangjiabang East Gate, not direct Zhangjiabang measurements.",
+    "The water-quality series uses Sanjiagang station 2198 on Chuan Yang River.",
+    "The weather series uses Pudong station 58370, as requested, instead of the existing nearest-station auto-match.",
+    "No UAV, remote-sensing, hydrodynamic, or gate-operation series for Zhangjiabang East Gate were found locally."
+  ]
+}
