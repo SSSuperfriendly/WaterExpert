@@ -23,7 +23,6 @@ REALTIME_HOST = "https://naswater.market.alicloudapi.com"
 REALTIME_STATIONS_PATH = "/api/stainfo/stations"
 REALTIME_SNAPSHOT_PATH = "/api/stainfo/station_realtime"
 DEFAULT_SECTION_NAME = "吴淞口"
-DEFAULT_CHECK_SECTION_NAME = "张家浜"
 REALTIME_PAGE_SIZE = 2000
 CORE_REALTIME_MAPPING = {
     "water_temp": "water_temp",
@@ -50,7 +49,7 @@ class LatestValidationConfig:
     artifact_root: Path
     section_name: str = DEFAULT_SECTION_NAME
     as_of_time: str | None = None
-    check_section_name: str = DEFAULT_CHECK_SECTION_NAME
+    check_section_name: str | None = None
 
 
 def _parse_appcode(draft_path: Path) -> str:
@@ -635,13 +634,17 @@ def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[
         "target_actual_observation": target_actual,
         "true_success_rate": true_success,
         "success_estimate": success_estimate,
-        "station_access_checks": {
-            config.check_section_name: _station_access_check(
-                stations,
-                latest_rows,
-                config.check_section_name,
-            )
-        },
+        "station_access_checks": (
+            {
+                config.check_section_name: _station_access_check(
+                    stations,
+                    latest_rows,
+                    config.check_section_name,
+                )
+            }
+            if config.check_section_name
+            else {}
+        ),
     }
 
     artifact_root = ensure_dir(config.artifact_root)

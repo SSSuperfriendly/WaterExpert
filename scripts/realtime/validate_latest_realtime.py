@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--check-section",
-        default="张家浜",
+        default=None,
         help="Additional station section name to check for catalog/realtime availability.",
     )
     return parser.parse_args()
