@@ -1701,6 +1701,48 @@ input.is-invalid {
   overflow: auto;
 }
 
+.media-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.media-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-soft);
+}
+
+.media-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: rgba(83, 102, 119, 0.12);
+}
+
+.media-card-body {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px 14px;
+}
+
+.media-card-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.media-card-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .pager {
   display: flex;
   align-items: center;

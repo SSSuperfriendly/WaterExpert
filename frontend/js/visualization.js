@@ -29,7 +29,7 @@ function populateStations(stations) {
   select.innerHTML = stations
     .map(
       (station) =>
-        `<option value="${station.station_code}" ${station.station_code === "2586" ? "selected" : ""}>${station.station_code} - ${station.station_name}</option>`
+        `<option value="${escapeHtml(station.station_code)}" ${station.station_code === "2586" ? "selected" : ""}>${escapeHtml(station.station_code)} - ${escapeHtml(station.station_name)}</option>`
     )
     .join("");
 }
@@ -42,7 +42,7 @@ function populateIndicators(indicators) {
   select.innerHTML = indicators
     .map(
       (item) =>
-        `<option value="${item.key}" ${item.key === "turbidity" ? "selected" : ""}>${item.label}</option>`
+        `<option value="${escapeHtml(item.key)}" ${item.key === "turbidity" ? "selected" : ""}>${escapeHtml(item.label)}</option>`
     )
     .join("");
 }
@@ -159,6 +159,71 @@ function renderVisualization(payload) {
   );
 }
 
+function renderCrossModalGallery(assets) {
+  const container = document.getElementById("crossModalGallery");
+  if (!container) {
+    return;
+  }
+  const visibleAssets = (assets || []).filter((asset) => asset.preview_url).slice(0, 8);
+  if (!visibleAssets.length) {
+    container.innerHTML = `<p class="muted">暂无 UAV 预览图。</p>`;
+    return;
+  }
+  container.innerHTML = visibleAssets
+    .map((asset) => {
+      const metric =
+        asset.media_type === "video"
+          ? `视频，${formatNumber(asset.duration_seconds, 1)} 秒`
+          : "图片";
+      return `
+        <article class="media-card">
+          <img src="${escapeHtml(asset.preview_url)}" alt="${escapeHtml(asset.file_name || "UAV asset")}">
+          <div class="media-card-body">
+            <div class="media-card-title">${escapeHtml(formatMaybeDate(asset.sample_date))}</div>
+            <div class="media-card-meta">${escapeHtml(metric)} · ${escapeHtml(asset.file_name || "")}</div>
+            <div class="media-card-meta">视觉浊度代理：${escapeHtml(formatNumber(asset.turbidity_visual_proxy, 3))}</div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderCrossModal(payload) {
+  const counts = payload.counts || {};
+  const ranges = payload.date_ranges || {};
+  setHtml(
+    "crossModalStats",
+    [
+      { label: "UAV素材", value: `${formatNumber(counts.uav_assets, 0)} 个` },
+      { label: "实地监测", value: `${formatNumber(counts.field_monitoring_zhangjiabang_rows, 0)} 组` },
+      { label: "融合样本", value: `${formatNumber(counts.cross_modal_rows, 0)} 行` },
+      { label: "同日强监督", value: `${formatNumber(counts.strong_same_day_cross_modal_rows, 0)} 行` },
+      { label: "监督/弱监督", value: `${formatNumber(counts.supervised_cross_modal_rows, 0)} 行` },
+      { label: "UAV日期", value: `${formatMaybeDate(ranges.uav?.start)} - ${formatMaybeDate(ranges.uav?.end)}` },
+    ]
+      .map((item) => `<article class="stat-card"><span>${item.label}</span><strong>${item.value}</strong></article>`)
+      .join("")
+  );
+  renderCrossModalGallery(payload.preview_assets || []);
+  renderTable(
+    "crossModalTable",
+    payload.daily_rows || [],
+    [
+      { key: "sample_date", label: "UAV日期" },
+      { key: "field_sample_date", label: "实测日期" },
+      { key: "label_alignment", label: "标签对齐" },
+      { key: "turbidity_ntu", label: "实测浊度" },
+      { key: "secchi_depth_m", label: "透明度" },
+      { key: "uav_asset_count", label: "UAV素材" },
+      { key: "uav_turbidity_visual_proxy_mean", label: "视觉浊度代理" },
+      { key: "uav_sharpness_laplacian_mean", label: "清晰度" },
+      { key: "fusion_readiness", label: "融合状态" },
+    ],
+    "暂无张家浜跨模态融合结果。"
+  );
+}
+
 async function loadVisualization() {
   const stationCode = document.getElementById("visualStationCode")?.value || "2586";
   const indicator = document.getElementById("visualIndicator")?.value || "turbidity";
@@ -169,6 +234,13 @@ async function loadVisualization() {
   );
   renderVisualization(payload);
   setText("sidebarContext", payload.station?.station_name || stationCode);
+}
+
+async function loadCrossModal() {
+  setLoadingState("crossModalStats", 6);
+  setLoadingState("crossModalTable", 6);
+  const payload = await fetchJson("/api/v1/cross-modal/zhangjiabang");
+  renderCrossModal(payload);
 }
 
 if (initAuthenticatedShell()) {
@@ -182,6 +254,9 @@ if (initAuthenticatedShell()) {
       populateIndicators(summaryResult.data.key_indicators || []);
       loadVisualization().catch((error) => {
         showStatus(`加载失败：${error.message}`, "error");
+      });
+      loadCrossModal().catch((error) => {
+        showStatus(`跨模态数据加载失败：${error.message}`, "error");
       });
     }
   });

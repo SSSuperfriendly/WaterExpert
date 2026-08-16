@@ -26,6 +26,9 @@ node_modules/
 *.rar
 *.7z
 *.lance
+data/raw/zhangjiabang_uav/
+实地监测数据.xlsx
+key notes-*.docx
 rag_project/
 AIforScience/
 outputs_h3/

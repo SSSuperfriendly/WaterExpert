@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-08-16T15:53:24.529848+00:00",
+  "site": "张家浜",
+  "modality_status": {
+    "field_monitoring": "parsed",
+    "uav_images": "indexed_and_featurized",
+    "uav_videos": "sampled_frames_and_featurized",
+    "proxy_weather": "joined_when_dates_overlap"
+  },
+  "counts": {
+    "field_monitoring_rows": 7,
+    "field_monitoring_zhangjiabang_rows": 3,
+    "field_replicate_rows": 40,
+    "uav_assets": 9,
+    "uav_images": 5,
+    "uav_videos": 4,
+    "uav_dates": 6,
+    "cross_modal_rows": 6,
+    "supervised_cross_modal_rows": 4,
+    "strong_same_day_cross_modal_rows": 2
+  },
+  "date_ranges": {
+    "uav": {
+      "start": "2026-06-07",
+      "end": "2026-07-28"
+    },
+    "field_monitoring": {
+      "start": "2026-07-13",
+      "end": "2026-08-03"
+    },
+    "cross_modal": {
+      "start": "2026-06-07",
+      "end": "2026-07-28"
+    }
+  },
+  "supervised_dates": [
+    "2026-07-06",
+    "2026-07-13",
+    "2026-07-21",
+    "2026-07-28"
+  ],
+  "outputs": {
+    "field_summary_csv": "data/processed/zhangjiabang_cross_modal/field_monitoring_summary.csv",
+    "field_replicates_csv": "data/processed/zhangjiabang_cross_modal/field_monitoring_replicates.csv",
+    "uav_asset_index_csv": "data/processed/zhangjiabang_cross_modal/uav_asset_index.csv",
+    "uav_visual_daily_csv": "data/processed/zhangjiabang_cross_modal/uav_visual_daily_features.csv",
+    "cross_modal_daily_csv": "data/processed/zhangjiabang_cross_modal/zhangjiabang_cross_modal_daily.csv",
+    "summary_json": "data/processed/zhangjiabang_cross_modal/zhangjiabang_cross_modal_summary.json"
+  },
+  "fusion_route": [
+    "Field monitoring provides measured turbidity, transparency, water temperature, pH, ORP, DO, EC, and chlorophyll labels.",
+    "UAV images and videos are converted into date-indexed visual assets, thumbnails, representative frames, and color/texture quality features.",
+    "The daily fusion table aligns UAV visual features with field monitoring labels and proxy weather features by sample date.",
+    "Current model-level fusion can use the generated table for small-sample validation and for wiring the MSCIM visual branch interface."
+  ]
+}

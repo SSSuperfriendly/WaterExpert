@@ -18,6 +18,7 @@ from backend.app.schemas import (
 )
 from backend.app.services.auth_service import DemoAuthService
 from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
+from backend.app.services.cross_modal_repository import CrossModalRepository
 from backend.app.services.data_explorer import DataExplorerService
 from backend.app.services.realtime_validation import RealtimeValidationService
 from backend.app.services.report_builder import get_report_media_type, write_report
@@ -32,6 +33,7 @@ runtime_jobs = RuntimeJobService(settings, repository, store)
 auth_service = DemoAuthService()
 data_explorer = DataExplorerService(settings)
 realtime_validation_service = RealtimeValidationService(settings)
+cross_modal_repository = CrossModalRepository(settings)
 
 app = FastAPI(
     title=settings.app_name,
@@ -346,6 +348,20 @@ def sensitivity(job_id: str | None = Query(default=None)) -> dict:
 @app.get("/api/v1/realtime-validation")
 def realtime_validation() -> dict:
     return realtime_validation_service.latest()
+
+
+@app.get("/api/v1/cross-modal/zhangjiabang")
+def zhangjiabang_cross_modal() -> dict:
+    return run_repository_call(cross_modal_repository.summary)
+
+
+@app.get("/api/v1/cross-modal/media")
+def cross_modal_media(path: str = Query(...)) -> FileResponse:
+    try:
+        media_path = cross_modal_repository.resolve_media_path(path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Cross-modal media file not found.") from exc
+    return FileResponse(media_path)
 
 
 @app.post("/api/v1/report/export")
