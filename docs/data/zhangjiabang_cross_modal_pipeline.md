@@ -78,3 +78,11 @@
 - 实地监测组数、融合样本数、同日强监督样本数。
 - UAV 缩略图与视频代表帧。
 - 每日跨模态融合表。
+## Transformer 视觉表征
+
+当前图片和视频模态采用“双通道”特征：一类是可解释视觉统计特征，另一类是 PyTorch 实现的轻量视觉 Transformer 表征。
+
+- 图片处理：将整张 UAV 图片划分为 `4 x 4` 个 patch token，每个 token 包含 RGB 均值、RGB 标准差、patch 行列位置和整体亮度，共 9 维；随后输入 2 层 Transformer Encoder，输出 32 维 `visual_transformer_embedding_*`。
+- 视频处理：先用 OpenCV 从每个视频抽取代表帧；每一帧按图片流程得到 32 维 Transformer embedding；视频级特征对这些帧 embedding 做均值和标准差聚合。
+- 融合使用：`uav_asset_index.csv` 保存单个图片/视频的 Transformer embedding；`uav_visual_daily_features.csv` 和 `zhangjiabang_cross_modal_daily.csv` 按日期聚合后进入跨模态日表，与实地浊度、透明度、水温、pH、DO、电导率、叶绿素和代理气象字段对齐。
+- 工程取舍：该 Transformer 分支是离线可复现的视觉编码器，不依赖联网下载大模型权重；目前用于形成稳定视觉表征与网站展示，后续如样本量扩大，可替换为预训练 ViT/CLIP 并接入 MSCIM 的视觉分支训练。

@@ -1,10 +1,11 @@
 {
-  "generated_at": "2026-08-16T15:53:24.529848+00:00",
+  "generated_at": "2026-08-17T03:54:38.035510+00:00",
   "site": "张家浜",
   "modality_status": {
     "field_monitoring": "parsed",
     "uav_images": "indexed_and_featurized",
     "uav_videos": "sampled_frames_and_featurized",
+    "visual_transformer": "patch_tokens_encoded",
     "proxy_weather": "joined_when_dates_overlap"
   },
   "counts": {
@@ -49,8 +50,8 @@
   },
   "fusion_route": [
     "Field monitoring provides measured turbidity, transparency, water temperature, pH, ORP, DO, EC, and chlorophyll labels.",
-    "UAV images and videos are converted into date-indexed visual assets, thumbnails, representative frames, and color/texture quality features.",
+    "UAV images and videos are converted into date-indexed visual assets, thumbnails, representative frames, color/texture quality features, and 32-dimensional visual Transformer embeddings.",
     "The daily fusion table aligns UAV visual features with field monitoring labels and proxy weather features by sample date.",
-    "Current model-level fusion can use the generated table for small-sample validation and for wiring the MSCIM visual branch interface."
+    "Current model-level fusion uses the generated daily table as the tabular bridge: interpretable visual proxies support diagnosis, while Transformer embeddings provide the visual representation branch for downstream MSCIM fusion."
   ]
 }

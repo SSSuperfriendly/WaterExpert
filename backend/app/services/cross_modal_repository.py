@@ -13,6 +13,7 @@ CROSS_MODAL_ROOT = Path("data") / "processed" / "zhangjiabang_cross_modal"
 SUMMARY_FILE = CROSS_MODAL_ROOT / "zhangjiabang_cross_modal_summary.json"
 ASSET_INDEX_FILE = CROSS_MODAL_ROOT / "uav_asset_index.csv"
 CROSS_MODAL_DAILY_FILE = CROSS_MODAL_ROOT / "zhangjiabang_cross_modal_daily.csv"
+MODEL_COMPARISON_FILE = CROSS_MODAL_ROOT / "cross_modal_model_comparison.json"
 
 
 class CrossModalRepository:
@@ -41,6 +42,10 @@ class CrossModalRepository:
         summary = self._read_json(SUMMARY_FILE)
         assets = self._read_csv(ASSET_INDEX_FILE)
         daily = self._read_csv(CROSS_MODAL_DAILY_FILE)
+        try:
+            model_evaluation = self._read_json(MODEL_COMPARISON_FILE)
+        except FileNotFoundError:
+            model_evaluation = None
 
         preview_assets = []
         for row in assets.head(12).to_dict(orient="records"):
@@ -55,6 +60,10 @@ class CrossModalRepository:
                     "duration_seconds": row.get("duration_seconds"),
                     "turbidity_visual_proxy": row.get("turbidity_visual_proxy"),
                     "sharpness_laplacian": row.get("sharpness_laplacian"),
+                    "visual_transformer_embedding_norm": row.get(
+                        "visual_transformer_embedding_norm"
+                    ),
+                    "visual_transformer_embed_dim": row.get("visual_transformer_embed_dim"),
                 }
             )
 
@@ -76,6 +85,8 @@ class CrossModalRepository:
                 "uav_image_count",
                 "uav_video_count",
                 "uav_turbidity_visual_proxy_mean",
+                "uav_visual_transformer_embedding_norm_mean",
+                "uav_visual_transformer_embed_dim_mean",
                 "uav_brown_yellow_index_mean",
                 "uav_green_index_mean",
                 "uav_high_glare_ratio_mean",
@@ -88,6 +99,7 @@ class CrossModalRepository:
             **summary,
             "preview_assets": preview_assets,
             "daily_rows": daily_rows,
+            "model_evaluation": model_evaluation,
         }
 
     def resolve_media_path(self, relative_path: str) -> Path:

@@ -180,6 +180,7 @@ function renderCrossModalGallery(assets) {
           <img src="${escapeHtml(asset.preview_url)}" alt="${escapeHtml(asset.file_name || "UAV asset")}">
           <div class="media-card-body">
             <div class="media-card-title">${escapeHtml(formatMaybeDate(asset.sample_date))}</div>
+            <div class="media-card-meta">Transformer: ${escapeHtml(formatNumber(asset.visual_transformer_embedding_norm, 3))}</div>
             <div class="media-card-meta">${escapeHtml(metric)} · ${escapeHtml(asset.file_name || "")}</div>
             <div class="media-card-meta">视觉浊度代理：${escapeHtml(formatNumber(asset.turbidity_visual_proxy, 3))}</div>
           </div>
@@ -187,6 +188,59 @@ function renderCrossModalGallery(assets) {
       `;
     })
     .join("");
+}
+
+function renderCrossModalEvaluation(evaluation) {
+  const statsContainer = document.getElementById("crossModalEvaluationStats");
+  const tableContainer = document.getElementById("crossModalEvaluationTable");
+  if (!statsContainer || !tableContainer) {
+    return;
+  }
+  if (!evaluation || !Array.isArray(evaluation.metric_rows) || !evaluation.metric_rows.length) {
+    statsContainer.innerHTML = `<article class="stat-card"><span>模型前后对比</span><strong>暂无评估产物</strong></article>`;
+    tableContainer.innerHTML = "";
+    return;
+  }
+  const targets = evaluation.targets || {};
+  const turbidity = targets.turbidity_ntu || {};
+  const secchi = targets.secchi_depth_m || {};
+  setHtml(
+    "crossModalEvaluationStats",
+    [
+      { label: "评估样本", value: `${formatNumber(evaluation.sample_count, 0)} 行` },
+      { label: "验证方式", value: evaluation.cv_strategy || "leave_one_out" },
+      { label: "浊度最佳", value: turbidity.best_display_name || "-" },
+      { label: "浊度RMSE", value: formatNumber(turbidity.best_rmse, 2) },
+      { label: "透明度最佳", value: secchi.best_display_name || "-" },
+      { label: "透明度RMSE", value: formatNumber(secchi.best_rmse, 3) },
+    ]
+      .map((item) => `<article class="stat-card"><span>${item.label}</span><strong>${escapeHtml(item.value)}</strong></article>`)
+      .join("")
+  );
+  const metricRows = evaluation.metric_rows.map((row) => ({
+    ...row,
+    rmse: formatNumber(row.rmse, row.target === "secchi_depth_m" ? 3 : 2),
+    mae: formatNumber(row.mae, row.target === "secchi_depth_m" ? 3 : 2),
+    r2: formatNumber(row.r2, 3),
+    success_rate: `${formatNumber(Number(row.success_rate) * 100, 1)}%`,
+    rmse_reduction_pct_vs_baseline: `${formatNumber(row.rmse_reduction_pct_vs_baseline, 1)}%`,
+  }));
+  renderTable(
+    "crossModalEvaluationTable",
+    metricRows,
+    [
+      { key: "target_label", label: "目标" },
+      { key: "display_name", label: "模型方案" },
+      { key: "feature_count", label: "特征数" },
+      { key: "sample_count", label: "样本数" },
+      { key: "rmse", label: "RMSE" },
+      { key: "mae", label: "MAE" },
+      { key: "r2", label: "R2" },
+      { key: "success_rate", label: "成功率" },
+      { key: "rmse_reduction_pct_vs_baseline", label: "RMSE较前变化" },
+    ],
+    "暂无模型前后对比结果。"
+  );
 }
 
 function renderCrossModal(payload) {
@@ -205,6 +259,7 @@ function renderCrossModal(payload) {
       .map((item) => `<article class="stat-card"><span>${item.label}</span><strong>${item.value}</strong></article>`)
       .join("")
   );
+  renderCrossModalEvaluation(payload.model_evaluation);
   renderCrossModalGallery(payload.preview_assets || []);
   renderTable(
     "crossModalTable",
@@ -217,6 +272,7 @@ function renderCrossModal(payload) {
       { key: "secchi_depth_m", label: "透明度" },
       { key: "uav_asset_count", label: "UAV素材" },
       { key: "uav_turbidity_visual_proxy_mean", label: "视觉浊度代理" },
+      { key: "uav_visual_transformer_embedding_norm_mean", label: "Transformer表征" },
       { key: "uav_sharpness_laplacian_mean", label: "清晰度" },
       { key: "fusion_readiness", label: "融合状态" },
     ],
