@@ -85,6 +85,18 @@ class CrossModalEvaluationTest(unittest.TestCase):
         self.assertEqual(len(predictions), 24)
         self.assertIn("rmse_reduction_pct_vs_baseline", metrics.columns)
 
+        for target in ("turbidity_ntu", "secchi_depth_m"):
+            target_metrics = metrics.set_index(["target", "model_name"]).loc[target]
+            baseline_rmse = target_metrics.loc["baseline_non_visual", "rmse"]
+            transformer_rmse = target_metrics.loc["cross_modal_transformer", "rmse"]
+            self.assertLess(transformer_rmse, baseline_rmse)
+            self.assertGreater(
+                target_metrics.loc[
+                    "cross_modal_transformer", "rmse_reduction_pct_vs_baseline"
+                ],
+                0.0,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

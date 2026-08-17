@@ -64,25 +64,34 @@ VISUAL_STAT_FEATURES = [
     "uav_sharpness_laplacian_mean",
 ]
 
+# Small-sample guardrail: only low-order Transformer components are allowed to
+# correct the base prediction. The full 32-d embedding is too wide for four
+# supervised Zhangjiabang rows.
+TRANSFORMER_RESIDUAL_FEATURES = [
+    f"uav_visual_transformer_embedding_{index:02d}_mean" for index in range(1, 9)
+]
+
 MODEL_SPECS = {
     "baseline_non_visual": {
-        "display_name": "加入跨模态前",
+        "display_name": "\u52a0\u5165\u8de8\u6a21\u6001\u524d",
         "feature_groups": ["non_visual_context"],
         "description": "Only date context and available proxy weather fields are used.",
     },
     "cross_modal_visual_stats": {
-        "display_name": "加入可解释视觉特征后",
+        "display_name": "\u53ef\u89e3\u91ca\u89c6\u89c9\u7edf\u8ba1\u878d\u5408",
         "feature_groups": ["non_visual_context", "uav_visual_statistics"],
         "description": "Adds UAV color, texture, glare, vegetation, and visual turbidity proxy features.",
     },
     "cross_modal_transformer": {
-        "display_name": "加入Transformer视觉表征后",
+        "display_name": "Transformer\u6b8b\u5dee\u878d\u5408",
         "feature_groups": [
             "non_visual_context",
-            "uav_visual_statistics",
-            "uav_transformer_embeddings",
+            "uav_transformer_residual_embeddings",
         ],
-        "description": "Adds date-aligned UAV visual statistics plus patch-Transformer embedding features.",
+        "description": (
+            "Uses date/proxy context as the base prediction and applies a shrinkage-guarded "
+            "residual correction from low-dimensional UAV Transformer embeddings."
+        ),
     },
 }
 
@@ -121,14 +130,7 @@ def _numeric_existing_columns(df: pd.DataFrame, columns: list[str]) -> list[str]
 
 
 def _transformer_columns(df: pd.DataFrame) -> list[str]:
-    return [
-        column
-        for column in df.columns
-        if "visual_transformer_embedding_" in column
-        and column.endswith("_mean")
-        and pd.api.types.is_numeric_dtype(df[column])
-        and pd.to_numeric(df[column], errors="coerce").notna().any()
-    ]
+    return _numeric_existing_columns(df, TRANSFORMER_RESIDUAL_FEATURES)
 
 
 def feature_sets(df: pd.DataFrame) -> dict[str, list[str]]:
@@ -138,7 +140,7 @@ def feature_sets(df: pd.DataFrame) -> dict[str, list[str]]:
     return {
         "baseline_non_visual": non_visual,
         "cross_modal_visual_stats": [*non_visual, *visual_stats],
-        "cross_modal_transformer": [*non_visual, *visual_stats, *transformer],
+        "cross_modal_transformer": [*non_visual, *transformer],
     }
 
 
@@ -168,6 +170,16 @@ def _build_model(train_rows: int, feature_count: int) -> Pipeline:
             steps.append(("pca", PCA(n_components=max_components, random_state=20260817)))
     steps.append(("ridge", Ridge(alpha=5.0)))
     return Pipeline(steps)
+
+
+def _build_residual_model(alpha: float = 1.0) -> Pipeline:
+    return Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+            ("ridge", Ridge(alpha=alpha)),
+        ]
+    )
 
 
 def _leave_one_out_predictions(
@@ -200,6 +212,65 @@ def _leave_one_out_predictions(
                 "label_alignment": df.iloc[holdout].get("label_alignment", ""),
                 "fusion_readiness": df.iloc[holdout].get("fusion_readiness", ""),
                 "feature_count": len(features),
+                "fusion_strategy": "direct_ridge",
+                "cv_strategy": "leave_one_out",
+            }
+        )
+    return predictions, rows
+
+
+def _leave_one_out_residual_predictions(
+    df: pd.DataFrame,
+    *,
+    target: str,
+    model_name: str,
+    baseline_features: list[str],
+    residual_features: list[str],
+    residual_alpha: float = 1.0,
+    residual_shrinkage: float = 0.5,
+) -> tuple[np.ndarray, list[dict[str, Any]]]:
+    y = pd.to_numeric(df[target], errors="coerce").astype(float).to_numpy()
+    baseline_x = (
+        df[baseline_features].apply(pd.to_numeric, errors="coerce").astype(float).to_numpy()
+    )
+    residual_x = (
+        df[residual_features].apply(pd.to_numeric, errors="coerce").astype(float).to_numpy()
+    )
+    predictions = np.zeros_like(y, dtype=float)
+    rows: list[dict[str, Any]] = []
+    for holdout in range(len(df)):
+        train_mask = np.ones(len(df), dtype=bool)
+        train_mask[holdout] = False
+
+        baseline_model = _build_model(int(train_mask.sum()), len(baseline_features))
+        baseline_model.fit(baseline_x[train_mask], y[train_mask])
+        baseline_prediction = float(baseline_model.predict(baseline_x[[holdout]])[0])
+
+        train_residual = y[train_mask] - baseline_model.predict(baseline_x[train_mask])
+        residual_model = _build_residual_model(alpha=residual_alpha)
+        residual_model.fit(residual_x[train_mask], train_residual)
+        residual_correction = float(residual_model.predict(residual_x[[holdout]])[0])
+
+        prediction = baseline_prediction + residual_shrinkage * residual_correction
+        predictions[holdout] = prediction
+        rows.append(
+            {
+                "sample_date": df.iloc[holdout]["sample_date"],
+                "field_sample_date": df.iloc[holdout].get("field_sample_date", ""),
+                "target": target,
+                "model_name": model_name,
+                "actual": float(y[holdout]),
+                "predicted": prediction,
+                "baseline_predicted": baseline_prediction,
+                "residual_correction": residual_correction,
+                "absolute_error": abs(float(y[holdout]) - prediction),
+                "label_alignment": df.iloc[holdout].get("label_alignment", ""),
+                "fusion_readiness": df.iloc[holdout].get("fusion_readiness", ""),
+                "feature_count": len(baseline_features) + len(residual_features),
+                "residual_feature_count": len(residual_features),
+                "residual_alpha": residual_alpha,
+                "residual_shrinkage": residual_shrinkage,
+                "fusion_strategy": "shrinkage_guarded_residual",
                 "cv_strategy": "leave_one_out",
             }
         )
@@ -219,12 +290,29 @@ def evaluate_cross_modal_models(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
             if not features:
                 continue
             y_true = pd.to_numeric(target_df[target], errors="coerce").astype(float).to_numpy()
-            y_pred, rows = _leave_one_out_predictions(
-                target_df,
-                target=target,
-                model_name=model_name,
-                features=features,
-            )
+            fusion_strategy = "direct_ridge"
+            if model_name == "cross_modal_transformer":
+                baseline_features = all_feature_sets["baseline_non_visual"]
+                residual_features = [
+                    feature for feature in features if feature not in baseline_features
+                ]
+                if not baseline_features or not residual_features:
+                    continue
+                y_pred, rows = _leave_one_out_residual_predictions(
+                    target_df,
+                    target=target,
+                    model_name=model_name,
+                    baseline_features=baseline_features,
+                    residual_features=residual_features,
+                )
+                fusion_strategy = "shrinkage_guarded_residual"
+            else:
+                y_pred, rows = _leave_one_out_predictions(
+                    target_df,
+                    target=target,
+                    model_name=model_name,
+                    features=features,
+                )
             prediction_rows.extend(rows)
             metric_rows.append(
                 {
@@ -237,6 +325,7 @@ def evaluate_cross_modal_models(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
                     "feature_count": len(features),
                     "sample_count": len(target_df),
                     "cv_strategy": "leave_one_out",
+                    "fusion_strategy": fusion_strategy,
                     "mae": float(mean_absolute_error(y_true, y_pred)),
                     "rmse": float(math.sqrt(mean_squared_error(y_true, y_pred))),
                     "r2": float(r2_score(y_true, y_pred)),
@@ -290,7 +379,7 @@ def evaluation_summary(metrics: pd.DataFrame, predictions: pd.DataFrame) -> dict
         }
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "site": "张家浜",
+        "site": "\u5f20\u5bb6\u6d5c",
         "evaluation_scope": "same supervised Zhangjiabang cross-modal rows",
         "cv_strategy": "leave_one_out",
         "sample_count": int(metrics["sample_count"].max()) if not metrics.empty else 0,
@@ -300,6 +389,7 @@ def evaluation_summary(metrics: pd.DataFrame, predictions: pd.DataFrame) -> dict
         "notes": [
             "This is a small-sample model comparison, not a production retraining benchmark.",
             "Baseline uses non-visual date/proxy context; cross-modal variants add UAV visual features.",
+            "The Transformer variant uses shrinkage-guarded residual fusion to avoid small-sample overfitting.",
             "Success rate uses target-specific tolerances recorded in this module.",
         ],
     }
