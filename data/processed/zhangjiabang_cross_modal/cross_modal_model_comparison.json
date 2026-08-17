@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17T03:54:54.521597+00:00",
+  "generated_at": "2026-08-17T15:55:19.565843+00:00",
   "site": "张家浜",
   "evaluation_scope": "same supervised Zhangjiabang cross-modal rows",
   "cv_strategy": "leave_one_out",
@@ -583,7 +583,7 @@
   "notes": [
     "This is a small-sample model comparison, not a production retraining benchmark.",
     "Baseline uses non-visual date/proxy context; cross-modal variants add UAV visual features.",
-    "Success rate uses target-specific tolerances recorded in this script."
+    "Success rate uses target-specific tolerances recorded in this module."
   ],
   "outputs": {
     "metrics_csv": "data/processed/zhangjiabang_cross_modal/cross_modal_model_comparison.csv",

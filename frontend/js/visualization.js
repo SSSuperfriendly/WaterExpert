@@ -171,17 +171,17 @@ function renderCrossModalGallery(assets) {
   }
   container.innerHTML = visibleAssets
     .map((asset) => {
-      const metric =
+      const mediaLabel =
         asset.media_type === "video"
-          ? `视频，${formatNumber(asset.duration_seconds, 1)} 秒`
+          ? `视频：${formatNumber(asset.duration_seconds, 1)} 秒`
           : "图片";
       return `
         <article class="media-card">
           <img src="${escapeHtml(asset.preview_url)}" alt="${escapeHtml(asset.file_name || "UAV asset")}">
           <div class="media-card-body">
             <div class="media-card-title">${escapeHtml(formatMaybeDate(asset.sample_date))}</div>
-            <div class="media-card-meta">Transformer: ${escapeHtml(formatNumber(asset.visual_transformer_embedding_norm, 3))}</div>
-            <div class="media-card-meta">${escapeHtml(metric)} · ${escapeHtml(asset.file_name || "")}</div>
+            <div class="media-card-meta">Transformer分量1：${escapeHtml(formatNumber(asset.visual_transformer_embedding_01, 3))}</div>
+            <div class="media-card-meta">${escapeHtml(mediaLabel)} · ${escapeHtml(asset.file_name || "")}</div>
             <div class="media-card-meta">视觉浊度代理：${escapeHtml(formatNumber(asset.turbidity_visual_proxy, 3))}</div>
           </div>
         </article>
@@ -272,7 +272,7 @@ function renderCrossModal(payload) {
       { key: "secchi_depth_m", label: "透明度" },
       { key: "uav_asset_count", label: "UAV素材" },
       { key: "uav_turbidity_visual_proxy_mean", label: "视觉浊度代理" },
-      { key: "uav_visual_transformer_embedding_norm_mean", label: "Transformer表征" },
+      { key: "uav_visual_transformer_embedding_01_mean", label: "Transformer分量1" },
       { key: "uav_sharpness_laplacian_mean", label: "清晰度" },
       { key: "fusion_readiness", label: "融合状态" },
     ],
@@ -294,6 +294,8 @@ async function loadVisualization() {
 
 async function loadCrossModal() {
   setLoadingState("crossModalStats", 6);
+  setLoadingState("crossModalEvaluationStats", 6);
+  setLoadingState("crossModalEvaluationTable", 6);
   setLoadingState("crossModalTable", 6);
   const payload = await fetchJson("/api/v1/cross-modal/zhangjiabang");
   renderCrossModal(payload);

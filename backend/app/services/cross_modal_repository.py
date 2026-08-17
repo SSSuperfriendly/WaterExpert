@@ -60,6 +60,9 @@ class CrossModalRepository:
                     "duration_seconds": row.get("duration_seconds"),
                     "turbidity_visual_proxy": row.get("turbidity_visual_proxy"),
                     "sharpness_laplacian": row.get("sharpness_laplacian"),
+                    "visual_transformer_embedding_01": row.get(
+                        "visual_transformer_embedding_01"
+                    ),
                     "visual_transformer_embedding_norm": row.get(
                         "visual_transformer_embedding_norm"
                     ),
@@ -85,6 +88,7 @@ class CrossModalRepository:
                 "uav_image_count",
                 "uav_video_count",
                 "uav_turbidity_visual_proxy_mean",
+                "uav_visual_transformer_embedding_01_mean",
                 "uav_visual_transformer_embedding_norm_mean",
                 "uav_visual_transformer_embed_dim_mean",
                 "uav_brown_yellow_index_mean",
