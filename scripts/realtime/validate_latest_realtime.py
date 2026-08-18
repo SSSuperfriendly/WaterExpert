@@ -23,11 +23,6 @@ def parse_args() -> argparse.Namespace:
         help="Path to the WaterExpert runtime config.",
     )
     parser.add_argument(
-        "--draft",
-        default=str(PROJECT_ROOT / "docs" / "API" / "draft.txt"),
-        help="Path to the aliyun API draft file containing AppCode.",
-    )
-    parser.add_argument(
         "--outputs-root",
         default=str(PROJECT_ROOT / "outputs"),
         help="Path to historical outputs root.",
@@ -60,7 +55,6 @@ def main() -> None:
     result = generate_latest_realtime_validation(
         LatestValidationConfig(
             config_path=Path(args.config).resolve(),
-            draft_path=Path(args.draft).resolve(),
             outputs_root=Path(args.outputs_root).resolve(),
             artifact_root=Path(args.artifact_root).resolve(),
             section_name=args.section_name,

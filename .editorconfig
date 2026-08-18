@@ -1,0 +1,21 @@
+# EditorConfig enforces UTF-8 and LF line endings across the repository.
+# The project text files are UTF-8 only; never save them as GBK/GB2312.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{js,json,yaml,yml,html,css,md}]
+indent_style = space
+indent_size = 2
+
+[*.{ps1,sh}]
+indent_style = space
+indent_size = 2

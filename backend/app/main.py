@@ -54,7 +54,7 @@ app.mount("/ui", StaticFiles(directory=settings.frontend_root), name="ui")
 
 def _frontend_error_page(filename: str, status_code: int) -> FileResponse:
     path = settings.frontend_root / filename
-    return FileResponse(path, media_type="text/html", status_code=status_code)
+    return FileResponse(path, media_type="text/html; charset=utf-8", status_code=status_code)
 
 
 def artifact_error_to_http(exc: Exception) -> HTTPException:
@@ -107,7 +107,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     return Response(
         content=str(exc.detail),
         status_code=exc.status_code,
-        media_type="text/plain",
+        media_type="text/plain; charset=utf-8",
     )
 
 
@@ -121,7 +121,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> Respo
     return Response(
         content="Internal server error.",
         status_code=500,
-        media_type="text/plain",
+        media_type="text/plain; charset=utf-8",
     )
 
 

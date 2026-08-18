@@ -44,7 +44,6 @@ SENTINEL_VALUES = {"", "-", "-1", "-2", "null", "None"}
 @dataclass(frozen=True)
 class LatestValidationConfig:
     config_path: Path
-    draft_path: Path
     outputs_root: Path
     artifact_root: Path
     section_name: str = DEFAULT_SECTION_NAME
@@ -52,18 +51,15 @@ class LatestValidationConfig:
     check_section_name: str | None = None
 
 
-def _parse_appcode(draft_path: Path) -> str:
+def _parse_appcode() -> str:
     for env_name in ("WATEREXPERT_REALTIME_APPCODE", "ALIYUN_APPCODE"):
         appcode = os.getenv(env_name, "").strip()
         if appcode:
             return appcode
-    raw_bytes = draft_path.read_bytes()
-    text = raw_bytes.decode("utf-8", errors="replace")
-    for line in text.splitlines():
-        normalized = line.replace("：", ":").strip()
-        if normalized.lower().startswith("appcode:"):
-            return normalized.split(":", 1)[1].strip()
-    raise ValueError(f"Unable to find AppCode in {draft_path}")
+    raise ValueError(
+        "Realtime API AppCode is not set. "
+        "Set the WATEREXPERT_REALTIME_APPCODE environment variable."
+    )
 
 
 def _fetch_json(path: str, params: dict[str, Any], appcode: str) -> dict[str, Any]:
@@ -527,7 +523,7 @@ def _estimate_success_rate(
 
 
 def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[str, Any]:
-    appcode = _parse_appcode(config.draft_path)
+    appcode = _parse_appcode()
     stations = _fetch_station_catalog(appcode)
     latest_rows, total_latest_station_count = _fetch_latest_snapshot(appcode, config.as_of_time)
     station_lookup = _station_lookup(stations)

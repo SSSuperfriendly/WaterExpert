@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from backend.app.config import Settings
+from backend.app.services.artifact_io import read_csv, read_json
 
 
 CROSS_MODAL_ROOT = Path("data") / "processed" / "zhangjiabang_cross_modal"
@@ -22,16 +22,10 @@ class CrossModalRepository:
         self.root = settings.runtime_root / CROSS_MODAL_ROOT
 
     def _read_json(self, relative_path: Path) -> dict[str, Any]:
-        path = self.settings.runtime_root / relative_path
-        if not path.exists():
-            raise FileNotFoundError(path)
-        return json.loads(path.read_text(encoding="utf-8"))
+        return read_json(self.settings.runtime_root / relative_path)
 
     def _read_csv(self, relative_path: Path) -> pd.DataFrame:
-        path = self.settings.runtime_root / relative_path
-        if not path.exists():
-            raise FileNotFoundError(path)
-        return pd.read_csv(path, encoding="utf-8-sig")
+        return read_csv(self.settings.runtime_root / relative_path)
 
     def _media_url(self, relative_path: str | float | None) -> str:
         if not relative_path or pd.isna(relative_path):

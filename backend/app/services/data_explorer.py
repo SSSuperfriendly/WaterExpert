@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import math
 from dataclasses import dataclass
 from functools import cached_property
@@ -9,6 +8,7 @@ from statistics import fmean, median, pstdev
 from typing import Any, Iterable
 
 from backend.app.config import Settings
+from backend.app.services.artifact_io import iter_csv_rows
 
 
 CATALOG_RELATIVE_PATH = Path("data") / "full_station_database" / "station_catalog.csv"
@@ -157,35 +157,30 @@ class DataExplorerService:
     @cached_property
     def _stations(self) -> list[StationRecord]:
         stations: list[StationRecord] = []
-        with self._catalog_path.open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                stations.append(
-                    StationRecord(
-                        station_code=str(row.get("station_code", "")),
-                        station_name=str(row.get("station_name", "")),
-                        province=str(row.get("province", "")),
-                        city=str(row.get("city", "")),
-                        basin=str(row.get("basin", "")),
-                        river=str(row.get("river", "")),
-                        longitude=str(row.get("longitude", "")),
-                        latitude=str(row.get("latitude", "")),
-                        start_date=str(row.get("start_date", "")),
-                        end_date=str(row.get("end_date", "")),
-                        raw_rows=str(row.get("raw_rows", "")),
-                        daily_rows=str(row.get("daily_rows", "")),
-                        is_available=str(row.get("is_available", "")),
-                        availability_note=str(row.get("availability_note", "")),
-                        source_file=str(row.get("source_file", "")),
-                    )
+        for row in iter_csv_rows(self._catalog_path):
+            stations.append(
+                StationRecord(
+                    station_code=row.get("station_code", ""),
+                    station_name=row.get("station_name", ""),
+                    province=row.get("province", ""),
+                    city=row.get("city", ""),
+                    basin=row.get("basin", ""),
+                    river=row.get("river", ""),
+                    longitude=row.get("longitude", ""),
+                    latitude=row.get("latitude", ""),
+                    start_date=row.get("start_date", ""),
+                    end_date=row.get("end_date", ""),
+                    raw_rows=row.get("raw_rows", ""),
+                    daily_rows=row.get("daily_rows", ""),
+                    is_available=row.get("is_available", ""),
+                    availability_note=row.get("availability_note", ""),
+                    source_file=row.get("source_file", ""),
                 )
+            )
         return stations
 
     def _iter_database_rows(self) -> Iterable[dict[str, str]]:
-        with self._database_path.open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                yield {key: str(value or "") for key, value in row.items()}
+        return iter_csv_rows(self._database_path)
 
     def database_stations(self) -> list[dict[str, str]]:
         return [station.as_dict() for station in self._stations]

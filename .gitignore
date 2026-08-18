@@ -49,3 +49,14 @@ backend/app/__pycache__/
 backend/app/services/__pycache__/
 scripts/__pycache__/
 tests/__pycache__/
+
+# Large binary media and proposal assets (keep only on disk, not in git)
+*.mp4
+*.mov
+*.avi
+*.pptx
+*.pdf
+
+# Realtime API credentials: set WATEREXPERT_REALTIME_APPCODE instead of committing them.
+docs/API/draft.txt
+docs/API/realtime_api_credentials.txt

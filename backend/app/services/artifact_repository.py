@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from backend.app.config import Settings
+from backend.app.services.artifact_io import ArtifactReadError, read_csv, read_json
 
 DEFAULT_STATION_CODE = "2586"
 PRODUCT_MODE = "integrated-runtime"
@@ -39,10 +39,6 @@ COUNTERFACTUAL_PATH = "counterfactual/cmfbe_counterfactual_summary.csv"
 JOINT_COUNTERFACTUAL_PATH = "counterfactual/cmfbe_joint_counterfactual_summary.csv"
 CMFBE_MODEL_NAME = "cmfbe_stgcn"
 TEST_SPLIT_NAME = "test"
-
-
-class ArtifactReadError(ValueError):
-    """Raised when an artifact exists but is malformed or unreadable."""
 
 
 @dataclass(frozen=True)
@@ -131,25 +127,10 @@ class ArtifactRepository:
         return self.outputs_root / relative_path
 
     def _read_json(self, relative_path: str) -> dict[str, Any]:
-        path = self._artifact_path(relative_path)
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            raise
-        except (OSError, UnicodeDecodeError, JSONDecodeError) as exc:
-            raise ArtifactReadError(f"Invalid JSON artifact at {path}: {exc}") from exc
-        if not isinstance(payload, dict):
-            raise ArtifactReadError(f"JSON artifact must decode to an object: {path}")
-        return payload
+        return read_json(self._artifact_path(relative_path))
 
     def _read_csv(self, relative_path: str) -> pd.DataFrame:
-        path = self._artifact_path(relative_path)
-        try:
-            return pd.read_csv(path)
-        except FileNotFoundError:
-            raise
-        except Exception as exc:
-            raise ArtifactReadError(f"Failed to read CSV artifact at {path}: {exc}") from exc
+        return read_csv(self._artifact_path(relative_path))
 
     def _records(
         self, frame: pd.DataFrame, limit: int | None = None

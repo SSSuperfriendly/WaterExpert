@@ -174,9 +174,25 @@ If PyTorch installation requires a CPU/GPU-specific wheel, install the appropria
 
 For collaborator-facing setup on the software branch, see `docs/handoffs/environment_reviewer_quickstart.md`.
 
+## Configuration & Encoding Conventions
+
+- **Text encoding**: all tracked text files use UTF-8. `.editorconfig` enforces `charset = utf-8`, `end_of_line = lf`, and trailing-newline/whitespace rules. Backend responses explicitly set `charset=utf-8`. A guard script (`scripts/dev/check_encoding.py`) detects non-UTF-8 files and GBK-mojibake text.
+- **Paths**: configuration and paths are repository-relative, resolved through `backend/app/config.py`. No machine-specific or absolute paths are committed.
+- **Environment variables** (see `docs/API/software_api_reference.md` for the full list):
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `WATEREXPERT_RUNTIME_ROOT` / `WATERTURBIDITY_RUNTIME_ROOT` | runtime root for `outputs/` and `data/` | repository root |
+| `WATEREXPERT_REALTIME_APPCODE` / `ALIYUN_APPCODE` | realtime API AppCode (required) | — |
+| `WATEREXPERT_DEMO_USERNAME` / `WATEREXPERT_DEMO_PASSWORD` | demo login credentials | `2510709` / `AI4S666` |
+| `WATEREXPERT_DEMO_DISPLAY_NAME` / `WATEREXPERT_DEMO_ROLE` | demo profile | `AI4S Demo User` / `reviewer` |
+
 ## Software Launch
 
+The realtime validation script requires the Aliyun national surface-water API AppCode to be provided through an environment variable (it is no longer read from a committed draft file):
+
 ```powershell
+$env:WATEREXPERT_REALTIME_APPCODE = "<your-appcode>"
 .\.ai4s\Scripts\python.exe scripts\realtime\validate_latest_realtime.py
 powershell -ExecutionPolicy Bypass -File .\scripts\dev\start_local.ps1
 ```

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
 from backend.app.config import Settings
+from backend.app.services.artifact_io import ArtifactReadError, read_json
 
 
 class RealtimeValidationService:
@@ -20,15 +19,9 @@ class RealtimeValidationService:
                 "message": "Latest realtime validation artifact not found. Run scripts/realtime/validate_latest_realtime.py first.",
             }
         try:
-            payload = json.loads(self.artifact_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, JSONDecodeError) as exc:
+            return read_json(self.artifact_path)
+        except ArtifactReadError as exc:
             return {
                 "status": "error",
                 "message": f"Failed to read latest realtime validation artifact: {exc}",
             }
-        if not isinstance(payload, dict):
-            return {
-                "status": "error",
-                "message": "Latest realtime validation artifact is not a JSON object.",
-            }
-        return payload

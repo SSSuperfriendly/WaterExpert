@@ -10,9 +10,9 @@
 我已经确认：
 
 - `gstack` 命令存在
-  - 路径：`C:\msys64\mingw64\bin\gstack`
+  - 路径：`<MSYS2_ROOT>\mingw64\bin\gstack`
 - Codex 技能目录存在
-  - 路径：`C:\Users\dell\.codex\skills`
+  - 路径：`<USER_HOME>\.codex\skills`
 - 该目录下已安装大量 gstack 相关技能，例如：
   - `gstack-review`
   - `gstack-cso`
