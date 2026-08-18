@@ -170,7 +170,7 @@ def _fetch_swim_catalog(
 
 
 def main() -> None:
-    config = load_yaml(PROJECT_ROOT / "configs" / "prototype_repo.yaml")
+    config = load_yaml(PROJECT_ROOT / "configs" / "default.yaml")
     boundary_config = config.get("boundary_labels", {})
     raster_proxy_config = boundary_config.get("raster_proxy", {})
     output_dir = ensure_dir(resolve_repo_path(config.get("output_dir", "outputs")))

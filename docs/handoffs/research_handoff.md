@@ -79,7 +79,7 @@
 
 主配置文件为：
 
-- `configs/prototype_repo.yaml`
+- `configs/default.yaml`
 
 其中已经定义：
 

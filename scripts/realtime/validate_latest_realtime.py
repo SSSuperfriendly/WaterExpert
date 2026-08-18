@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate latest national surface-water realtime data against WaterExpert models.")
     parser.add_argument(
         "--config",
-        default=str(PROJECT_ROOT / "configs" / "prototype_repo.yaml"),
+        default=str(PROJECT_ROOT / "configs" / "default.yaml"),
         help="Path to the WaterExpert runtime config.",
     )
     parser.add_argument(

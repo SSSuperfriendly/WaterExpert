@@ -27,7 +27,7 @@ class Settings:
 
     @property
     def default_config_path(self) -> Path:
-        return self.runtime_root / "configs" / "prototype_repo.yaml"
+        return self.runtime_root / "configs" / "default.yaml"
 
     @property
     def imports_root(self) -> Path:

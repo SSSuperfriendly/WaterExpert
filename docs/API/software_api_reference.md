@@ -158,7 +158,7 @@ API 路径下的错误统一返回 `{"detail": "<message>"}`。
 | `mode` | enum | `inference` | `inference` / `full_pipeline` |
 | `model_name` | enum | `cmfbe_stgcn` | `mscim` / `mscim_no_kg` / `cmfbe_stgcn` |
 | `station_code` | string | `2586` | — |
-| `config_path` | string \| null | — | 默认 `configs/prototype_repo.yaml` |
+| `config_path` | string \| null | — | 默认 `configs/default.yaml` |
 | `start_date` / `end_date` | string \| null | — | — |
 | `use_existing_artifacts` | bool | `true` | `true` 时直接快照现有集成产物并完成；`false` 时启动子进程运行流水线 |
 

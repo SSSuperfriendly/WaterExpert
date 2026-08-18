@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default=str(PROJECT_ROOT / "configs" / "prototype_repo.yaml"),
+        default=str(PROJECT_ROOT / "configs" / "default.yaml"),
         help="Path to the YAML config file.",
     )
     return parser.parse_args()

@@ -16,7 +16,7 @@ from water_ai.utils.io import load_yaml
 
 
 def main() -> None:
-    config = load_yaml(PROJECT_ROOT / "configs" / "prototype_repo.yaml")
+    config = load_yaml(PROJECT_ROOT / "configs" / "default.yaml")
     hydrodynamics_config = config.get("hydrodynamics", {})
     ndti_config = config.get("ndti", {})
     dataset_df, _ = build_multimodal_dataset(

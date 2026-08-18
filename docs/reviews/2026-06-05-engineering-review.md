@@ -57,7 +57,7 @@ flowchart LR
       R --> O5[outputs/thresholds/*]
       R --> O6[outputs/boundary/*]
       R --> O7[outputs/sensitivity/*]
-      R --> C[configs/prototype_repo.yaml]
+      R --> C[configs/default.yaml]
       O3 --> R
     end
 

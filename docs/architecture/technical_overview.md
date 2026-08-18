@@ -107,7 +107,7 @@ It is designed as an agent-facing bridge toward future `RL-TGRR` style work, but
 
 The `MSCIM` boundary head is now connected to an optional supervision pathway rather than being a pure placeholder.
 
-- Expected label interface: a date-aligned boundary label table configured in `configs/prototype_repo.yaml`.
+- Expected label interface: a date-aligned boundary label table configured in `configs/default.yaml`.
 - Template file: `data/raw/wusongkou_boundary_labels_template.csv`.
 - Real-raster proxy generator: `scripts/boundary/generate_real_raster_boundary_labels.py`.
 - Exported status and evaluation artifact: `outputs/boundary/boundary_detection_summary.json`.

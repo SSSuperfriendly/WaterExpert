@@ -158,7 +158,7 @@ WaterExpert Software/
   "mode": "inference",
   "model_name": "cmfbe_stgcn",
   "station_code": "2586",
-  "config_path": "configs/prototype_repo.yaml",
+  "config_path": "configs/default.yaml",
   "start_date": "2024-09-07",
   "end_date": "2024-12-31",
   "use_existing_artifacts": true

@@ -82,7 +82,7 @@ This is a proxy feature for modeling and screening. It should not be presented a
 ## Usage Notes
 
 - Treat this directory as a processed reference database.
-- Use `data/raw/` and `configs/prototype_repo.yaml` to reproduce the current Wusongkou enhanced model run.
+- Use `data/raw/` and `configs/default.yaml` to reproduce the current Wusongkou enhanced model run.
 - Future multi-station modeling should first define station-level train/validation/test splits and hydrodynamic matching rules before training a joint model.
 
 ## Zhangjiabang Proxy Dataset
