@@ -24,7 +24,6 @@ The software-facing UI now also includes a demo login page plus goal-aligned pag
 - `scripts/boundary/`: boundary-label template and raster proxy tooling.
 - `scripts/preprocess/`: preprocessing entrypoints.
 - `configs/prototype_repo.yaml`: primary repository-relative configuration.
-- `configs/prototype.yaml`: equivalent portable default configuration.
 - `data/raw/`: minimum raw inputs required for the current Wusongkou enhanced run.
 - `data/knowledge_graph/`: lightweight relationship artifact used to build feature-graph priors.
 - `data/full_station_database/`: processed all-station reference tables.
@@ -135,7 +134,7 @@ It is not a trained `RL-TGRR` policy, not a validated restoration controller, an
 
 The repository now includes a supervision-ready boundary-detection pathway for `MSCIM`.
 
-- Boundary labels can be loaded through `configs/prototype_repo.yaml` and `configs/prototype.yaml`.
+- Boundary labels can be loaded through `configs/prototype_repo.yaml`.
 - A fill-in template is provided at `data/raw/wusongkou_boundary_labels_template.csv`.
 - The repository also includes `scripts/boundary/generate_real_raster_boundary_labels.py`, which derives a real raster boundary-change proxy from DLR daily water masks for the Wusongkou AOI and writes `data/raw/wusongkou_boundary_labels.csv`.
 - When raster/UAV-derived labels or the committed real-raster proxy labels are supplied, the pipeline trains the existing boundary head and exports `outputs/boundary/boundary_detection_summary.json`.
