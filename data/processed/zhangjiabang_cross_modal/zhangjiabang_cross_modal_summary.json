@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17T15:55:53.703312+00:00",
+  "generated_at": "2026-08-18T15:19:18.136241+00:00",
   "site": "张家浜",
   "modality_status": {
     "field_monitoring": "parsed",
@@ -12,18 +12,18 @@
     "field_monitoring_rows": 7,
     "field_monitoring_zhangjiabang_rows": 3,
     "field_replicate_rows": 40,
-    "uav_assets": 9,
-    "uav_images": 5,
-    "uav_videos": 4,
-    "uav_dates": 6,
-    "cross_modal_rows": 6,
-    "supervised_cross_modal_rows": 4,
-    "strong_same_day_cross_modal_rows": 2
+    "uav_assets": 13,
+    "uav_images": 7,
+    "uav_videos": 6,
+    "uav_dates": 8,
+    "cross_modal_rows": 8,
+    "supervised_cross_modal_rows": 6,
+    "strong_same_day_cross_modal_rows": 4
   },
   "date_ranges": {
     "uav": {
       "start": "2026-06-07",
-      "end": "2026-07-28"
+      "end": "2026-08-03"
     },
     "field_monitoring": {
       "start": "2026-07-13",
@@ -31,14 +31,16 @@
     },
     "cross_modal": {
       "start": "2026-06-07",
-      "end": "2026-07-28"
+      "end": "2026-08-03"
     }
   },
   "supervised_dates": [
     "2026-07-06",
     "2026-07-13",
     "2026-07-21",
-    "2026-07-28"
+    "2026-07-28",
+    "2026-07-31",
+    "2026-08-03"
   ],
   "outputs": {
     "field_summary_csv": "data/processed/zhangjiabang_cross_modal/field_monitoring_summary.csv",

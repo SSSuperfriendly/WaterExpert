@@ -49,6 +49,23 @@ NON_VISUAL_FEATURES = [
     "weather_wind_dir",
 ]
 
+HISTORICAL_PROXY_FEATURES = [
+    "historical_proxy_turbidity_median",
+    "historical_proxy_turbidity_iqr",
+    "historical_proxy_secchi_depth_sd_m_median",
+    "historical_proxy_secchi_depth_sd_m_iqr",
+    "historical_proxy_water_temp_median",
+    "historical_proxy_ph_median",
+    "historical_proxy_dissolved_oxygen_median",
+    "historical_proxy_conductivity_median",
+    "historical_proxy_weather_pressure_median",
+    "historical_proxy_weather_air_temp_median",
+    "historical_proxy_weather_humidity_median",
+    "historical_proxy_weather_precipitation_median",
+    "historical_proxy_weather_wind_speed_median",
+    "historical_proxy_weather_wind_dir_median",
+]
+
 VISUAL_STAT_FEATURES = [
     "uav_asset_count",
     "uav_image_count",
@@ -93,6 +110,24 @@ MODEL_SPECS = {
             "residual correction from low-dimensional UAV Transformer embeddings."
         ),
     },
+    "cross_modal_auxiliary_visual_residual": {
+        "display_name": "\u76f8\u8fd1\u6cb3\u6bb5\u89c6\u89c9\u6b8b\u5dee\u6821\u6b63",
+        "feature_groups": [
+            "non_visual_context",
+            "uav_visual_statistics",
+            "nearby_river_auxiliary_samples",
+        ],
+        "description": (
+            "Uses Zhangjiabang rows as the evaluation target and adds Chenxing/Sanlu "
+            "nearby-river UAV rows only as auxiliary training samples for a conservative "
+            "visual residual correction."
+        ),
+    },
+}
+
+AUXILIARY_VISUAL_RESIDUAL_CONFIG = {
+    "turbidity_ntu": {"alpha": 20.0, "shrinkage": 0.1},
+    "secchi_depth_m": {"alpha": 100.0, "shrinkage": 0.1},
 }
 
 
@@ -134,13 +169,14 @@ def _transformer_columns(df: pd.DataFrame) -> list[str]:
 
 
 def feature_sets(df: pd.DataFrame) -> dict[str, list[str]]:
-    non_visual = _numeric_existing_columns(df, NON_VISUAL_FEATURES)
+    non_visual = _numeric_existing_columns(df, [*NON_VISUAL_FEATURES, *HISTORICAL_PROXY_FEATURES])
     visual_stats = _numeric_existing_columns(df, VISUAL_STAT_FEATURES)
     transformer = _transformer_columns(df)
     return {
         "baseline_non_visual": non_visual,
         "cross_modal_visual_stats": [*non_visual, *visual_stats],
         "cross_modal_transformer": [*non_visual, *transformer],
+        "cross_modal_auxiliary_visual_residual": [*non_visual, *visual_stats],
     }
 
 
@@ -219,55 +255,108 @@ def _leave_one_out_predictions(
     return predictions, rows
 
 
+def _evaluation_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if "sample_site_role" not in df.columns:
+        return df.copy()
+    target = df[df["sample_site_role"].fillna("").eq("zhangjiabang_target")].copy()
+    return target if not target.empty else df.copy()
+
+
+def _auxiliary_count(df: pd.DataFrame) -> int:
+    if "sample_site_role" not in df.columns:
+        return 0
+    return int(df["sample_site_role"].fillna("").ne("zhangjiabang_target").sum())
+
+
 def _leave_one_out_residual_predictions(
-    df: pd.DataFrame,
+    eval_df: pd.DataFrame,
     *,
     target: str,
     model_name: str,
+    train_pool_df: pd.DataFrame | None = None,
     baseline_features: list[str],
     residual_features: list[str],
     residual_alpha: float = 1.0,
     residual_shrinkage: float = 0.5,
 ) -> tuple[np.ndarray, list[dict[str, Any]]]:
-    y = pd.to_numeric(df[target], errors="coerce").astype(float).to_numpy()
+    if train_pool_df is None:
+        train_pool_df = eval_df
+    train_pool_df = train_pool_df.copy()
+    eval_df = eval_df.copy()
+    y_eval = pd.to_numeric(eval_df[target], errors="coerce").astype(float).to_numpy()
+    y_train_pool = pd.to_numeric(train_pool_df[target], errors="coerce").astype(float).to_numpy()
     baseline_x = (
-        df[baseline_features].apply(pd.to_numeric, errors="coerce").astype(float).to_numpy()
+        train_pool_df[baseline_features]
+        .apply(pd.to_numeric, errors="coerce")
+        .astype(float)
+        .to_numpy()
     )
     residual_x = (
-        df[residual_features].apply(pd.to_numeric, errors="coerce").astype(float).to_numpy()
+        train_pool_df[residual_features]
+        .apply(pd.to_numeric, errors="coerce")
+        .astype(float)
+        .to_numpy()
     )
-    predictions = np.zeros_like(y, dtype=float)
+    eval_baseline_x = (
+        eval_df[baseline_features].apply(pd.to_numeric, errors="coerce").astype(float).to_numpy()
+    )
+    eval_residual_x = (
+        eval_df[residual_features].apply(pd.to_numeric, errors="coerce").astype(float).to_numpy()
+    )
+    train_row_ids = (
+        train_pool_df["_row_id"].to_numpy()
+        if "_row_id" in train_pool_df.columns
+        else np.arange(len(train_pool_df))
+    )
+    eval_row_ids = (
+        eval_df["_row_id"].to_numpy()
+        if "_row_id" in eval_df.columns
+        else np.arange(len(eval_df))
+    )
+    train_roles = (
+        train_pool_df["sample_site_role"].fillna("")
+        if "sample_site_role" in train_pool_df.columns
+        else pd.Series("zhangjiabang_target", index=train_pool_df.index)
+    ).to_numpy()
+    predictions = np.zeros_like(y_eval, dtype=float)
     rows: list[dict[str, Any]] = []
-    for holdout in range(len(df)):
-        train_mask = np.ones(len(df), dtype=bool)
-        train_mask[holdout] = False
+    for holdout in range(len(eval_df)):
+        train_mask = train_row_ids != eval_row_ids[holdout]
+        if int(train_mask.sum()) < 2:
+            train_mask = np.ones(len(train_pool_df), dtype=bool)
+        baseline_train_mask = train_mask & (train_roles == "zhangjiabang_target")
+        if int(baseline_train_mask.sum()) < 2:
+            baseline_train_mask = train_mask
 
-        baseline_model = _build_model(int(train_mask.sum()), len(baseline_features))
-        baseline_model.fit(baseline_x[train_mask], y[train_mask])
-        baseline_prediction = float(baseline_model.predict(baseline_x[[holdout]])[0])
+        baseline_model = _build_model(int(baseline_train_mask.sum()), len(baseline_features))
+        baseline_model.fit(baseline_x[baseline_train_mask], y_train_pool[baseline_train_mask])
+        baseline_prediction = float(baseline_model.predict(eval_baseline_x[[holdout]])[0])
 
-        train_residual = y[train_mask] - baseline_model.predict(baseline_x[train_mask])
+        train_residual = y_train_pool[train_mask] - baseline_model.predict(baseline_x[train_mask])
         residual_model = _build_residual_model(alpha=residual_alpha)
         residual_model.fit(residual_x[train_mask], train_residual)
-        residual_correction = float(residual_model.predict(residual_x[[holdout]])[0])
+        residual_correction = float(residual_model.predict(eval_residual_x[[holdout]])[0])
 
         prediction = baseline_prediction + residual_shrinkage * residual_correction
         predictions[holdout] = prediction
         rows.append(
             {
-                "sample_date": df.iloc[holdout]["sample_date"],
-                "field_sample_date": df.iloc[holdout].get("field_sample_date", ""),
+                "sample_date": eval_df.iloc[holdout]["sample_date"],
+                "field_sample_date": eval_df.iloc[holdout].get("field_sample_date", ""),
                 "target": target,
                 "model_name": model_name,
-                "actual": float(y[holdout]),
+                "actual": float(y_eval[holdout]),
                 "predicted": prediction,
                 "baseline_predicted": baseline_prediction,
                 "residual_correction": residual_correction,
-                "absolute_error": abs(float(y[holdout]) - prediction),
-                "label_alignment": df.iloc[holdout].get("label_alignment", ""),
-                "fusion_readiness": df.iloc[holdout].get("fusion_readiness", ""),
+                "absolute_error": abs(float(y_eval[holdout]) - prediction),
+                "label_alignment": eval_df.iloc[holdout].get("label_alignment", ""),
+                "fusion_readiness": eval_df.iloc[holdout].get("fusion_readiness", ""),
+                "sample_site_role": eval_df.iloc[holdout].get("sample_site_role", ""),
                 "feature_count": len(baseline_features) + len(residual_features),
                 "residual_feature_count": len(residual_features),
+                "train_sample_count": int(train_mask.sum()),
+                "auxiliary_train_count": _auxiliary_count(train_pool_df[train_mask]),
                 "residual_alpha": residual_alpha,
                 "residual_shrinkage": residual_shrinkage,
                 "fusion_strategy": "shrinkage_guarded_residual",
@@ -278,19 +367,24 @@ def _leave_one_out_residual_predictions(
 
 
 def evaluate_cross_modal_models(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    prepared = add_date_features(supervised_rows(df))
+    prepared = add_date_features(supervised_rows(df)).reset_index(drop=True)
+    prepared["_row_id"] = np.arange(len(prepared))
+    evaluation_prepared = _evaluation_rows(prepared)
     all_feature_sets = feature_sets(prepared)
     metric_rows: list[dict[str, Any]] = []
     prediction_rows: list[dict[str, Any]] = []
     for target in TARGETS:
-        target_df = prepared[prepared[target].notna()].copy().reset_index(drop=True)
-        if len(target_df) < 3:
+        target_eval_df = evaluation_prepared[evaluation_prepared[target].notna()].copy().reset_index(drop=True)
+        target_train_pool_df = prepared[prepared[target].notna()].copy().reset_index(drop=True)
+        if len(target_eval_df) < 3:
             continue
         for model_name, features in all_feature_sets.items():
             if not features:
                 continue
-            y_true = pd.to_numeric(target_df[target], errors="coerce").astype(float).to_numpy()
+            y_true = pd.to_numeric(target_eval_df[target], errors="coerce").astype(float).to_numpy()
             fusion_strategy = "direct_ridge"
+            train_sample_count = len(target_eval_df)
+            auxiliary_train_count = 0
             if model_name == "cross_modal_transformer":
                 baseline_features = all_feature_sets["baseline_non_visual"]
                 residual_features = [
@@ -299,16 +393,40 @@ def evaluate_cross_modal_models(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
                 if not baseline_features or not residual_features:
                     continue
                 y_pred, rows = _leave_one_out_residual_predictions(
-                    target_df,
+                    target_eval_df,
                     target=target,
                     model_name=model_name,
+                    train_pool_df=target_train_pool_df,
                     baseline_features=baseline_features,
                     residual_features=residual_features,
                 )
                 fusion_strategy = "shrinkage_guarded_residual"
+                train_sample_count = len(target_train_pool_df)
+                auxiliary_train_count = _auxiliary_count(target_train_pool_df)
+            elif model_name == "cross_modal_auxiliary_visual_residual":
+                baseline_features = all_feature_sets["baseline_non_visual"]
+                residual_features = [
+                    feature for feature in features if feature not in baseline_features
+                ]
+                if not baseline_features or not residual_features:
+                    continue
+                config = AUXILIARY_VISUAL_RESIDUAL_CONFIG[target]
+                y_pred, rows = _leave_one_out_residual_predictions(
+                    target_eval_df,
+                    target=target,
+                    model_name=model_name,
+                    train_pool_df=target_train_pool_df,
+                    baseline_features=baseline_features,
+                    residual_features=residual_features,
+                    residual_alpha=float(config["alpha"]),
+                    residual_shrinkage=float(config["shrinkage"]),
+                )
+                fusion_strategy = "auxiliary_visual_residual"
+                train_sample_count = len(target_train_pool_df)
+                auxiliary_train_count = _auxiliary_count(target_train_pool_df)
             else:
                 y_pred, rows = _leave_one_out_predictions(
-                    target_df,
+                    target_eval_df,
                     target=target,
                     model_name=model_name,
                     features=features,
@@ -323,7 +441,9 @@ def evaluate_cross_modal_models(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
                     "display_name": MODEL_SPECS[model_name]["display_name"],
                     "feature_groups": ";".join(MODEL_SPECS[model_name]["feature_groups"]),
                     "feature_count": len(features),
-                    "sample_count": len(target_df),
+                    "sample_count": len(target_eval_df),
+                    "train_sample_count": train_sample_count,
+                    "auxiliary_train_count": auxiliary_train_count,
                     "cv_strategy": "leave_one_out",
                     "fusion_strategy": fusion_strategy,
                     "mae": float(mean_absolute_error(y_true, y_pred)),

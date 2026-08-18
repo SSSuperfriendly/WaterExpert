@@ -234,6 +234,28 @@ def _date_from_asset_path(path: Path, uav_root: Path) -> str | None:
     return _date_from_text(relative.parts[0])
 
 
+def _asset_site_role(path: Path, uav_root: Path) -> str:
+    try:
+        relative = path.relative_to(uav_root)
+    except ValueError:
+        return "unknown"
+    first_part = relative.parts[0] if relative.parts else ""
+    if first_part.startswith("2026."):
+        return "zhangjiabang_target"
+    if first_part in {"7.31", "8.3"}:
+        return "chenxing_sanlu_auxiliary"
+    return "unknown"
+
+
+def _field_site_role(location: Any) -> str:
+    text = _clean_text(location)
+    if "\u5f20\u5bb6\u6d5c" in text:
+        return "zhangjiabang_target"
+    if "\u9648\u884c" in text or "\u4e09\u9c81\u6cb3" in text:
+        return "chenxing_sanlu_auxiliary"
+    return "other_field_site"
+
+
 def _relative(path: Path) -> str:
     return path.relative_to(PROJECT_ROOT).as_posix()
 
@@ -413,9 +435,11 @@ def build_uav_asset_index(
             continue
         sample_date = _date_from_asset_path(path, uav_root)
         media_type = "image" if suffix in IMAGE_SUFFIXES else "video"
+        site_role = _asset_site_role(path, uav_root)
         base = {
             "asset_id": f"uav_{sample_date or 'unknown'}_{_safe_output_stem(path)}",
             "sample_date": sample_date,
+            "sample_site_role": site_role,
             "media_type": media_type,
             "file_name": path.name,
             "source_path": _relative(path),
@@ -453,6 +477,11 @@ def aggregate_visual_features(assets: pd.DataFrame) -> pd.DataFrame:
     for sample_date, group in assets.groupby("sample_date", dropna=False):
         row: dict[str, Any] = {
             "sample_date": sample_date,
+            "sample_site_role": (
+                group["sample_site_role"].mode(dropna=True).iloc[0]
+                if "sample_site_role" in group and not group["sample_site_role"].dropna().empty
+                else "unknown"
+            ),
             "uav_asset_count": int(len(group)),
             "uav_image_count": int((group["media_type"] == "image").sum()),
             "uav_video_count": int((group["media_type"] == "video").sum()),
@@ -477,6 +506,14 @@ def _zhangjiabang_only(field_summary: pd.DataFrame) -> pd.DataFrame:
     return filtered if not filtered.empty else field_summary.copy()
 
 
+def _target_field_only(field_summary: pd.DataFrame) -> pd.DataFrame:
+    if field_summary.empty or "sample_location" not in field_summary:
+        return field_summary
+    mask = field_summary["sample_location"].apply(_field_site_role).eq("zhangjiabang_target")
+    filtered = field_summary[mask].copy()
+    return filtered if not filtered.empty else field_summary.copy()
+
+
 def _attach_nearest_field_labels(
     visual_daily: pd.DataFrame,
     field: pd.DataFrame,
@@ -494,20 +531,28 @@ def _attach_nearest_field_labels(
     visual["sample_date_dt"] = pd.to_datetime(visual["sample_date"])
     field["field_sample_date"] = field["sample_date"]
     field["sample_date_dt"] = pd.to_datetime(field["sample_date"])
+    field["field_site_role"] = field["sample_location"].apply(_field_site_role)
     field = field.sort_values("sample_date_dt")
 
     rows: list[dict[str, Any]] = []
     for _, visual_row in visual.iterrows():
-        deltas = (field["sample_date_dt"] - visual_row["sample_date_dt"]).abs().dt.days
+        site_role = visual_row.get("sample_site_role", "unknown")
+        candidate_field = field
+        if site_role in {"zhangjiabang_target", "chenxing_sanlu_auxiliary"}:
+            candidate_field = field[field["field_site_role"].eq(site_role)]
+        if candidate_field.empty:
+            candidate_field = field
+        deltas = (candidate_field["sample_date_dt"] - visual_row["sample_date_dt"]).abs().dt.days
         if deltas.empty or int(deltas.min()) > max_days:
             row = visual_row.drop(labels=["sample_date_dt"]).to_dict()
             row["label_alignment"] = "no_field_label"
             row["label_offset_days"] = None
             row["field_sample_date"] = ""
+            row["field_site_role"] = ""
             rows.append(row)
             continue
         nearest_index = deltas.idxmin()
-        nearest = field.loc[nearest_index].drop(labels=["sample_date_dt"]).to_dict()
+        nearest = candidate_field.loc[nearest_index].drop(labels=["sample_date_dt"]).to_dict()
         offset = int((pd.to_datetime(nearest["field_sample_date"]) - visual_row["sample_date_dt"]).days)
         row = visual_row.drop(labels=["sample_date_dt"]).to_dict()
         for key, value in nearest.items():
@@ -527,12 +572,76 @@ def _attach_nearest_field_labels(
     return pd.DataFrame(rows)
 
 
+def _month_part(day: int) -> str:
+    if day <= 10:
+        return "early"
+    if day <= 20:
+        return "middle"
+    return "late"
+
+
+def _historical_proxy_context(proxy: pd.DataFrame, sample_dates: pd.Series) -> pd.DataFrame:
+    if proxy.empty or "date" not in proxy:
+        return pd.DataFrame({"sample_date": sample_dates.astype(str)})
+    proxy = proxy.copy()
+    proxy["date"] = pd.to_datetime(proxy["date"], errors="coerce")
+    proxy = proxy[proxy["date"].notna()].copy()
+    if proxy.empty:
+        return pd.DataFrame({"sample_date": sample_dates.astype(str)})
+    proxy["month"] = proxy["date"].dt.month
+    proxy["month_part"] = proxy["date"].dt.day.apply(_month_part)
+    numeric_fields = [
+        field
+        for field in [
+            "turbidity",
+            "secchi_depth_sd_m",
+            "water_temp",
+            "ph",
+            "dissolved_oxygen",
+            "conductivity",
+            "weather_pressure",
+            "weather_air_temp",
+            "weather_humidity",
+            "weather_precipitation",
+            "weather_wind_speed",
+            "weather_wind_dir",
+        ]
+        if field in proxy.columns
+    ]
+    rows: list[dict[str, Any]] = []
+    for sample_date in pd.to_datetime(sample_dates, errors="coerce"):
+        if pd.isna(sample_date):
+            rows.append({"sample_date": ""})
+            continue
+        candidates = proxy[
+            (proxy["month"] == sample_date.month)
+            & (proxy["month_part"] == _month_part(int(sample_date.day)))
+        ]
+        if candidates.empty:
+            candidates = proxy[proxy["month"] == sample_date.month]
+        row: dict[str, Any] = {
+            "sample_date": sample_date.strftime("%Y-%m-%d"),
+            "historical_proxy_match_scope": "same_month_part"
+            if not candidates.empty
+            else "unmatched",
+            "historical_proxy_rows": int(len(candidates)),
+        }
+        for field in numeric_fields:
+            values = pd.to_numeric(candidates[field], errors="coerce").dropna()
+            if values.empty:
+                continue
+            row[f"historical_proxy_{field}_median"] = float(values.median())
+            row[f"historical_proxy_{field}_iqr"] = float(values.quantile(0.75) - values.quantile(0.25))
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def build_cross_modal_dataset(
     field_summary: pd.DataFrame,
     visual_daily: pd.DataFrame,
     proxy_path: Path,
 ) -> pd.DataFrame:
-    field = _zhangjiabang_only(field_summary)
+    field = field_summary.copy()
     cross_modal = _attach_nearest_field_labels(visual_daily, field, max_days=7)
 
     if proxy_path.exists():
@@ -553,6 +662,8 @@ def build_cross_modal_dataset(
         if proxy_columns:
             proxy_subset = proxy[proxy_columns].rename(columns={"date": "sample_date"})
             cross_modal = cross_modal.merge(proxy_subset, on="sample_date", how="left")
+            historical_proxy = _historical_proxy_context(proxy, cross_modal["sample_date"])
+            cross_modal = cross_modal.merge(historical_proxy, on="sample_date", how="left")
 
     if not cross_modal.empty:
         cross_modal["has_field_monitoring_label"] = cross_modal["turbidity_ntu"].notna() if "turbidity_ntu" in cross_modal else False
@@ -627,7 +738,7 @@ def write_outputs(
         },
         "counts": {
             "field_monitoring_rows": int(len(field_summary)),
-            "field_monitoring_zhangjiabang_rows": int(len(_zhangjiabang_only(field_summary))),
+            "field_monitoring_zhangjiabang_rows": int(len(_target_field_only(field_summary))),
             "field_replicate_rows": int(len(field_replicates)),
             "uav_assets": int(len(asset_index)),
             "uav_images": int((asset_index["media_type"] == "image").sum()) if not asset_index.empty else 0,

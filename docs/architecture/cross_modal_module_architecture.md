@@ -28,5 +28,6 @@ Processed artifacts live under `data/processed/zhangjiabang_cross_modal/`.
 
 - Raw UAV videos stay outside git; only lightweight processed previews and tabular artifacts are committed.
 - The current evaluation is a small-sample engineering comparison, not a production-grade retraining benchmark.
-- The current best-performing Zhangjiabang variant is Transformer residual fusion. It improves the leave-one-out RMSE on the current four supervised rows, but this remains a small-sample engineering result rather than a production retraining benchmark.
+- The current best-performing Zhangjiabang variant is nearby-river visual residual correction. It evaluates only Zhangjiabang target rows while allowing Chenxing/Sanlu River UAV rows to support the visual residual branch.
+- Historical proxy context from Sanjiagang `2198` and Pudong `58370` is treated as non-visual context, not as direct Zhangjiabang measurements.
 - Directly concatenating many visual features is still rejected by the comparison: it overfits the tiny supervised set and performs worse than the non-visual baseline.

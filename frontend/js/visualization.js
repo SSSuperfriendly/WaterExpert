@@ -266,7 +266,9 @@ function renderCrossModal(payload) {
     payload.daily_rows || [],
     [
       { key: "sample_date", label: "UAV日期" },
+      { key: "sample_site_role", label: "样本角色" },
       { key: "field_sample_date", label: "实测日期" },
+      { key: "field_site_role", label: "标签角色" },
       { key: "label_alignment", label: "标签对齐" },
       { key: "turbidity_ntu", label: "实测浊度" },
       { key: "secchi_depth_m", label: "透明度" },
@@ -274,6 +276,7 @@ function renderCrossModal(payload) {
       { key: "uav_turbidity_visual_proxy_mean", label: "视觉浊度代理" },
       { key: "uav_visual_transformer_embedding_01_mean", label: "Transformer分量1" },
       { key: "uav_sharpness_laplacian_mean", label: "清晰度" },
+      { key: "historical_proxy_turbidity_median", label: "历史代理浊度" },
       { key: "fusion_readiness", label: "融合状态" },
     ],
     "暂无张家浜跨模态融合结果。"

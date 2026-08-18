@@ -46,6 +46,7 @@ class CrossModalRepository:
             preview_assets.append(
                 {
                     "sample_date": row.get("sample_date", ""),
+                    "sample_site_role": row.get("sample_site_role", ""),
                     "media_type": row.get("media_type", ""),
                     "file_name": row.get("file_name", ""),
                     "file_size_bytes": row.get("file_size_bytes"),
@@ -68,7 +69,9 @@ class CrossModalRepository:
             column
             for column in [
                 "sample_date",
+                "sample_site_role",
                 "field_sample_date",
+                "field_site_role",
                 "label_alignment",
                 "label_offset_days",
                 "fusion_readiness",
@@ -89,6 +92,10 @@ class CrossModalRepository:
                 "uav_green_index_mean",
                 "uav_high_glare_ratio_mean",
                 "uav_sharpness_laplacian_mean",
+                "historical_proxy_rows",
+                "historical_proxy_turbidity_median",
+                "historical_proxy_weather_air_temp_median",
+                "historical_proxy_weather_precipitation_median",
             ]
             if column in daily.columns
         ]

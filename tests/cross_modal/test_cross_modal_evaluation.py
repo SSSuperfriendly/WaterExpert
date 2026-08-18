@@ -35,7 +35,7 @@ class VisionFeatureTest(unittest.TestCase):
 
 
 class CrossModalEvaluationTest(unittest.TestCase):
-    def test_evaluation_returns_three_model_variants_for_each_target(self) -> None:
+    def test_evaluation_returns_model_variants_for_each_target(self) -> None:
         df = pd.DataFrame(
             {
                 "sample_date": ["2026-07-06", "2026-07-13", "2026-07-21", "2026-07-28"],
@@ -74,20 +74,34 @@ class CrossModalEvaluationTest(unittest.TestCase):
                 "baseline_non_visual",
                 "cross_modal_visual_stats",
                 "cross_modal_transformer",
+                "cross_modal_auxiliary_visual_residual",
             },
         )
-        self.assertEqual(len(metrics), 6)
-        self.assertEqual(len(predictions), 24)
+        self.assertEqual(len(metrics), 8)
+        self.assertEqual(len(predictions), 32)
         self.assertIn("rmse_reduction_pct_vs_baseline", metrics.columns)
 
+    def test_current_artifact_keeps_auxiliary_visual_residual_gain(self) -> None:
+        artifact = (
+            Path(__file__).resolve().parents[2]
+            / "data"
+            / "processed"
+            / "zhangjiabang_cross_modal"
+            / "zhangjiabang_cross_modal_daily.csv"
+        )
+        df = pd.read_csv(artifact, encoding="utf-8-sig")
+        metrics, _ = evaluate_cross_modal_models(df)
         for target in ("turbidity_ntu", "secchi_depth_m"):
             target_metrics = metrics.set_index(["target", "model_name"]).loc[target]
             baseline_rmse = target_metrics.loc["baseline_non_visual", "rmse"]
-            transformer_rmse = target_metrics.loc["cross_modal_transformer", "rmse"]
-            self.assertLess(transformer_rmse, baseline_rmse)
+            auxiliary_rmse = target_metrics.loc[
+                "cross_modal_auxiliary_visual_residual", "rmse"
+            ]
+            self.assertLess(auxiliary_rmse, baseline_rmse)
             self.assertGreater(
                 target_metrics.loc[
-                    "cross_modal_transformer", "rmse_reduction_pct_vs_baseline"
+                    "cross_modal_auxiliary_visual_residual",
+                    "rmse_reduction_pct_vs_baseline",
                 ],
                 0.0,
             )
