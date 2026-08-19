@@ -1,0 +1,173 @@
+\documentclass{beamer}
+\usepackage{xeCJK}
+\usepackage[tongji,zh]{collegeBeamer}
+\usepackage{fontspec}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds}
+\setCJKmainfont{FandolSong-Regular}[BoldFont=FandolSong-Bold,ItalicFont=FandolKai-Regular,Mapping=fullwidth-stop,Scale=0.88]
+
+\newcommand{\method}{MethodName}
+\newcommand{\tdr}{TDR}
+\newcommand{\orr}{ORR}
+\newcommand{\Resid}{\mathrm{Resid}}
+\newcommand{\Bdrop}{B\text{-}\mathrm{Drop}}
+\newcommand{\taudet}{\tau_{\mathrm{det}}}
+\newcommand{\AT}{A_T}
+\newcommand{\RG}{\mathrm{RG}}
+
+\setbeamertemplate{section page}{}
+\AtBeginSection[]{}
+\setbeamertemplate{frametitle}{
+    \vspace*{-3.5ex}
+    \begin{beamercolorbox}[leftskip=2cm]{frametitle}
+    \usebeamerfont{frametitle}\insertframetitle
+    \end{beamercolorbox}
+}
+
+\newcommand{\pageheadline}[1]{\vspace{1mm}{\Large\textbf{\textcolor{maincolor}{#1}}}\par\vspace{1.5mm}}
+\newcommand{\smallcap}[1]{{\small\textcolor{maincolor}{#1}}}
+\newcommand{\plainpara}[1]{\par\noindent #1\par}
+\newcommand{\callout}[1]{\begin{center}\fcolorbox{maincolor}{maincolor!6}{\parbox{0.88\textwidth}{#1}}\end{center}}
+
+\title{\textbf{中文演示标题占位符：\\English Presentation Title Placeholder}}
+\author{\textbf{Author Name} \ \footnotesize{Institution Placeholder}}
+\date{Month DD, 202X}
+
+\begin{document}
+\maketitle
+
+\section{研究背景}
+
+\begin{frame}{研究背景}
+
+\begin{center}
+\begin{tikzpicture}[
+  font=\footnotesize,
+  role/.style={draw=maincolor, rounded corners=3pt, fill=maincolor!6, text width=2.25cm, minimum height=1.25cm, align=center, inner sep=4pt},
+  arrow/.style={-{Latex[length=2.2mm]}, thick, draw=maincolor}
+]
+\node[role] (c1) at (0,1.8) {实体A\\描述占位符};
+\node[role] (c2) at (0,0.0) {实体B\\描述占位符};
+\node[role] (c3) at (0,-1.8) {实体C\\描述占位符};
+\node[role, text width=2.55cm] (srv) at (3.2,0.0) {中心节点\\描述占位符};
+\node[role, text width=2.3cm] (eva) at (6.2,0.0) {评估节点\\描述占位符};
+\draw[arrow] (c1.east) -- (srv.west);
+\draw[arrow] (c2.east) -- (srv.west);
+\draw[arrow] (c3.east) -- (srv.west);
+\draw[arrow] (srv.east) -- (eva.west);
+\end{tikzpicture}
+\end{center}
+\vspace{1mm}
+\smallcap{此处为图表说明文字占位符，用于解释图中各组件之间的关系。}
+\end{frame}
+
+\begin{frame}{方法总览}
+\pageheadline{整体机制说明占位符}
+
+此处为正文内容占位符。请替换为实际的方法描述。本幻灯片演示了正文段落的排版效果。
+
+\[
+\text{输入}
+\rightarrow
+\text{处理步骤一}
+\rightarrow
+\text{处理步骤二}
+\]
+
+此处为继续的正文内容占位符，展示多段落的排版格式。
+
+\[
+\text{步骤二}
+\rightarrow
+\text{中间结果}
+\rightarrow
+\text{最终输出}
+\]
+
+\vspace{1mm}
+\smallcap{此处的说明文字占位符用于补充解释公式或方法的细节。}
+\end{frame}
+
+\begin{frame}{协议建模}
+\pageheadline{系统输入为多元组协议占位符}
+
+\[
+\mathcal{V}_k^r=
+\left(
+A_k^r,\,
+B_k^r,\,
+C(k,r),\,
+D_k^r,\,
+\{E_{k,i}^r\}_{i\in\mathcal{A}_k^r}
+\right)
+\]
+\smallcap{$A_k^r$ 是参数一，$B_k^r$ 是参数二，$C(k,r)$ 是参数三，$D_k^r$ 是参数四，$E_{k,i}^r$ 是参数五。}
+
+此处为正文占位符，解释协议各字段的含义和使用方式。
+\end{frame}
+
+\begin{frame}{实验设置}
+
+\begin{table}
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+数据集 & 数据集名称占位符 \\
+参数一 & 参数值占位符 \\
+参数二 & 参数值占位符 \\
+比较对象 & 方法A, 方法B, 方法C, 本方法 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\plainpara{此处为实验设置的描述文字占位符。}
+
+$\AT$ 表示指标一，$\mathrm{TargetAcc}_T$ 表示指标二，$\Resid_T$ 表示指标三，$\Bdrop_T$ 与 $\Bdrop_{\mathrm{peak}}$ 表示指标四和指标五，$\taudet$ 表示指标六。
+
+\end{frame}
+
+\begin{frame}{实验结果}
+
+\pageheadline{实验结果汇总占位符}
+\begin{columns}[T,onlytextwidth]
+\column{0.64\textwidth}
+\begin{table}
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+Method & 指标1 & 指标2 & 指标3 & 指标4 & 指标5 & 指标6 \\
+\midrule
+方法A  & 数据1 & 数据2 & 数据3 & 数据4 & 数据5 & 数据6 \\
+方法B  & 数据7 & 数据8 & 数据9 & 数据10 & 数据11 & 数据12 \\
+方法C  & 数据13 & 数据14 & 数据15 & 数据16 & 数据17 & 数据18 \\
+\textbf{本方法} & \textbf{数据19} & \textbf{数据20} & \textbf{数据21} & \textbf{数据22} & \textbf{数据23} & \textbf{数据24} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}{总结与展望}
+
+此处为总结内容占位符，用于展示段落排版效果。请替换为实际内容。
+
+\begin{itemize}
+    \item 贡献点一占位符
+    \item 贡献点二占位符
+    \item 未来工作方向占位符
+\end{itemize}
+
+\vspace{2mm}
+\smallcap{感谢您的关注。}
+\end{frame}
+
+\end{document}
