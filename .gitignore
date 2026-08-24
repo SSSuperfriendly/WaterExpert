@@ -60,3 +60,9 @@ tests/__pycache__/
 # Realtime API credentials: set WATEREXPERT_REALTIME_APPCODE instead of committing them.
 docs/API/draft.txt
 docs/API/realtime_api_credentials.txt
+
+# Local-only ops notes with non-public server details (see doc header; not for a public repo).
+docs/ops/server_access.md
+
+# Third-party reference clones (dashboard-3 / square-ui) kept locally for study only.
+vendor/

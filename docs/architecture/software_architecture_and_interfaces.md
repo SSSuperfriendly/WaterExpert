@@ -78,9 +78,11 @@ WaterExpert Software/
 │   ├── services/
 │   ├── tasks/
 │   └── adapters/
-├── frontend/
-│   ├── src/
-│   └── public/
+├── frontend/                 # Next.js (App Router) 前端
+│   ├── app/                  # 路由页面（/ui/login、/ui/、/ui/database …）
+│   ├── components/           # 基础组件与领域组件
+│   ├── lib/                  # i18n、API 客户端、状态、领域映射
+│   └── out/                  # `npm run build` 生成的静态导出，后端在 /ui 下提供
 ├── src/
 ├── scripts/
 ├── configs/

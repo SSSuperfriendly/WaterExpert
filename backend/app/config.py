@@ -61,7 +61,7 @@ def get_settings() -> Settings:
         app_name="WaterExpert Software",
         project_root=PROJECT_ROOT,
         runtime_root=runtime_root,
-        frontend_root=(PROJECT_ROOT / "frontend").resolve(),
+        frontend_root=(PROJECT_ROOT / "frontend" / "out").resolve(),
         report_root=(PROJECT_ROOT / VAR_ROOT_NAME / REPORT_ROOT_NAME).resolve(),
         state_root=(PROJECT_ROOT / VAR_ROOT_NAME / STATE_ROOT_NAME).resolve(),
     )

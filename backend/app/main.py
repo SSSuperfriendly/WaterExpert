@@ -49,7 +49,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/ui", StaticFiles(directory=settings.frontend_root), name="ui")
+app.mount("/ui", StaticFiles(directory=settings.frontend_root, html=True), name="ui")
 
 
 def _frontend_error_page(filename: str, status_code: int) -> FileResponse:
@@ -89,7 +89,7 @@ def resolve_repository(job_id: str | None, require_completed: bool = False) -> A
 
 @app.get("/", include_in_schema=False)
 def index() -> RedirectResponse:
-    return RedirectResponse(url="/ui/login.html")
+    return RedirectResponse(url="/ui/login")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

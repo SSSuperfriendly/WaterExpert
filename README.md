@@ -10,12 +10,12 @@ The current handoff package also includes an agent-ready scenario triage layer. 
 
 This release now also exports a guarded recommendation playbook. It maps the empirical scenarios to reviewable follow-up actions, monitoring targets, and explicit no-overclaim rules so that a downstream agent can draft response suggestions without pretending that a validated RL controller already exists.
 
-The software-facing UI now also includes a demo login page plus goal-aligned pages for home, database query, data upload, preprocessing, visualization, and integrated prediction/diagnosis.
+The software-facing UI is a Next.js (App Router) application under `frontend/` that compiles to a static export at `frontend/out/` and is served by the FastAPI backend at `/ui`. It includes a demo login page plus goal-aligned pages for overview, database query, data upload, preprocessing, visualization, turbidity/clearness prediction, factor diagnosis, empirical threshold retrieval, boundary-change proxy detection, scenario triage, response playbook, Sobol/counterfactual sensitivity, and realtime validation.
 
 ## Repository Scope
 
 - `backend/`: FastAPI service layer for import, prediction jobs, artifact reads, and report export.
-- `frontend/`: browser UI for overview, prediction, diagnostics, scenario triage, thresholds, boundary summary, and task state.
+- `frontend/`: Next.js (App Router) browser UI, statically exported to `frontend/out` and served by FastAPI at `/ui`.
 - `tests/`: software regression tests for state, job scoping, and API-serving assumptions.
 - `src/water_ai/`: data processing, model definitions, physics-surrogate utilities, metrics, and diagnosis helpers.
 - `scripts/pipeline/`: full runtime entrypoints.
@@ -158,6 +158,8 @@ These outputs are generated from the current learned CMFBE surrogate and are int
 
 The repository was last verified with Python 3.12.7. Install the pinned runtime dependencies:
 
+**Windows (PowerShell)**
+
 ```powershell
 python -m venv .ai4s
 .\.ai4s\Scripts\python.exe -m pip install -r requirements.txt
@@ -168,6 +170,17 @@ If a stale `.ai4s` already exists because the repository was moved to a new dire
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\dev\rebuild_venv.ps1
 ```
+
+**macOS / Linux (Homebrew + uv)**
+
+```bash
+brew install uv            # fast Python package manager; installs Python 3.12 too
+uv python install 3.12
+uv venv .ai4s --python 3.12
+uv pip install --python .ai4s/bin/python -r requirements.txt
+```
+
+The `scripts/dev/start_local.sh` launcher automates the venv + install + run steps on macOS/Linux; `scripts/dev/start_local.ps1` is the Windows equivalent.
 
 If PyTorch installation requires a CPU/GPU-specific wheel, install the appropriate PyTorch build first, then run `python -m pip install -r requirements.txt`.
 
@@ -187,6 +200,26 @@ For collaborator-facing setup on the software branch, see `docs/handoffs/environ
 | `WATEREXPERT_DEMO_DISPLAY_NAME` / `WATEREXPERT_DEMO_ROLE` | demo profile | `AI4S Demo User` / `reviewer` |
 
 ## Software Launch
+
+### Build the frontend
+
+The UI is a Next.js app that must be built to a static export before the backend can serve it. From the `frontend/` directory:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+This writes the static export to `frontend/out/`, which the backend serves at `/ui`. Requires Node.js and npm (tested with npm 11 and Node 26).
+
+The statically exported frontend calls the API on the **same origin** (relative `/api/v1/...`), so it works for any host the backend is served from. Only during local development (`next dev` on `:3000`, backend on `:8000`) do you need to point it at the backend explicitly:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev
+```
+
+### Start the backend
 
 The realtime validation script requires the Aliyun national surface-water API AppCode to be provided through an environment variable (it is no longer read from a committed draft file):
 
@@ -212,6 +245,13 @@ To avoid launcher path issues after moving the repository between drives, you ca
 powershell -ExecutionPolicy Bypass -File .\scripts\dev\start_local.ps1
 ```
 
+On macOS/Linux, the equivalent is:
+
+```bash
+./scripts/dev/start_local.sh
+```
+```
+
 The root route now opens the login page first. Default demo credentials are:
 
 - Username: `2510709`
@@ -219,12 +259,21 @@ The root route now opens the login page first. Default demo credentials are:
 
 After login, the main navigation is:
 
-- `首页`
-- `水质综合数据库`
-- `数据上传`
+- `系统总览`
+- `数据库与数据查询`
+- `数据导入与上传`
 - `数据预处理`
-- `数据可视化`
-- `透明度预测与致因诊断`
+- `可视化分析`
+- `浊度/清澈度预测`
+- `致浑因子诊断`
+- `经验阈值检索`
+- `边界变化代理识别`
+- `场景 Triage`
+- `响应 Playbook`
+- `Sobol 敏感性分析`
+- `实时验证`
+
+The UI defaults to 简体中文 and can be toggled to English from the sidebar; the choice persists in `localStorage`.
 
 ## Reproduce The Baseline
 

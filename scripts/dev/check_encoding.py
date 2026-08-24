@@ -33,6 +33,7 @@ TEXT_SUFFIXES = (
     ".ini",
     ".toml",
     ".ts",
+    ".tsx",
     ".vue",
     ".rst",
 )
@@ -43,6 +44,8 @@ SKIP_DIR_NAMES = {
     ".venv",
     "venv",
     "node_modules",
+    ".next",
+    "out",
     "__pycache__",
     ".pytest_cache",
     ".ipynb_checkpoints",
