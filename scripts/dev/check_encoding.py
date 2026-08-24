@@ -44,6 +44,7 @@ SKIP_DIR_NAMES = {
     ".venv",
     "venv",
     "node_modules",
+    "vis-network",
     ".next",
     "out",
     "__pycache__",

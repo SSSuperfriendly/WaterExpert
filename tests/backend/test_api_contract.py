@@ -38,6 +38,20 @@ class ApiContractTest(unittest.TestCase):
             "/api/v1/cross-modal/media",
             "/api/v1/report/export",
             "/api/v1/report/files/{filename}",
+            "/api/v1/knowledge-graph/summary",
+            "/api/v1/knowledge-graph/upload",
+            "/api/v1/knowledge-graph/uploads",
+            "/api/v1/knowledge-graph/uploads/clear",
+            "/api/v1/knowledge-graph/preprocess",
+            "/api/v1/knowledge-graph/texts",
+            "/api/v1/knowledge-graph/texts/clear",
+            "/api/v1/knowledge-graph/build",
+            "/api/v1/knowledge-graph/jobs",
+            "/api/v1/knowledge-graph/jobs/{job_id}",
+            "/api/v1/knowledge-graph/graph",
+            "/api/v1/knowledge-graph/kg/clear",
+            "/api/v1/knowledge-graph/qa",
+            "/api/v1/knowledge-graph/files/{name}",
         }
         missing = expected - registered
         self.assertEqual(missing, set(), f"Missing registered routes: {missing}")

@@ -49,6 +49,10 @@ class Settings:
     def var_root(self) -> Path:
         return self.project_root / VAR_ROOT_NAME
 
+    @property
+    def kg_root(self) -> Path:
+        return self.var_root / "knowledge_graph"
+
 
 def get_settings() -> Settings:
     runtime_root = Path(

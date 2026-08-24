@@ -1,0 +1,858 @@
+{
+  "nodes": [
+    {
+      "id": "风",
+      "label": "风",
+      "type": "环境因子"
+    },
+    {
+      "id": "沉积物再悬浮",
+      "label": "沉积物再悬浮",
+      "type": "水质因子"
+    },
+    {
+      "id": "风场",
+      "label": "风场",
+      "type": "环境因子"
+    },
+    {
+      "id": "水动力强度",
+      "label": "水动力强度",
+      "type": "环境因子"
+    },
+    {
+      "id": "太湖",
+      "label": "太湖",
+      "type": "水体对象"
+    },
+    {
+      "id": "浅水湖泊",
+      "label": "浅水湖泊",
+      "type": "水体对象"
+    },
+    {
+      "id": "营养盐释放",
+      "label": "营养盐释放",
+      "type": "水质因子"
+    },
+    {
+      "id": "剪切应力",
+      "label": "剪切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "再悬浮沉积物浓度和粒径",
+      "label": "再悬浮沉积物浓度和粒径",
+      "type": "水质因子"
+    },
+    {
+      "id": "水动力扰动",
+      "label": "水动力扰动",
+      "type": "环境因子"
+    },
+    {
+      "id": "水深",
+      "label": "水深",
+      "type": "环境因子"
+    },
+    {
+      "id": "风致水动力扰动",
+      "label": "风致水动力扰动",
+      "type": "环境因子"
+    },
+    {
+      "id": "波浪-底边界层过程",
+      "label": "波浪-底边界层过程",
+      "type": "环境因子"
+    },
+    {
+      "id": "Lake Taihu",
+      "label": "Lake Taihu",
+      "type": "水体对象"
+    },
+    {
+      "id": "水温",
+      "label": "水温",
+      "type": "环境因子"
+    },
+    {
+      "id": "Meiliang Bay",
+      "label": "Meiliang Bay",
+      "type": "水体对象"
+    },
+    {
+      "id": "风速",
+      "label": "风速",
+      "type": "环境因子"
+    },
+    {
+      "id": "Tuoshan Bay",
+      "label": "Tuoshan Bay",
+      "type": "水体对象"
+    },
+    {
+      "id": "总氮",
+      "label": "总氮",
+      "type": "水质因子"
+    },
+    {
+      "id": "总磷",
+      "label": "总磷",
+      "type": "水质因子"
+    },
+    {
+      "id": "有机质含量",
+      "label": "有机质含量",
+      "type": "水质因子"
+    },
+    {
+      "id": "含水率",
+      "label": "含水率",
+      "type": "水质因子"
+    },
+    {
+      "id": "沉积物粒径",
+      "label": "沉积物粒径",
+      "type": "水质因子"
+    },
+    {
+      "id": "沉积物容重",
+      "label": "沉积物容重",
+      "type": "水质因子"
+    },
+    {
+      "id": "悬浮物浓度",
+      "label": "悬浮物浓度",
+      "type": "水质因子"
+    },
+    {
+      "id": "波浪",
+      "label": "波浪",
+      "type": "环境因子"
+    },
+    {
+      "id": "流速",
+      "label": "流速",
+      "type": "环境因子"
+    },
+    {
+      "id": "浊度",
+      "label": "浊度",
+      "type": "清澈度指标"
+    },
+    {
+      "id": "光学后向散射传感器",
+      "label": "光学后向散射传感器",
+      "type": "监测方法"
+    },
+    {
+      "id": "现场监测",
+      "label": "现场监测",
+      "type": "监测方法"
+    },
+    {
+      "id": "近底区剪切应力",
+      "label": "近底区剪切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "悬浮物再悬浮",
+      "label": "悬浮物再悬浮",
+      "type": "水质因子"
+    },
+    {
+      "id": "波浪与水流共同作用",
+      "label": "波浪与水流共同作用",
+      "type": "环境因子"
+    },
+    {
+      "id": "OBS-3A",
+      "label": "OBS-3A",
+      "type": "监测方法"
+    },
+    {
+      "id": "总悬浮物浓度",
+      "label": "总悬浮物浓度",
+      "type": "水质因子"
+    },
+    {
+      "id": "人工采样",
+      "label": "人工采样",
+      "type": "监测方法"
+    },
+    {
+      "id": "风速/风向",
+      "label": "风速/风向",
+      "type": "环境因子"
+    },
+    {
+      "id": "TLLER气象站",
+      "label": "TLLER气象站",
+      "type": "监测方法"
+    },
+    {
+      "id": "PH-II手持式气象站",
+      "label": "PH-II手持式气象站",
+      "type": "监测方法"
+    },
+    {
+      "id": "波高",
+      "label": "波高",
+      "type": "环境因子"
+    },
+    {
+      "id": "RBRduo T.D | wave",
+      "label": "RBRduo T.D | wave",
+      "type": "监测方法"
+    },
+    {
+      "id": "风向",
+      "label": "风向",
+      "type": "环境因子"
+    },
+    {
+      "id": "水体混合或再悬浮",
+      "label": "水体混合或再悬浮",
+      "type": "水质过程"
+    },
+    {
+      "id": "波周期",
+      "label": "波周期",
+      "type": "环境因子"
+    },
+    {
+      "id": "底床剪切应力",
+      "label": "底床剪切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "底泥再悬浮",
+      "label": "底泥再悬浮",
+      "type": "水质过程"
+    },
+    {
+      "id": "表面浊度",
+      "label": "表面浊度",
+      "type": "清澈度指标"
+    },
+    {
+      "id": "底层浊度",
+      "label": "底层浊度",
+      "type": "清澈度指标"
+    },
+    {
+      "id": "低密度有机质",
+      "label": "低密度有机质",
+      "type": "水质因子"
+    },
+    {
+      "id": "藻类和浮游动物",
+      "label": "藻类和浮游动物",
+      "type": "水质生物组分"
+    },
+    {
+      "id": "波切应力",
+      "label": "波切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "流切应力",
+      "label": "流切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "波致剪切应力",
+      "label": "波致剪切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "流致剪切应力",
+      "label": "流致剪切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "波流共同剪切应力",
+      "label": "波流共同剪切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "泥沙再悬浮速率",
+      "label": "泥沙再悬浮速率",
+      "type": "水质因子"
+    },
+    {
+      "id": "水位",
+      "label": "水位",
+      "type": "环境因子"
+    },
+    {
+      "id": "磷分布",
+      "label": "磷分布",
+      "type": "水质因子"
+    },
+    {
+      "id": "磷释放",
+      "label": "磷释放",
+      "type": "水质因子"
+    },
+    {
+      "id": "总氮释放",
+      "label": "总氮释放",
+      "type": "水质因子"
+    },
+    {
+      "id": "总磷释放",
+      "label": "总磷释放",
+      "type": "水质因子"
+    },
+    {
+      "id": "有机质释放",
+      "label": "有机质释放",
+      "type": "水质因子"
+    },
+    {
+      "id": "梅梁湾",
+      "label": "梅梁湾",
+      "type": "水体对象"
+    },
+    {
+      "id": "泥沙再悬浮",
+      "label": "泥沙再悬浮",
+      "type": "水质因子"
+    },
+    {
+      "id": "总切应力",
+      "label": "总切应力",
+      "type": "环境因子"
+    },
+    {
+      "id": "光学和声学技术",
+      "label": "光学和声学技术",
+      "type": "监测方法"
+    }
+  ],
+  "edges": [
+    {
+      "source": "风",
+      "target": "沉积物再悬浮",
+      "relation": "导致",
+      "evidence": "Wind-induced disturbances to sediment resuspension"
+    },
+    {
+      "source": "风场",
+      "target": "水动力强度",
+      "relation": "影响",
+      "evidence": "The hydrodynamic intensity that leads to sediment suspension is highly dependent on the wind"
+    },
+    {
+      "source": "风",
+      "target": "太湖",
+      "relation": "影响",
+      "evidence": "Lake Taihu Hydrodynamics Wind field"
+    },
+    {
+      "source": "浅水湖泊",
+      "target": "营养盐释放",
+      "relation": "影响",
+      "evidence": "The release of nutrients from bottom of the shallow lake is important to control to achieve ecological restoration"
+    },
+    {
+      "source": "沉积物再悬浮",
+      "target": "营养盐释放",
+      "relation": "导致",
+      "evidence": "Nutrients release is the result of sediment resuspension in large shallow lakes"
+    },
+    {
+      "source": "剪切应力",
+      "target": "再悬浮沉积物浓度和粒径",
+      "relation": "相关",
+      "evidence": "Lick (1994) showed that the concentration and diameter of the resuspended sediment are related to the shear stress near the sediment-water interface"
+    },
+    {
+      "source": "风",
+      "target": "水动力扰动",
+      "relation": "影响",
+      "evidence": "bay areas are significantly sensitive to wind induced hydrodynamic disturbances"
+    },
+    {
+      "source": "水深",
+      "target": "风致水动力扰动",
+      "relation": "影响",
+      "evidence": "due to shallow water interactions between the wind and bottom processes"
+    },
+    {
+      "source": "波浪-底边界层过程",
+      "target": "水动力扰动",
+      "relation": "主导",
+      "evidence": "dominated by wave-bottom boundary-layer processes"
+    },
+    {
+      "source": "Lake Taihu",
+      "target": "水温",
+      "relation": "影响",
+      "evidence": "Annual lake water temperature ranges from 4.8 to 29.2 °C with an average of 17.3 °C"
+    },
+    {
+      "source": "Lake Taihu",
+      "target": "水深",
+      "relation": "影响",
+      "evidence": "having water surface area of 2338 km2 and an average depth of 1.9 m"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "水深",
+      "relation": "影响",
+      "evidence": "with an average depth of 1.9 m"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "风速",
+      "relation": "影响",
+      "evidence": "Average wind speed is 4.3 m/s in summer and 0.9 m/s in winter with an annual variation of 0 to 10 m/s"
+    },
+    {
+      "source": "Tuoshan Bay",
+      "target": "水深",
+      "relation": "影响",
+      "evidence": "The mean depth during the field experiment was 2.7 m with the maximum of 2.88 m and a minimum of 2.62 m"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "总氮",
+      "relation": "影响",
+      "evidence": "The average total nitrogen [...] has been found 1.73 g/kg in Meiliang Bay during the field experiment"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "总磷",
+      "relation": "影响",
+      "evidence": "The average total phosphorus [...] has been found 0.32 g/kg in Meiliang Bay during the field experiment"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "有机质含量",
+      "relation": "影响",
+      "evidence": "The average organic content [...] has been found 0.94% in Meiliang Bay during the field experiment"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "含水率",
+      "relation": "影响",
+      "evidence": "The average water content has been found 48.93% in Meiliang Bay during the field experiment"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "沉积物粒径",
+      "relation": "影响",
+      "evidence": "The particle size of sediment at Meiliang Bay is 12 μm"
+    },
+    {
+      "source": "Meiliang Bay",
+      "target": "沉积物容重",
+      "relation": "影响",
+      "evidence": "The particle size of sediment at Meiliang Bay is 12 μm with a bulk density of 1.45 g/cm3"
+    },
+    {
+      "source": "风",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "high-frequency wind, waves, currents, and SSC concentrations were measured"
+    },
+    {
+      "source": "波浪",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "high-frequency wind, waves, currents, and SSC concentrations were measured"
+    },
+    {
+      "source": "流速",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "high-frequency wind, waves, currents, and SSC concentrations were measured"
+    },
+    {
+      "source": "悬浮物浓度",
+      "target": "浊度",
+      "relation": "影响",
+      "evidence": "The OBS 3A had been used to measure turbidity... The OBS data of turbidity was calibrated with the manually measured SSC (mg/L)"
+    },
+    {
+      "source": "浊度",
+      "target": "悬浮物浓度",
+      "relation": "监测",
+      "evidence": "The OBS data of turbidity was calibrated with the manually measured SSC (mg/L) at the same depth and time"
+    },
+    {
+      "source": "光学后向散射传感器",
+      "target": "浊度",
+      "relation": "监测",
+      "evidence": "an optical backscatter sensor (OBS) turbidity meter"
+    },
+    {
+      "source": "现场监测",
+      "target": "悬浮物浓度",
+      "relation": "监测",
+      "evidence": "Water samples were collected from 5 cm above the lake bed and were analyzed in the laboratory for SSC calibration purposes. TSS concentrations were measured by the membrane filtration method in laboratory analysis."
+    },
+    {
+      "source": "风速",
+      "target": "近底区剪切应力",
+      "relation": "影响",
+      "evidence": "wind field induced wave and current action on sediment resuspension"
+    },
+    {
+      "source": "近底区剪切应力",
+      "target": "悬浮物再悬浮",
+      "relation": "导致",
+      "evidence": "The bottom shear stress generated by combined wave and current action is the major dynamic force which is mainly responsible for nutrients resuspension in the large, shallow Lake Taihu"
+    },
+    {
+      "source": "太湖",
+      "target": "近底区剪切应力",
+      "relation": "相关",
+      "evidence": "bottom shear stress ... is mainly responsible for nutrients resuspension in the large, shallow Lake Taihu"
+    },
+    {
+      "source": "太湖",
+      "target": "悬浮物再悬浮",
+      "relation": "相关",
+      "evidence": "bottom shear stress ... is mainly responsible for nutrients resuspension in the large, shallow Lake Taihu"
+    },
+    {
+      "source": "波浪与水流共同作用",
+      "target": "近底区剪切应力",
+      "relation": "导致",
+      "evidence": "The bottom shear stress generated by combined wave and current action"
+    },
+    {
+      "source": "悬浮物浓度",
+      "target": "OBS-3A",
+      "relation": "监测",
+      "evidence": "Concentration of suspended sediment (SS) OBS-3A"
+    },
+    {
+      "source": "总悬浮物浓度",
+      "target": "人工采样",
+      "relation": "监测",
+      "evidence": "Water Samples for Total suspended sediment (TSS) concentrations Manual sampling"
+    },
+    {
+      "source": "风速/风向",
+      "target": "TLLER气象站",
+      "relation": "监测",
+      "evidence": "Wind speed /direction TLLER weather station"
+    },
+    {
+      "source": "风速",
+      "target": "PH-II手持式气象站",
+      "relation": "监测",
+      "evidence": "Wind speed PH-II Handheld weather station"
+    },
+    {
+      "source": "波高",
+      "target": "RBRduo T.D | wave",
+      "relation": "监测",
+      "evidence": "Wave (wave height, H; wave period, T) RBRduo T.D | wave"
+    },
+    {
+      "source": "风速",
+      "target": "风向",
+      "relation": "相关",
+      "evidence": "总体上，最盛行的风速区间3.1–6.0 m/s与所有主导风向强相关"
+    },
+    {
+      "source": "风速",
+      "target": "水体混合或再悬浮",
+      "relation": "影响",
+      "evidence": "大多数风速为3.1至9.0 m/s的强风出现在向岸风方向"
+    },
+    {
+      "source": "风向",
+      "target": "水体混合或再悬浮",
+      "relation": "影响",
+      "evidence": "主导的向岸风（SE和ESE）具有较强风速，出现在湾口岸线附近"
+    },
+    {
+      "source": "风速",
+      "target": "波高",
+      "relation": "影响",
+      "evidence": "onshore winds were strongly connected with the wave height and wave period which ultimately increased the total shear stress"
+    },
+    {
+      "source": "风向",
+      "target": "波高",
+      "relation": "影响",
+      "evidence": "onshore winds (96–180°) generated significant wave height and wave period as compared to offshore winds (248–304°) which generated low wave height and wave periods"
+    },
+    {
+      "source": "风向",
+      "target": "波周期",
+      "relation": "影响",
+      "evidence": "onshore winds were strongly connected with the wave height and wave period which ultimately increased the total shear stress"
+    },
+    {
+      "source": "波高",
+      "target": "底床剪切应力",
+      "relation": "影响",
+      "evidence": "This factor of wave height and wave period differences led to the generation of increased shear stress by onshore winds and decreased shear stress by offshore winds at the bottom of the Lake Taihu"
+    },
+    {
+      "source": "波周期",
+      "target": "底床剪切应力",
+      "relation": "影响",
+      "evidence": "This factor of wave height and wave period differences led to the generation of increased shear stress by onshore winds and decreased shear stress by offshore winds at the bottom of the Lake Taihu"
+    },
+    {
+      "source": "太湖",
+      "target": "底床剪切应力",
+      "relation": "影响",
+      "evidence": "led to the generation of increased shear stress by onshore winds and decreased shear stress by offshore winds at the bottom of the Lake Taihu"
+    },
+    {
+      "source": "风速",
+      "target": "浊度",
+      "relation": "影响",
+      "evidence": "The turbidity has been found to be highly sensitive to wind speed, especially when the wind speed was greater than 4 m/s"
+    },
+    {
+      "source": "风速",
+      "target": "底泥再悬浮",
+      "relation": "导致",
+      "evidence": "The higher turbidity during greater wind speeds was due to the vertical energy transfer to the lake bed through large changes in hydrodynamic mixing processes causing resuspension of sediment"
+    },
+    {
+      "source": "底泥再悬浮",
+      "target": "浊度",
+      "relation": "增加",
+      "evidence": "At the higher wind speeds (6 – 10.8 m/s), bottom sediment resuspension contributed substantially to increased turbid conditions at the bottom (up to 270 NTU) and surface (up to 148 NTU)"
+    },
+    {
+      "source": "风速",
+      "target": "表面浊度",
+      "relation": "相关",
+      "evidence": "There was a weak positive correlation between wind speed and surface turbidity (R² 0.3899)"
+    },
+    {
+      "source": "风速",
+      "target": "底层浊度",
+      "relation": "相关",
+      "evidence": "There was a weak positive correlation between wind speed and bottom turbidity (R² 0.3521)"
+    },
+    {
+      "source": "低密度有机质",
+      "target": "表面浊度",
+      "relation": "导致",
+      "evidence": "Turbidity at the surface was higher at lower wind speeds as compared to the bottom, which could be due to an excessive amount of low-density organic matter (consisting of approximately 50% organic content)"
+    },
+    {
+      "source": "藻类和浮游动物",
+      "target": "表面浊度",
+      "relation": "导致",
+      "evidence": "small floating organisms such as algae and zooplankton may have contributed to the surface turbidity during calm periods with low wind speeds"
+    },
+    {
+      "source": "风速",
+      "target": "波切应力",
+      "relation": "影响",
+      "evidence": "风速高于4 m/s时波切应力显著升高"
+    },
+    {
+      "source": "风向",
+      "target": "波切应力",
+      "relation": "影响",
+      "evidence": "东风、东南风和东东南风（80–157°）对波切应力总贡献起主要作用"
+    },
+    {
+      "source": "风速",
+      "target": "流切应力",
+      "relation": "影响",
+      "evidence": "较高风速（高于4 m/s）导致湖底流切应力增加"
+    },
+    {
+      "source": "风向",
+      "target": "流切应力",
+      "relation": "影响",
+      "evidence": "流切应力对风向敏感，盛行（向岸）风向期间更高"
+    },
+    {
+      "source": "风速",
+      "target": "沉积物再悬浮",
+      "relation": "导致",
+      "evidence": "波浪和流切应力被用于评估其对太湖沉积物再悬浮的影响"
+    },
+    {
+      "source": "太湖",
+      "target": "波切应力",
+      "relation": "监测",
+      "evidence": "波浪和流切应力在太湖湖底被计算以评估沉积物再悬浮"
+    },
+    {
+      "source": "太湖",
+      "target": "流切应力",
+      "relation": "监测",
+      "evidence": "波浪和流切应力在太湖湖底被计算以评估沉积物再悬浮"
+    },
+    {
+      "source": "波致剪切应力",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "波致剪切应力与OBS测得的悬浮物浓度呈正相关，临界波致剪切应力为0.13 N/m²，超过该值后沉积物开始活化"
+    },
+    {
+      "source": "流致剪切应力",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "流致剪切应力与OBS测得的悬浮物浓度呈正相关，临界流致剪切应力为0.019 N/m²"
+    },
+    {
+      "source": "波流共同剪切应力",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "总剪切应力与OBS测得的悬浮物浓度呈强正相关，拟合关系为SSC_OBS = −178.25 τ_(cw)² + 354.49 τ_(cw) + 34.213"
+    },
+    {
+      "source": "太湖",
+      "target": "风速",
+      "relation": "相关",
+      "evidence": "太湖沉积物动力学直接受风力影响；梅梁湾风速大于4 m/s是沉积物再悬浮主因"
+    },
+    {
+      "source": "太湖",
+      "target": "浊度",
+      "relation": "相关",
+      "evidence": "太湖表层与底层浊度变化与风速变化一致"
+    },
+    {
+      "source": "太湖",
+      "target": "沉积物再悬浮",
+      "relation": "相关",
+      "evidence": "太湖沉积物动力学直接受风力影响；梅梁湾风速大于4 m/s是沉积物再悬浮主因"
+    },
+    {
+      "source": "风速",
+      "target": "泥沙再悬浮速率",
+      "relation": "影响",
+      "evidence": "风速为4–6 m/s的向岸风显著促进梅梁湾泥沙再悬浮；风速从4、6、8 m/s增加时，泥沙再悬浮速率分别增至205、390、902 g/m²/d"
+    },
+    {
+      "source": "风向",
+      "target": "泥沙再悬浮速率",
+      "relation": "影响",
+      "evidence": "风向在太湖泥沙再悬浮中起最重要作用；东南、东东南和南东南风向在4–6 m/s风速区间内分别贡献200–738、160–730、165–459 g/m²/d的泥沙再悬浮速率"
+    },
+    {
+      "source": "风速",
+      "target": "剪切应力",
+      "relation": "影响",
+      "evidence": "风场（风速和风向）被发现是波浪和流剪切应力的控制参数；波浪剪切应力在较大风速和向岸风向下占总剪切应力的92.5%"
+    },
+    {
+      "source": "风向",
+      "target": "剪切应力",
+      "relation": "影响",
+      "evidence": "风向是导致更大剪切应力的主要驱动机制；向岸风是剪切应力的主要贡献者"
+    },
+    {
+      "source": "风速",
+      "target": "水位",
+      "relation": "影响",
+      "evidence": "风场控制水位变化，向岸风主要导致太湖水位升高"
+    },
+    {
+      "source": "风向",
+      "target": "磷分布",
+      "relation": "影响",
+      "evidence": "不同盛行风向引起的湖流差异影响太湖悬浮泥沙和磷的分布"
+    },
+    {
+      "source": "风速",
+      "target": "磷释放",
+      "relation": "影响",
+      "evidence": "磷释放和泥沙再悬浮是太湖磷浓度变化的主因；内部营养盐释放源于泥沙再悬浮，而后者由波浪和水流作用于水-沉积物界面引起"
+    },
+    {
+      "source": "风速",
+      "target": "总氮释放",
+      "relation": "影响",
+      "evidence": "营养盐释放速率高度依赖于沉积物性质和风强度；底泥中总氮平均含量为1.73 g/kg"
+    },
+    {
+      "source": "风速",
+      "target": "总磷释放",
+      "relation": "影响",
+      "evidence": "营养盐释放速率高度依赖于沉积物性质和风强度；底泥中总磷平均含量为0.32 g/kg"
+    },
+    {
+      "source": "风速",
+      "target": "有机质释放",
+      "relation": "影响",
+      "evidence": "营养盐释放速率高度依赖于沉积物性质和风强度；底泥中有机质平均含量为0.94%"
+    },
+    {
+      "source": "风速",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "当波浪剪切应力低于临界值时，悬浮物浓度处于相对稳定状态；当波浪剪切应力超过0.13 N/m²时，沉积物被激活并达到最大再悬浮潜力"
+    },
+    {
+      "source": "太湖",
+      "target": "梅梁湾",
+      "relation": "相关",
+      "evidence": "梅梁湾是大型浅水太湖的一部分"
+    },
+    {
+      "source": "梅梁湾",
+      "target": "泥沙再悬浮",
+      "relation": "相关",
+      "evidence": "梅梁湾泥沙再悬浮率在向岸风（风速4–6 m/s）下显著升高"
+    },
+    {
+      "source": "波切应力",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "a second order polynomial correlation was found between wave shear stress, current shear stress, and total shear stress with SSC"
+    },
+    {
+      "source": "流切应力",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "a second order polynomial correlation was found between wave shear stress, current shear stress, and total shear stress with SSC"
+    },
+    {
+      "source": "总切应力",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "a second order polynomial correlation was found between wave shear stress, current shear stress, and total shear stress with SSC"
+    },
+    {
+      "source": "梅梁湾",
+      "target": "光学和声学技术",
+      "relation": "监测",
+      "evidence": "high frequency optical and acoustic techniques have been used to obtain field data from Meiliang Bay"
+    },
+    {
+      "source": "波切应力",
+      "target": "沉积物再悬浮",
+      "relation": "导致",
+      "evidence": "critical wave shear stress and total shear stress for sediment resuspension were 0.13 N/m2"
+    },
+    {
+      "source": "流切应力",
+      "target": "沉积物再悬浮",
+      "relation": "导致",
+      "evidence": "critical current shear stress for sediment resuspension was 0.019 N/m2"
+    },
+    {
+      "source": "总切应力",
+      "target": "沉积物再悬浮",
+      "relation": "导致",
+      "evidence": "critical wave shear stress and total shear stress for sediment resuspension were 0.13 N/m2"
+    },
+    {
+      "source": "沉积物再悬浮",
+      "target": "悬浮物浓度",
+      "relation": "影响",
+      "evidence": "sediment resuspension rate ranged from 120 g/m2/d to 738 g/m2/d during 4–6 m/s onshore winds"
+    }
+  ]
+}

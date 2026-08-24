@@ -26,6 +26,12 @@ EXPECTED_ROUTES = (
     "playbook/index.html",
     "sensitivity/index.html",
     "realtime/index.html",
+    "knowledge-graph/index.html",
+    "knowledge-graph/upload/index.html",
+    "knowledge-graph/preprocess/index.html",
+    "knowledge-graph/build/index.html",
+    "knowledge-graph/qa/index.html",
+    "knowledge-graph/view/index.html",
 )
 
 

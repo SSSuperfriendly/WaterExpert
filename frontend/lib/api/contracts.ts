@@ -331,3 +331,73 @@ export interface ReportExportResult {
   format: string;
   download_url: string;
 }
+
+export interface KgFileInfo {
+  name: string;
+  size_bytes?: number;
+}
+
+export interface KnowledgeGraphSummary {
+  uploads?: number;
+  texts?: number;
+  node_count?: number;
+  edge_count?: number;
+  source?: "runtime" | "baseline" | "none";
+  llm_configured?: boolean;
+}
+
+export interface KgGraphNode {
+  id: string;
+  label?: string;
+  type?: string;
+}
+
+export interface KgGraphEdge {
+  source: string;
+  target: string;
+  relation?: string;
+  evidence?: string;
+}
+
+export interface KgGraphPayload {
+  nodes: KgGraphNode[];
+  edges: KgGraphEdge[];
+  node_count: number;
+  edge_count: number;
+  source: string;
+}
+
+export interface KgMatchedRelation {
+  source?: string;
+  source_type?: string;
+  relation?: string;
+  target?: string;
+  target_type?: string;
+  evidence?: string;
+  source_file?: string;
+  _score?: number;
+  [key: string]: unknown;
+}
+
+export interface KgQaResult {
+  question: string;
+  answer: string;
+  matched_relations: KgMatchedRelation[];
+  source: string;
+}
+
+export interface KgBuildJob {
+  job_id: string;
+  created_at?: string;
+  started_at?: string;
+  finished_at?: string;
+  files?: string[];
+  max_chars?: number;
+  status: string;
+  progress?: number;
+  current_file?: string;
+  relation_count?: number;
+  message?: string;
+  error?: string;
+  [key: string]: unknown;
+}

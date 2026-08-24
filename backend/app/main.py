@@ -12,6 +12,9 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.config import get_settings
 from backend.app.schemas import (
     DataImportRequest,
+    KnowledgeGraphBuildRequest,
+    KnowledgeGraphPreprocessRequest,
+    KnowledgeGraphQARequest,
     LoginRequest,
     PredictionJobCreateRequest,
     ReportExportFormat,
@@ -20,6 +23,7 @@ from backend.app.services.auth_service import DemoAuthService
 from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
 from backend.app.services.cross_modal_repository import CrossModalRepository
 from backend.app.services.data_explorer import DataExplorerService
+from backend.app.services.kg_service import KnowledgeGraphService
 from backend.app.services.realtime_validation import RealtimeValidationService
 from backend.app.services.report_builder import get_report_media_type, write_report
 from backend.app.services.runtime_jobs import RuntimeJobService
@@ -34,6 +38,7 @@ auth_service = DemoAuthService()
 data_explorer = DataExplorerService(settings)
 realtime_validation_service = RealtimeValidationService(settings)
 cross_modal_repository = CrossModalRepository(settings)
+kg_service = KnowledgeGraphService(settings)
 
 app = FastAPI(
     title=settings.app_name,
@@ -392,3 +397,99 @@ def download_report(filename: str) -> FileResponse:
     if not path.exists():
         raise HTTPException(status_code=404, detail="Report file not found.")
     return FileResponse(path, media_type=get_report_media_type(path), filename=path.name)
+
+
+# ---------------------------------------------------------------------------
+# Knowledge graph (literature → KG → QA)
+# ---------------------------------------------------------------------------
+@app.get("/api/v1/knowledge-graph/summary")
+def knowledge_graph_summary() -> dict:
+    return kg_service.summary()
+
+
+@app.post("/api/v1/knowledge-graph/upload")
+def knowledge_graph_upload(files: list[UploadFile] = File(...)) -> dict:
+    try:
+        return kg_service.upload_pdfs(files)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/knowledge-graph/uploads")
+def knowledge_graph_uploads() -> list[dict]:
+    return kg_service.list_uploads()
+
+
+@app.post("/api/v1/knowledge-graph/uploads/clear")
+def knowledge_graph_clear_uploads() -> dict:
+    return {"deleted_count": kg_service.clear_uploads()}
+
+
+@app.post("/api/v1/knowledge-graph/preprocess")
+def knowledge_graph_preprocess(payload: KnowledgeGraphPreprocessRequest) -> dict:
+    try:
+        return kg_service.preprocess(
+            files=payload.files,
+            write_json=payload.write_json,
+            keep_captions=payload.keep_captions,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/knowledge-graph/texts")
+def knowledge_graph_texts() -> dict:
+    return kg_service.list_texts()
+
+
+@app.post("/api/v1/knowledge-graph/texts/clear")
+def knowledge_graph_clear_texts() -> dict:
+    return {"deleted_count": kg_service.clear_texts()}
+
+
+@app.post("/api/v1/knowledge-graph/build")
+def knowledge_graph_build(payload: KnowledgeGraphBuildRequest) -> dict:
+    try:
+        return kg_service.start_build(files=payload.files, max_chars=payload.max_chars)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/knowledge-graph/jobs")
+def knowledge_graph_jobs() -> list[dict]:
+    return kg_service.list_build_jobs()
+
+
+@app.get("/api/v1/knowledge-graph/jobs/{job_id}")
+def knowledge_graph_job(job_id: str) -> dict:
+    try:
+        return kg_service.refresh_build_job(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Knowledge graph build job not found.") from exc
+
+
+@app.get("/api/v1/knowledge-graph/graph")
+def knowledge_graph_graph() -> dict:
+    return kg_service.graph()
+
+
+@app.post("/api/v1/knowledge-graph/kg/clear")
+def knowledge_graph_clear_kg() -> dict:
+    return {"deleted_count": kg_service.clear_kg()}
+
+
+@app.post("/api/v1/knowledge-graph/qa")
+def knowledge_graph_qa(payload: KnowledgeGraphQARequest) -> dict:
+    try:
+        return kg_service.qa(payload.question)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/knowledge-graph/files/{name}")
+def knowledge_graph_file(name: str) -> FileResponse:
+    try:
+        path = kg_service.file_download_path(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(path, filename=path.name)

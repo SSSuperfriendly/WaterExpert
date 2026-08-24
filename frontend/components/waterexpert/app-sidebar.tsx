@@ -35,6 +35,10 @@ import {
   RefreshIcon,
   Logout01Icon,
   Globe02Icon,
+  Book01Icon,
+  Notebook01Icon,
+  NodeMoveUpIcon,
+  AiNetworkIcon,
 } from "@hugeicons/core-free-icons";
 
 type NavItem = {
@@ -78,6 +82,17 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
     items: [
       { href: "/sensitivity", labelKey: "nav.sensitivity", icon: Atom01Icon },
       { href: "/realtime", labelKey: "nav.realtime", icon: RefreshIcon },
+    ],
+  },
+  {
+    labelKey: "nav.knowledgeGraph",
+    items: [
+      { href: "/knowledge-graph", labelKey: "nav.kgOverview", icon: Book01Icon },
+      { href: "/knowledge-graph/upload", labelKey: "nav.kgUpload", icon: Upload01Icon },
+      { href: "/knowledge-graph/preprocess", labelKey: "nav.kgPreprocess", icon: Notebook01Icon },
+      { href: "/knowledge-graph/build", labelKey: "nav.kgBuild", icon: NodeMoveUpIcon },
+      { href: "/knowledge-graph/qa", labelKey: "nav.kgQa", icon: Search01Icon },
+      { href: "/knowledge-graph/view", labelKey: "nav.kgView", icon: AiNetworkIcon },
     ],
   },
 ];

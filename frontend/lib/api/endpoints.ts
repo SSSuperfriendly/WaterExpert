@@ -7,6 +7,11 @@ import type {
   DashboardPayload,
   DatabaseSummary,
   DiagnosticsPayload,
+  KgBuildJob,
+  KgFileInfo,
+  KgGraphPayload,
+  KgQaResult,
+  KnowledgeGraphSummary,
   LoginResponse,
   PredictionsPayload,
   PredictionJob,
@@ -102,6 +107,32 @@ export const endpoints = {
       format,
       job_id: jobId || undefined,
     }),
+
+  // Knowledge graph
+  knowledgeGraph: {
+    summary: () => apiClient.get<KnowledgeGraphSummary>("/api/v1/knowledge-graph/summary"),
+    upload: (formData: FormData) =>
+      apiClient.upload<Record<string, unknown>>("/api/v1/knowledge-graph/upload", formData),
+    uploads: () => apiClient.get<KgFileInfo[]>("/api/v1/knowledge-graph/uploads"),
+    clearUploads: () =>
+      apiClient.post<{ deleted_count: number }>("/api/v1/knowledge-graph/uploads/clear"),
+    preprocess: (payload: { files: string[]; write_json?: boolean; keep_captions?: boolean }) =>
+      apiClient.post<Record<string, unknown>>("/api/v1/knowledge-graph/preprocess", payload),
+    texts: () =>
+      apiClient.get<{ txt: KgFileInfo[]; json: KgFileInfo[] }>("/api/v1/knowledge-graph/texts"),
+    clearTexts: () =>
+      apiClient.post<{ deleted_count: number }>("/api/v1/knowledge-graph/texts/clear"),
+    clearKg: () =>
+      apiClient.post<{ deleted_count: number }>("/api/v1/knowledge-graph/kg/clear"),
+    build: (payload: { files: string[]; max_chars?: number }) =>
+      apiClient.post<KgBuildJob>("/api/v1/knowledge-graph/build", payload),
+    jobs: () => apiClient.get<KgBuildJob[]>("/api/v1/knowledge-graph/jobs"),
+    job: (jobId: string) => apiClient.get<KgBuildJob>(`/api/v1/knowledge-graph/jobs/${jobId}`),
+    graph: () => apiClient.get<KgGraphPayload>("/api/v1/knowledge-graph/graph"),
+    qa: (question: string) =>
+      apiClient.post<KgQaResult>("/api/v1/knowledge-graph/qa", { question }),
+    downloadUrl: (name: string) => `/api/v1/knowledge-graph/files/${name}`,
+  },
 };
 
 export const REPORT_FORMATS: { value: ReportFormat; labelKey: string; extension: string }[] = [

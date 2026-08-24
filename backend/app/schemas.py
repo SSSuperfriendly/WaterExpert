@@ -35,3 +35,18 @@ class PredictionJobCreateRequest(BaseModel):
     start_date: str | None = None
     end_date: str | None = None
     use_existing_artifacts: bool = True
+
+
+class KnowledgeGraphPreprocessRequest(BaseModel):
+    files: list[str] = Field(default_factory=list)
+    write_json: bool = False
+    keep_captions: bool = False
+
+
+class KnowledgeGraphBuildRequest(BaseModel):
+    files: list[str] = Field(default_factory=list)
+    max_chars: int = Field(default=1200, ge=300, le=3000)
+
+
+class KnowledgeGraphQARequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
