@@ -4,8 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Notebook01Icon } from "@hugeicons/core-free-icons";
 
-export default function KnowledgeGraphPreprocessPage() {
+export function KgPreprocessPanel() {
   const { t } = useT();
   const uploads = useApi(() => endpoints.knowledgeGraph.uploads());
   const texts = useApi(() => endpoints.knowledgeGraph.texts());
@@ -68,9 +67,7 @@ export default function KnowledgeGraphPreprocessPage() {
   };
 
   return (
-    <AppShell title={t("nav.kgPreprocess")}>
-      <PageHeading title={t("kg.preprocessTitle")} subtitle={t("kg.preprocessSubtitle")} />
-
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -182,6 +179,6 @@ export default function KnowledgeGraphPreprocessPage() {
           )}
         </CardContent>
       </Card>
-    </AppShell>
+    </div>
   );
 }

@@ -18,7 +18,7 @@ interface AppState {
   setSession: (session: AuthProfile | null) => void;
   clearSession: () => void;
 
-  // Station context (single-station prototype; default "2586").
+  // Station context (default "2586").
   stationCode: string;
   setStationCode: (code: string) => void;
 

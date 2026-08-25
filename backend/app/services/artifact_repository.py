@@ -275,7 +275,7 @@ class ArtifactRepository:
         return {
             "app_name": self.settings.app_name,
             "product_mode": PRODUCT_MODE,
-            "prototype_scope": dashboard["prototype_scope"],
+            "data_scope": dashboard["data_scope"],
             "runtime_root": str(self.runtime_root),
             "outputs_root": str(self.outputs_root),
             "frontend_mode": FRONTEND_MODE,
@@ -293,7 +293,7 @@ class ArtifactRepository:
         return {
             "product_name": "WaterExpert Software",
             "algorithm_core": "embedded WaterExpert runtime",
-            "prototype_scope": self._scope_note(dataset_summary),
+            "data_scope": self._scope_note(dataset_summary),
             "purpose": agent_context.get("purpose"),
             "artifact_scope": self._artifact_scope(),
             "artifact_root": str(self.outputs_root),

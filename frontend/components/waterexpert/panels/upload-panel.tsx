@@ -5,8 +5,7 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { formatDateTime } from "@/lib/format";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +30,7 @@ const DATA_TYPES = [
   { value: "spatial", labelKey: "upload.spatial" },
 ];
 
-export default function UploadPage() {
+export function UploadPanel() {
   const { t } = useT();
   const history = useApi(() => endpoints.imports());
 
@@ -92,9 +91,7 @@ export default function UploadPage() {
   const imports = (history.data ?? []) as Record<string, unknown>[];
 
   return (
-    <AppShell title={t("nav.upload")}>
-      <PageHeading title={t("upload.title")} subtitle={t("upload.subtitle")} />
-
+    <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -242,6 +239,6 @@ export default function UploadPage() {
           )}
         </CardContent>
       </Card>
-    </AppShell>
+    </div>
   );
 }

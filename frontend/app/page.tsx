@@ -6,7 +6,6 @@ import { endpoints } from "@/lib/api/endpoints";
 import { translateModel } from "@/lib/domain";
 import { formatNumber, formatMaybeDate } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { GuardrailBanner } from "@/components/waterexpert/guardrail-banner";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { ScenarioHighPriorityTable, ScenarioCountBadges } from "@/components/waterexpert/scenario-feed";
@@ -42,10 +41,6 @@ export default function OverviewPage() {
         <ErrorState message={error} onRetry={reload} />
       ) : data ? (
         <>
-          {data.guardrails && data.guardrails.length > 0 && (
-            <GuardrailBanner items={data.guardrails} />
-          )}
-
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
               label={t("overview.product")}
@@ -180,23 +175,6 @@ export default function OverviewPage() {
               </CardHeader>
               <CardContent>
                 <ScenarioHighPriorityTable days={data.high_priority_days} />
-              </CardContent>
-            </Card>
-          )}
-
-          {data.recommended_agent_queries && data.recommended_agent_queries.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("overview.recommendedQueries")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc space-y-1 pl-5">
-                  {data.recommended_agent_queries.map((q, i) => (
-                    <li key={i} className="text-muted-foreground text-sm leading-snug">
-                      {q}
-                    </li>
-                  ))}
-                </ul>
               </CardContent>
             </Card>
           )}

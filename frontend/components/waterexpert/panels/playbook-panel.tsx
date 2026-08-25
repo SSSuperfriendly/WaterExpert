@@ -5,13 +5,11 @@ import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { translateScenario, translateRisk, riskBadgeVariant } from "@/lib/domain";
 import { formatNumber, formatMaybeDate } from "@/lib/format";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
-import { GuardrailBanner } from "@/components/waterexpert/guardrail-banner";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export default function PlaybookPage() {
+export function PlaybookPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.responsePlaybook());
 
@@ -23,19 +21,13 @@ export default function PlaybookPage() {
     Array.isArray(v) ? v.map((x) => String(x)) : v ? [String(v)] : [];
 
   return (
-    <AppShell title={t("nav.playbook")}>
-      <PageHeading title={t("playbook.title")} subtitle={t("playbook.subtitle")} />
-
+    <div className="flex flex-col gap-6">
       {loading ? (
         <LoadingState />
       ) : error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : data ? (
         <>
-          {data.guardrails && data.guardrails.length > 0 && (
-            <GuardrailBanner items={data.guardrails} />
-          )}
-
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {Object.entries(playbook).map(([key, def]) => (
               <Card key={key}>
@@ -130,7 +122,7 @@ export default function PlaybookPage() {
           )}
         </>
       ) : null}
-    </AppShell>
+    </div>
   );
 }
 
@@ -147,7 +139,11 @@ function ListSection({
   return (
     <div>
       <p className={`text-xs font-medium ${destructive ? "text-destructive" : ""}`}>{title}</p>
-      <ul className={`mt-1 list-disc space-y-0.5 pl-5 text-xs ${destructive ? "text-destructive/80" : "text-muted-foreground"}`}>
+      <ul
+        className={`mt-1 list-disc space-y-0.5 pl-5 text-xs ${
+          destructive ? "text-destructive/80" : "text-muted-foreground"
+        }`}
+      >
         {items.map((item, i) => (
           <li key={i} className="leading-snug">
             {item}

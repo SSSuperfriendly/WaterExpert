@@ -5,13 +5,11 @@ import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { translateScenario } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { ScenarioHighPriorityTable, ScenarioCountBadges } from "@/components/waterexpert/scenario-feed";
-import { GuardrailBanner } from "@/components/waterexpert/guardrail-banner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function ScenarioPage() {
+export function ScenarioPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.scenarioTriage());
 
@@ -19,19 +17,13 @@ export default function ScenarioPage() {
   const scenarioDefs = data?.scenario_definitions ?? {};
 
   return (
-    <AppShell title={t("nav.scenario")}>
-      <PageHeading title={t("scenario.title")} subtitle={t("scenario.subtitle")} />
-
+    <div className="flex flex-col gap-6">
       {loading ? (
         <LoadingState />
       ) : error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : data ? (
         <>
-          {data.classification_semantics && (
-            <GuardrailBanner items={[data.classification_semantics, ...(data.guardrails ?? [])]} />
-          )}
-
           <Card>
             <CardHeader>
               <CardTitle>{t("scenario.scenarioCounts")}</CardTitle>
@@ -96,6 +88,6 @@ export default function ScenarioPage() {
           )}
         </>
       ) : null}
-    </AppShell>
+    </div>
   );
 }

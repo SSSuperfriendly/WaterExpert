@@ -5,9 +5,8 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { formatNumber, formatDelta } from "@/lib/format";
-import { AppShell } from "@/components/waterexpert/app-shell";
 import { StatCard } from "@/components/waterexpert/stat-card";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { TimeSeriesChart } from "@/components/waterexpert/time-series-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-export default function VisualizationPage() {
+export function VisualizationPanel() {
   const { t } = useT();
   const [indicator, setIndicator] = React.useState("turbidity");
   const [limit, setLimit] = React.useState(180);
@@ -34,9 +33,7 @@ export default function VisualizationPage() {
   const available = data?.available_indicators ?? [];
 
   return (
-    <AppShell title={t("nav.visualization")}>
-      <PageHeading title={t("visualization.title")} subtitle={t("visualization.subtitle")} />
-
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <Label>{t("visualization.indicatorSelector")}</Label>
@@ -135,6 +132,6 @@ export default function VisualizationPage() {
           )}
         </>
       ) : null}
-    </AppShell>
+    </div>
   );
 }

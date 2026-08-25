@@ -6,7 +6,7 @@ import { I18nProvider } from "@/lib/i18n/provider";
 export const metadata: Metadata = {
   title: "WaterExpert · 水环境智能分析平台",
   description:
-    "WaterExpert 单站多模态日尺度原型工作台：浊度/清澈度预测、致浑因子诊断、阈值检索、边界变化代理识别与场景分级。",
+    "WaterExpert 水环境智能分析工作台：浊度/清澈度预测与验证、致浑因子诊断、响应与预案、边界变化识别、Sobol 敏感性分析与知识图谱问答。",
 };
 
 export default function RootLayout({

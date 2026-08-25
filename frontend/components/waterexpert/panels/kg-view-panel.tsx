@@ -4,8 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +25,11 @@ const TYPE_COLORS: Record<string, string> = {
 };
 const DEFAULT_COLOR = "#64748b";
 
-type VisNetworkInstance = { destroy: () => void };
+type VisNetworkInstance = {
+  destroy: () => void;
+  fit: (options?: Record<string, unknown>) => void;
+  once: (event: string, handler: () => void) => void;
+};
 type VisNetworkLib = {
   Network: new (
     container: HTMLElement,
@@ -42,7 +45,7 @@ function getVis(): VisNetworkLib | undefined {
   return (window as unknown as { vis?: VisNetworkLib }).vis;
 }
 
-export default function KnowledgeGraphViewPage() {
+export function KgViewPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.knowledgeGraph.graph());
 
@@ -53,10 +56,9 @@ export default function KnowledgeGraphViewPage() {
   // Inject the self-hosted vis-network script + stylesheet once.
   React.useEffect(() => {
     let script: HTMLScriptElement | null = null;
-    let link: HTMLLinkElement | null = null;
 
     if (!document.querySelector(`link[href="${VIS_CSS}"]`)) {
-      link = document.createElement("link");
+      const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = VIS_CSS;
       document.head.appendChild(link);
@@ -73,11 +75,6 @@ export default function KnowledgeGraphViewPage() {
     script.onload = () => setVisReady(true);
     script.onerror = () => setVisReady(false);
     document.head.appendChild(script);
-
-    return () => {
-      script?.remove();
-      link?.remove();
-    };
   }, []);
 
   // Build the network once both the library and the graph payload are ready.
@@ -106,10 +103,11 @@ export default function KnowledgeGraphViewPage() {
       title: e.evidence,
     }));
 
-    networkRef.current = new vis.Network(
+    const network = new vis.Network(
       container,
       { nodes, edges },
       {
+        autoResize: true,
         nodes: {
           shape: "dot",
           font: { size: 14, face: "sans-serif", color: "#334155" },
@@ -133,6 +131,11 @@ export default function KnowledgeGraphViewPage() {
       }
     );
 
+    networkRef.current = network;
+    network.once("stabilizationIterationsDone", () => {
+      network.fit({ animation: { duration: 300, easingFunction: "easeInOutQuad" } });
+    });
+
     return () => {
       networkRef.current?.destroy();
       networkRef.current = null;
@@ -146,9 +149,7 @@ export default function KnowledgeGraphViewPage() {
   ];
 
   return (
-    <AppShell title={t("nav.kgView")}>
-      <PageHeading title={t("kg.viewTitle")} subtitle={t("kg.viewSubtitle")} />
-
+    <div className="flex flex-col gap-6">
       {loading ? (
         <LoadingState rows={3} />
       ) : error ? (
@@ -183,7 +184,7 @@ export default function KnowledgeGraphViewPage() {
               ) : (
                 <div
                   ref={containerRef}
-                  className="min-h-[480px] w-full overflow-hidden rounded-md border bg-white"
+                  className="relative h-[520px] w-full overflow-hidden rounded-md border bg-white"
                 />
               )}
             </CardContent>
@@ -211,6 +212,6 @@ export default function KnowledgeGraphViewPage() {
           </Card>
         </>
       ) : null}
-    </AppShell>
+    </div>
   );
 }

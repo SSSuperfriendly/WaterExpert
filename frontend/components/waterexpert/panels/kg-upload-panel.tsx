@@ -4,14 +4,13 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Upload01Icon } from "@hugeicons/core-free-icons";
 
-export default function KnowledgeGraphUploadPage() {
+export function KgUploadPanel() {
   const { t } = useT();
   const uploads = useApi(() => endpoints.knowledgeGraph.uploads());
 
@@ -58,9 +57,7 @@ export default function KnowledgeGraphUploadPage() {
   const list = uploads.data ?? [];
 
   return (
-    <AppShell title={t("nav.kgUpload")}>
-      <PageHeading title={t("kg.uploadTitle")} subtitle={t("kg.uploadSubtitle")} />
-
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -134,6 +131,6 @@ export default function KnowledgeGraphUploadPage() {
           )}
         </CardContent>
       </Card>
-    </AppShell>
+    </div>
   );
 }

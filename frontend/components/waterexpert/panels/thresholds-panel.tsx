@@ -4,32 +4,24 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { formatNumber } from "@/lib/format";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { ThresholdBrowser } from "@/components/waterexpert/threshold-browser";
-import { GuardrailBanner } from "@/components/waterexpert/guardrail-banner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function ThresholdsPage() {
+export function ThresholdsPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.thresholds({}));
 
   const risk = data?.risk_snapshot ?? {};
 
   return (
-    <AppShell title={t("nav.thresholds")}>
-      <PageHeading title={t("thresholds.title")} subtitle={t("thresholds.subtitle")} />
-
+    <div className="flex flex-col gap-6">
       {loading ? (
         <LoadingState />
       ) : error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : data ? (
         <>
-          {data.threshold_semantics && (
-            <GuardrailBanner items={[data.threshold_semantics]} />
-          )}
-
           {Object.keys(risk).length > 0 && (
             <Card>
               <CardHeader>
@@ -54,6 +46,6 @@ export default function ThresholdsPage() {
           />
         </>
       ) : null}
-    </AppShell>
+    </div>
   );
 }

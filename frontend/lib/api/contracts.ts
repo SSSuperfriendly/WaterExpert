@@ -57,7 +57,7 @@ export interface ModelMetric {
 export interface DashboardPayload {
   product_name?: string;
   algorithm_core?: string;
-  prototype_scope?: string;
+  data_scope?: string;
   purpose?: string;
   artifact_scope?: string;
   artifact_root?: string;

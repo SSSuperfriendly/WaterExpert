@@ -22,22 +22,15 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
   DashboardSquare01Icon,
   Database01Icon,
-  Upload01Icon,
-  FilterHorizontalIcon,
   ChartLineData01Icon,
   Activity01Icon,
   Search01Icon,
-  SlidersHorizontalIcon,
   SatelliteIcon,
-  Flag01Icon,
   ClipboardIcon,
   Atom01Icon,
-  RefreshIcon,
   Logout01Icon,
   Globe02Icon,
   Book01Icon,
-  Notebook01Icon,
-  NodeMoveUpIcon,
   AiNetworkIcon,
 } from "@hugeicons/core-free-icons";
 
@@ -49,50 +42,31 @@ type NavItem = {
 
 const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   {
-    labelKey: "nav.overview",
+    labelKey: "nav.groupOverview",
     items: [{ href: "/", labelKey: "nav.overview", icon: DashboardSquare01Icon }],
   },
   {
-    labelKey: "nav.database",
+    labelKey: "nav.groupDatabase",
     items: [
-      { href: "/database", labelKey: "nav.database", icon: Database01Icon },
-      { href: "/upload", labelKey: "nav.upload", icon: Upload01Icon },
-      { href: "/preprocess", labelKey: "nav.preprocess", icon: FilterHorizontalIcon },
-      { href: "/visualization", labelKey: "nav.visualization", icon: ChartLineData01Icon },
+      { href: "/database", labelKey: "nav.importDatabase", icon: Database01Icon },
+      { href: "/query", labelKey: "nav.queryVisualization", icon: ChartLineData01Icon },
     ],
   },
   {
-    labelKey: "nav.prediction",
+    labelKey: "nav.groupPrediction",
     items: [
-      { href: "/prediction", labelKey: "nav.prediction", icon: Activity01Icon },
+      { href: "/prediction", labelKey: "nav.predictionValidation", icon: Activity01Icon },
       { href: "/diagnosis", labelKey: "nav.diagnosis", icon: Search01Icon },
-      { href: "/thresholds", labelKey: "nav.thresholds", icon: SlidersHorizontalIcon },
-    ],
-  },
-  {
-    labelKey: "nav.boundary",
-    items: [
+      { href: "/response", labelKey: "nav.responsePlaybook", icon: ClipboardIcon },
       { href: "/boundary", labelKey: "nav.boundary", icon: SatelliteIcon },
-      { href: "/scenario", labelKey: "nav.scenario", icon: Flag01Icon },
-      { href: "/playbook", labelKey: "nav.playbook", icon: ClipboardIcon },
     ],
   },
   {
-    labelKey: "nav.sensitivity",
+    labelKey: "nav.groupLab",
     items: [
       { href: "/sensitivity", labelKey: "nav.sensitivity", icon: Atom01Icon },
-      { href: "/realtime", labelKey: "nav.realtime", icon: RefreshIcon },
-    ],
-  },
-  {
-    labelKey: "nav.knowledgeGraph",
-    items: [
-      { href: "/knowledge-graph", labelKey: "nav.kgOverview", icon: Book01Icon },
-      { href: "/knowledge-graph/upload", labelKey: "nav.kgUpload", icon: Upload01Icon },
-      { href: "/knowledge-graph/preprocess", labelKey: "nav.kgPreprocess", icon: Notebook01Icon },
-      { href: "/knowledge-graph/build", labelKey: "nav.kgBuild", icon: NodeMoveUpIcon },
-      { href: "/knowledge-graph/qa", labelKey: "nav.kgQa", icon: Search01Icon },
-      { href: "/knowledge-graph/view", labelKey: "nav.kgView", icon: AiNetworkIcon },
+      { href: "/knowledge-graph", labelKey: "nav.knowledgeGraph", icon: Book01Icon },
+      { href: "/knowledge-graph/qa", labelKey: "nav.waterExpert", icon: AiNetworkIcon },
     ],
   },
 ];

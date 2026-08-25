@@ -18,7 +18,7 @@ class FakeRepository:
                 "river": "黄浦江",
                 "matched_model_rows": 92,
             },
-            "prototype_scope": "单站点日尺度原型",
+            "data_scope": "单站点日尺度数据",
             "guardrails": ["仅用于结果研判。"],
             "test_models": {
                 "cmfbe_stgcn": {
@@ -153,7 +153,7 @@ class ReportBuilderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = write_report(repository, Path(tmp_dir), export_format="md")
             content = path.read_text(encoding="utf-8")
-            self.assertIn("单站点日尺度原型", content)
+            self.assertIn("单站点日尺度数据", content)
             self.assertIn("外源输入", content)
             self.assertIn("高", content)
             self.assertIn("边界说明", content)

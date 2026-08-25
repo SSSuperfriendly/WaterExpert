@@ -40,7 +40,7 @@ REPORT_TIMESTAMP_FORMAT = "%Y%m%d-%H%M%S-%f"
 REPORT_ID_LENGTH = 8
 REPORT_TITLE = "WaterExpert 水环境智能诊断报告"
 REPORT_INTRO = (
-    "本报告汇总当前 WaterExpert 软件中吴淞口单站点、多模态、日尺度原型结果，"
+    "本报告汇总当前 WaterExpert 软件的分析结果，"
     "用于预测复核、诊断研判与报告留存，不用于自动控制或治理决策替代。"
 )
 REPORT_EMPTY_TEXT = "暂无数据。"
@@ -58,8 +58,8 @@ PDF_TABLE_WIDTH_WEIGHTS: dict[str, list[float]] = {
     "sobol_rows": [1.4, 0.9, 0.9, 0.9],
 }
 
-PROTOTYPE_SCOPE_LABELS = {
-    "single-station multimodal daily prototype": "单站点多模态日尺度原型",
+DATA_SCOPE_LABELS = {
+    "single-station multimodal daily prototype": "日尺度数据",
 }
 SCENARIO_LABELS = {
     "external_input": "外源输入",
@@ -111,13 +111,13 @@ TEXT_TRANSLATIONS = {
     "Current outputs support empirical diagnosis and screening, not calibrated operational control.": "当前产物仅支持经验性诊断与筛查，不代表经过标定的运行控制依据。",
     "Do not claim a full multi-station hydrodynamic model has been trained.": "不要将当前系统表述为已完成全域多站点水动力模型训练。",
     "Do not claim calibrated spatial governance maps or validated control policies are available.": "不要将当前产物表述为已提供经过校准的空间治理图或验证后的控制策略。",
-    "Thresholds denote empirical critical levels at which turbidity forcing tends to exceed self-purification capacity or turbidity tends to increase sharply in the current prototype.": "阈值表示当前原型下，致浊作用开始明显超过自净能力或浊度出现跃升的经验临界水平。",
+    "Thresholds denote empirical critical levels at which turbidity forcing tends to exceed self-purification capacity or turbidity tends to increase sharply in the current prototype.": "阈值表示当前条件下，致浊作用开始明显超过自净能力或浊度出现跃升的经验临界水平。",
     "The current scenario layer is a deterministic empirical triage built from CMFBE process outputs, auxiliary risk scores, and exported threshold breakpoints.": "当前场景层是基于 CMFBE 过程输出、辅助风险分数和导出阈值断点构建的确定性经验分诊结果。",
-    "Scenario labels describe empirical forcing regimes under which turbidity transport and self-purification balance appear to shift in the current prototype.": "场景标签描述的是当前原型中浊度输运与自净平衡出现转变时对应的经验驱动状态。",
+    "Scenario labels describe empirical forcing regimes under which turbidity transport and self-purification balance appear to shift in the current prototype.": "场景标签描述的是当前条件下浊度输运与自净平衡出现转变时对应的经验驱动状态。",
 }
 SCENARIO_GUARDRAILS = [
     "场景标签来自经验型 triage 产物，不是经过验证的治理分类标准。",
-    "阈值检索展示的是当前原型中的经验断点，不是二维水动力物理控制阈值。",
+    "阈值检索展示的是当前条件下的经验断点，不是二维水动力物理控制阈值。",
     "响应建议用于辅助分析师排查与监测优先级判断，不代表自动控制策略。",
 ]
 EVIDENCE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
@@ -470,9 +470,9 @@ def _collect_report_payload(repository: ArtifactRepository) -> dict[str, Any]:
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "dashboard": {
             **dashboard,
-            "prototype_scope": PROTOTYPE_SCOPE_LABELS.get(
-                _normalize_text(dashboard.get("prototype_scope")),
-                _normalize_text(dashboard.get("prototype_scope")),
+            "data_scope": DATA_SCOPE_LABELS.get(
+                _normalize_text(dashboard.get("data_scope")),
+                _normalize_text(dashboard.get("data_scope")),
             ),
             "guardrails": _translate_guardrails(_list_value(dashboard.get("guardrails"))),
         },
@@ -739,7 +739,7 @@ def build_report_html(repository: ArtifactRepository) -> str:
         <div class="meta">
           <div><strong>站点</strong>{escape(_normalize_text(dashboard["station_profile"]["station_name"]))}</div>
           <div><strong>河流</strong>{escape(_normalize_text(dashboard["station_profile"]["river"]))}</div>
-          <div><strong>范围</strong>{escape(_normalize_text(dashboard["prototype_scope"]))}</div>
+          <div><strong>范围</strong>{escape(_normalize_text(dashboard["data_scope"]))}</div>
           <div><strong>建模匹配日数</strong>{escape(_format_scalar(dashboard["station_profile"]["matched_model_rows"]))}</div>
         </div>
       </div>
@@ -792,7 +792,7 @@ def build_report_markdown(repository: ArtifactRepository) -> str:
         "",
         f"- 站点：{dashboard['station_profile']['station_name']}",
         f"- 河流：{dashboard['station_profile']['river']}",
-        f"- 范围：{dashboard['prototype_scope']}",
+        f"- 范围：{dashboard['data_scope']}",
         f"- 建模匹配日数：{dashboard['station_profile']['matched_model_rows']}",
         f"- 当前主模型：{payload['selected_model']}",
         "",
@@ -905,7 +905,7 @@ def build_report_pdf(repository: ArtifactRepository) -> bytes:
         Spacer(1, 4),
         _pdf_body(styles, f"站点：{dashboard['station_profile']['station_name']}"),
         _pdf_body(styles, f"河流：{dashboard['station_profile']['river']}"),
-        _pdf_body(styles, f"范围：{dashboard['prototype_scope']}"),
+        _pdf_body(styles, f"范围：{dashboard['data_scope']}"),
         _pdf_body(styles, f"建模匹配日数：{dashboard['station_profile']['matched_model_rows']}"),
         Spacer(1, 6),
         _pdf_section_heading(styles, "边界说明"),

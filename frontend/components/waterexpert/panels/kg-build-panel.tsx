@@ -4,8 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +30,7 @@ function statusBadge(status: string) {
   return <Badge variant="default">…</Badge>;
 }
 
-export default function KnowledgeGraphBuildPage() {
+export function KgBuildPanel() {
   const { t } = useT();
   const texts = useApi(() => endpoints.knowledgeGraph.texts());
 
@@ -104,9 +103,7 @@ export default function KnowledgeGraphBuildPage() {
   };
 
   return (
-    <AppShell title={t("nav.kgBuild")}>
-      <PageHeading title={t("kg.buildTitle")} subtitle={t("kg.buildSubtitle")} />
-
+    <div className="flex flex-col gap-6">
       <p className="text-muted-foreground rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
         {t("kg.llmWarning")}
       </p>
@@ -208,6 +205,6 @@ export default function KnowledgeGraphBuildPage() {
           )}
         </CardContent>
       </Card>
-    </AppShell>
+    </div>
   );
 }

@@ -39,7 +39,7 @@ export default function KnowledgeGraphQaPage() {
   const relations = result?.matched_relations ?? [];
 
   return (
-    <AppShell title={t("nav.kgQa")}>
+    <AppShell title={t("nav.waterExpert")}>
       <PageHeading title={t("kg.qaTitle")} subtitle={t("kg.qaSubtitle")} />
 
       <Card>
