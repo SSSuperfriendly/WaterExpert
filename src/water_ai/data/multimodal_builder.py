@@ -142,6 +142,13 @@ def _load_water_daily(
     data_root: str | Path, water_pattern: str
 ) -> tuple[pd.DataFrame, dict[str, Any], Path]:
     water_path = resolve_single_path(data_root, water_pattern)
+    return _load_water_daily_from_path(water_path)
+
+
+def _load_water_daily_from_path(
+    water_path: str | Path,
+) -> tuple[pd.DataFrame, dict[str, Any], Path]:
+    water_path = Path(water_path)
     water_df = pd.read_csv(water_path)
     water_df = water_df[water_df["\u76d1\u6d4b\u65f6\u95f4"].notna()].copy()
     water_df = water_df.rename(columns=WATER_RENAME)
@@ -632,12 +639,19 @@ def build_multimodal_dataset(
     ndti_dir: str | Path | None = None,
     ndti_output_dir: str | Path | None = None,
     boundary_config: dict[str, Any] | None = None,
+    water_path: str | Path | None = None,
+    weather_path: str | Path | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     output_dir = ensure_dir(output_dir)
     intermediate_dir = ensure_dir(Path(output_dir) / "intermediate")
 
-    water_daily, station_meta, water_path = _load_water_daily(data_root, water_pattern)
-    weather_df = _load_weather_daily(Path(data_root) / weather_filename)
+    if water_path is not None:
+        water_daily, station_meta, water_path = _load_water_daily_from_path(water_path)
+    else:
+        water_daily, station_meta, water_path = _load_water_daily(data_root, water_pattern)
+    weather_df = _load_weather_daily(
+        Path(weather_path) if weather_path is not None else Path(data_root) / weather_filename
+    )
     selected_weather, weather_meta = _select_weather_station(weather_df, water_daily, station_meta)
 
     merged_df = pd.merge(water_daily, selected_weather, on="date", how="inner")
@@ -725,7 +739,9 @@ def build_multimodal_dataset(
 
     summary = {
         "water_source_path": str(water_path),
-        "weather_source_path": str(Path(data_root) / weather_filename),
+        "weather_source_path": str(
+            Path(weather_path) if weather_path is not None else Path(data_root) / weather_filename
+        ),
         "hydrodynamics_enabled": hydrodynamics_enabled,
         "hydrodynamics": hydrodynamics_meta,
         "ndti_enabled": ndti_enabled,

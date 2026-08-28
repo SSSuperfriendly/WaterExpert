@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 from backend.app.config import Settings
 from backend.app.services.artifact_io import iter_csv_rows
+from backend.app.services.dataset_service import DatasetNotFound, DatasetService
 
 
 CATALOG_RELATIVE_PATH = Path("data") / "full_station_database" / "station_catalog.csv"
@@ -149,15 +150,32 @@ def _pearson(left: list[float], right: list[float]) -> float | None:
 
 
 class DataExplorerService:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self, settings: Settings, dataset_service: DatasetService | None = None
+    ) -> None:
         self.settings = settings
+        self._dataset_service = dataset_service
         self._catalog_path = settings.runtime_root / CATALOG_RELATIVE_PATH
         self._database_path = settings.runtime_root / DATABASE_RELATIVE_PATH
+
+    def _resolve_path(self, dataset_id: str, fallback: Path) -> Path:
+        """Read the registered version's canonical data when present.
+
+        Falls back to the committed bootstrap source only until the baseline has
+        been registered via ``scripts/data/register_baseline_datasets.py``; after
+        the switchover the registered version is the single read path.
+        """
+        if self._dataset_service is None:
+            return fallback
+        try:
+            return self._dataset_service.resolve_reading_path(dataset_id)
+        except DatasetNotFound:
+            return fallback
 
     @cached_property
     def _stations(self) -> list[StationRecord]:
         stations: list[StationRecord] = []
-        for row in iter_csv_rows(self._catalog_path):
+        for row in iter_csv_rows(self._resolve_path("station_catalog", self._catalog_path)):
             stations.append(
                 StationRecord(
                     station_code=row.get("station_code", ""),
@@ -180,7 +198,7 @@ class DataExplorerService:
         return stations
 
     def _iter_database_rows(self) -> Iterable[dict[str, str]]:
-        return iter_csv_rows(self._database_path)
+        return iter_csv_rows(self._resolve_path("wq_all_stations_secchi", self._database_path))
 
     def database_stations(self) -> list[dict[str, str]]:
         return [station.as_dict() for station in self._stations]

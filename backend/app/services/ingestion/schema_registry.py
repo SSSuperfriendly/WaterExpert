@@ -612,6 +612,21 @@ DATASET_SPECS: dict[str, DatasetSpec] = {
 
 SUPPORTED_DATA_TYPES: frozenset[str] = frozenset(DATASET_SPECS)
 
+#: Data types the data-layer review (2026-08-28) asks us to register that are not
+#: raw fact inputs to the modelling chain: station catalogs, proxy series, field
+#: monitoring, cross-modal fusion tables and knowledge-graph relationships. They
+#: are registered through ``DatasetService.register_derived_file`` (which computes
+#: a quality report, field dictionary, lineage and hash without field mapping).
+DERIVED_DATA_TYPES: frozenset[str] = frozenset(
+    {
+        "station_catalog",
+        "proxy",
+        "field_monitoring",
+        "cross_modal",
+        "knowledge_graph",
+    }
+)
+
 
 def get_spec(data_type: str) -> DatasetSpec:
     try:

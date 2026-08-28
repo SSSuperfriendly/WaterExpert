@@ -34,7 +34,7 @@ from backend.app.services.ingestion.schema_registry import (
     normalize_unit,
 )
 
-SUPPORTED_SUFFIXES: frozenset[str] = frozenset({".csv", ".xls", ".xlsx", ".json"})
+SUPPORTED_SUFFIXES: frozenset[str] = frozenset({".csv", ".xls", ".xlsx", ".json", ".parquet"})
 CANONICAL_DATA_FILENAME = "data.csv"
 QUALITY_REPORT_FILENAME = "quality_report.json"
 FIELD_DICTIONARY_FILENAME = "field_dictionary.json"
@@ -112,6 +112,8 @@ def _read_raw(path: Path) -> pd.DataFrame:
     try:
         if suffix == ".csv":
             return pd.read_csv(path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+        if suffix == ".parquet":
+            return pd.read_parquet(path).astype(str)
         if suffix in {".xls", ".xlsx"}:
             return pd.read_excel(path, dtype=str).fillna("")
         payload = json.loads(path.read_text(encoding="utf-8-sig"))

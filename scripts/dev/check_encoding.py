@@ -51,6 +51,11 @@ SKIP_DIR_NAMES = {
     ".pytest_cache",
     ".ipynb_checkpoints",
     ".vscode",
+    # Runtime output (gitignored): registered dataset versions, job runs, logs.
+    # These are generated artifacts whose canonical data.csv may legitimately
+    # contain CJK glyphs outside GB2312 (e.g. traditional-Chinese place names),
+    # which the mojibake heuristic would otherwise mis-flag.
+    "var",
 }
 
 MAX_TEXT_BYTES = 50_000_000

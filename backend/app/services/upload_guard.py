@@ -23,6 +23,7 @@ CONTENT_SIGNATURES: dict[str, tuple[bytes, ...] | None] = {
     ".json": None,
     ".xlsx": (b"PK\x03\x04",),  # zip container
     ".xls": (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",),  # OLE2 compound file
+    ".parquet": (b"PAR1",),  # Apache Parquet magic bytes
     ".pdf": (b"%PDF-",),
 }
 
@@ -84,16 +85,19 @@ def _check_signature(path: Path, suffix: str) -> None:
             )
         try:
             prefix.decode("utf-8")
-        except UnicodeDecodeError:
-            # A multi-byte character may straddle the sniff boundary; retry on a
-            # slightly shorter prefix before rejecting.
+        except UnicodeDecodeError as exc:
+            # A multi-byte character may straddle the sniff boundary. Trim to
+            # exactly where decoding failed and retry: UTF-8 decode stops at the
+            # first bad byte, so everything before ``exc.start`` is valid. A
+            # fixed -4 trim is not enough — several multi-byte characters can
+            # straddle the boundary at once.
             try:
-                prefix[:-4].decode("utf-8")
-            except UnicodeDecodeError as exc:
+                prefix[: exc.start].decode("utf-8")
+            except UnicodeDecodeError as exc2:
                 raise UploadRejected(
                     ErrorCode.CONTENT_TYPE_REJECTED,
                     f"'{suffix}' content is not valid UTF-8 text.",
-                ) from exc
+                ) from exc2
         return
 
     if not any(prefix.startswith(signature) for signature in expected):

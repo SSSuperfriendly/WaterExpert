@@ -21,6 +21,7 @@ from backend.app.services.ingestion.quality import (
 )
 from backend.app.services.ingestion.schema_registry import (
     DATASET_SPECS,
+    DERIVED_DATA_TYPES,
     SUPPORTED_DATA_TYPES,
     DatasetSpec,
     FieldSpec,
@@ -31,6 +32,7 @@ from backend.app.services.ingestion.schema_registry import (
 __all__ = [
     "CANONICAL_DATA_FILENAME",
     "DATASET_SPECS",
+    "DERIVED_DATA_TYPES",
     "FIELD_DICTIONARY_FILENAME",
     "LINEAGE_FILENAME",
     "MIN_MODELABLE_ROWS",

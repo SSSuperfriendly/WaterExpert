@@ -66,6 +66,59 @@ def to_repo_relative(path_value: str | Path) -> str:
         return str(path)
 
 
+_RESOLVED_SERVICE: Any = None
+_RESOLVED_SERVICE_FAILED = False
+
+
+def _dataset_service() -> Any:
+    """Lazily build a DatasetService, or ``None`` when it cannot be constructed.
+
+    The pipeline is a research script that normally runs without the backend
+    import path on ``sys.path``; we add it here only when a registered source is
+    actually needed so the common path (fallback to committed files) stays light.
+    """
+    global _RESOLVED_SERVICE, _RESOLVED_SERVICE_FAILED
+    if _RESOLVED_SERVICE is not None or _RESOLVED_SERVICE_FAILED:
+        return _RESOLVED_SERVICE
+    try:
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        from backend.app.config import get_settings
+        from backend.app.services.dataset_service import DatasetService
+        from backend.app.services.state_store import SqliteStateStore
+
+        settings = get_settings()
+        _RESOLVED_SERVICE = DatasetService(settings, SqliteStateStore(settings.state_root))
+    except Exception:
+        _RESOLVED_SERVICE_FAILED = True
+        _RESOLVED_SERVICE = None
+    return _RESOLVED_SERVICE
+
+
+def resolve_registered_source(
+    dataset_id: str, fallback_path: str | Path | None
+) -> tuple[str, str | None]:
+    """Resolve a pipeline input to its registered version's raw copy.
+
+    Returns ``(path, version_id)``. The pipeline consumes a byte-identical raw
+    source either way, so resolving through DatasetService records the
+    dataset/version identity in the run manifest without changing the algorithm.
+    Falls back to the committed repo path (``version_id=None``) when the baseline
+    has not been registered yet, which keeps a fresh checkout runnable before the
+    bootstrap has executed.
+    """
+    fallback = resolve_repo_path(fallback_path)
+    service = _dataset_service()
+    if service is None:
+        return str(fallback), None
+    try:
+        version = service.get_current_version(dataset_id)
+        raw_path = service.resolve_reading_path(dataset_id, raw=True)
+        return str(raw_path), version.get("version_id")
+    except Exception:
+        return str(fallback), None
+
+
 class RunScopeError(ValueError):
     """The requested run scope cannot be satisfied by the configured data.
 
@@ -1129,11 +1182,36 @@ def main() -> None:
     causal_config = config.get("causal_discovery", {})
     auxiliary_target_config = config.get("auxiliary_targets", {})
     boundary_config = config.get("boundary_labels", {})
-    if boundary_config.get("source_path"):
-        boundary_config = {
-            **boundary_config,
-            "source_path": resolve_repo_path(boundary_config.get("source_path")),
-        }
+
+    # Resolve every fact input through the dataset registry so the run manifest
+    # records the exact dataset/version it consumed. Each resolver falls back to
+    # the committed repo path (version_id None) until the baseline is registered.
+    water_full, water_version = resolve_registered_source(
+        "wq_wusongkou", Path(config["data_root"]) / water_pattern
+    )
+    weather_full, weather_version = resolve_registered_source(
+        "weather_shanghai", Path(config["data_root"]) / config["weather_filename"]
+    )
+    hydro_wide, hydro_version = resolve_registered_source(
+        "hydro_shanghai", hydrodynamics_config.get("wide_path")
+    )
+    boundary_source, boundary_version = resolve_registered_source(
+        "boundary_wusongkou", boundary_config.get("source_path")
+    )
+    rag_dir, kg_version = resolve_registered_source(
+        "kg_relationships", Path(config["rag_artifacts_dir"]) / "create_final_relationships.parquet"
+    )
+    rag_dir = str(Path(rag_dir).parent)
+    if boundary_source:
+        boundary_config = {**boundary_config, "source_path": boundary_source}
+
+    data_versions = {
+        "water": water_version,
+        "weather": weather_version,
+        "hydrodynamics": hydro_version,
+        "boundary_labels": boundary_version,
+        "knowledge_graph": kg_version,
+    }
 
     dataset_df, dataset_summary = build_multimodal_dataset(
         data_root=resolve_repo_path(config["data_root"]),
@@ -1142,12 +1220,14 @@ def main() -> None:
         output_dir=output_dir,
         hydrodynamics_enabled=bool(hydrodynamics_config.get("enabled", False)),
         hydrodynamics_source_path=resolve_repo_path(hydrodynamics_config.get("source_path")),
-        hydrodynamics_wide_path=resolve_repo_path(hydrodynamics_config.get("wide_path")),
+        hydrodynamics_wide_path=hydro_wide,
         hydrodynamics_output_dir=resolve_repo_path(hydrodynamics_config.get("output_dir")),
         ndti_enabled=bool(ndti_config.get("enabled", False)),
         ndti_dir=resolve_repo_path(ndti_config.get("source_dir")),
         ndti_output_dir=resolve_repo_path(ndti_config.get("output_dir")),
         boundary_config=boundary_config,
+        water_path=water_full,
+        weather_path=weather_full,
     )
     dataset_df, dataset_summary, scope_report = apply_run_scope(
         dataset_df, dataset_summary, config
@@ -1157,6 +1237,7 @@ def main() -> None:
         "models": enabled_models,
         "baselines": enabled_baselines,
         "water_pattern": water_pattern,
+        "data_versions": data_versions,
     }
     save_json(run_scope_manifest, output_dir / "metrics" / "run_scope.json")
 
@@ -1174,7 +1255,7 @@ def main() -> None:
     train_rows = int(prepared.split_summary["train_rows"])
     train_df_for_causality = sorted_dataset_df.iloc[:train_rows].copy()
     adjacency, graph_summary = build_feature_graph_priors(
-        rag_artifacts_dir=resolve_repo_path(config["rag_artifacts_dir"]),
+        rag_artifacts_dir=rag_dir,
         feature_columns=dataset_summary["feature_columns"],
         output_dir=output_dir,
         causal_df=train_df_for_causality if bool(causal_config.get("enabled", True)) else None,

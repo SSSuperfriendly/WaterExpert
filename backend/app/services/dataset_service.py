@@ -11,6 +11,8 @@ the acceptance chain, so "uploaded" can never again be mistaken for "usable".
 
 from __future__ import annotations
 
+import hashlib
+import json
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -24,9 +26,13 @@ from backend.app.domain.codes import (
     MODELABLE_GRADES,
     DatasetStatus,
     ErrorCode,
+    IngestionStage,
     QualityGrade,
 )
 from backend.app.services.ingestion import (
+    CANONICAL_DATA_FILENAME,
+    FIELD_DICTIONARY_FILENAME,
+    LINEAGE_FILENAME,
     QUALITY_REPORT_FILENAME,
     SUPPORTED_DATA_TYPES,
     SUPPORTED_SUFFIXES,
@@ -34,6 +40,7 @@ from backend.app.services.ingestion import (
     persist_result,
     run_ingestion,
 )
+from backend.app.services.ingestion.schema_registry import normalize_column
 from backend.app.services.state_store import (
     DATASET_VERSIONS_TABLE,
     DATASETS_TABLE,
@@ -58,6 +65,19 @@ def utc_now() -> str:
 
 def _new_id() -> str:
     return uuid4().hex[:ID_LENGTH]
+
+
+def sha256_file(path: Path) -> str:
+    """SHA-256 of a file, so a version's provenance can be re-verified.
+
+    Review item 8/26: a dataset version must carry a content hash so the answer
+    to "has this file changed since it was ingested?" is not a guess.
+    """
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class DatasetNotFound(KeyError):
@@ -166,6 +186,63 @@ class DatasetService:
             owner=owner,
         )
 
+    def ingest_source_path(
+        self,
+        *,
+        source_path: Path,
+        data_type: str,
+        station_code: str | None,
+        owner: str,
+        dataset_id: str | None = None,
+        title: str | None = None,
+        kind: str = "fact_source",
+        notes: list[str] | None = None,
+        proxy: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Import a baseline file already committed under the repository data tree.
+
+        This is the entry point the registration bootstrap uses to bring the
+        pre-existing ``data/`` files into the dataset/version chain. Unlike
+        ``ingest_managed_path`` it is not restricted to the inbox: the caller is
+        an operator running a trusted local script, and the source must already
+        resolve to a file.
+        """
+        self._assert_supported_type(data_type)
+        source = Path(source_path).resolve()
+        if not source.is_file():
+            raise UploadRejected(ErrorCode.NOT_FOUND, f"Source file does not exist: {source}")
+        dataset = self._resolve_or_create_dataset(
+            dataset_id=dataset_id,
+            data_type=data_type,
+            station_code=station_code,
+            owner=owner,
+            title=title,
+            source_kind="baseline",
+            kind=kind,
+            notes=notes,
+            proxy=proxy,
+        )
+        version = self._next_version(str(dataset["dataset_id"]))
+        stored = copy_managed_file(
+            source=source,
+            target_path=self._raw_path(str(dataset["dataset_id"]), version, source.name),
+            allowed_suffixes=SUPPORTED_SUFFIXES,
+            max_bytes=self.settings.max_upload_bytes,
+            max_compression_ratio=self.settings.max_compression_ratio,
+        )
+        return self._ingest_stored_file(
+            dataset=dataset,
+            version=version,
+            stored_path=stored.path,
+            source_name=stored.filename,
+            source_kind="baseline",
+            size_bytes=stored.size_bytes,
+            owner=owner,
+            kind=kind,
+            notes=notes,
+            proxy=proxy,
+        )
+
     def _ingest_stored_file(
         self,
         *,
@@ -176,6 +253,9 @@ class DatasetService:
         source_kind: str,
         size_bytes: int,
         owner: str,
+        kind: str = "fact_source",
+        notes: list[str] | None = None,
+        proxy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         dataset_id = str(dataset["dataset_id"])
         data_type = str(dataset["data_type"])
@@ -191,8 +271,12 @@ class DatasetService:
             "source_name": source_name,
             "source_kind": source_kind,
             "raw_path": str(stored_path),
+            "source_sha256": sha256_file(stored_path),
             "ingested_at": utc_now(),
             "ingested_by": owner,
+            "kind": kind,
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
             "used_by_cases": [],
         }
         artifacts = persist_result(result, version_root, lineage)
@@ -207,8 +291,12 @@ class DatasetService:
             "data_type": data_type,
             "source_name": source_name,
             "source_kind": source_kind,
+            "source_sha256": lineage["source_sha256"],
             "raw_path": str(stored_path),
             "size_bytes": size_bytes,
+            "kind": kind,
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
             "status": str(
                 DatasetStatus.ACCEPTED if result.accepted else DatasetStatus.REJECTED
             ),
@@ -252,6 +340,9 @@ class DatasetService:
         owner: str,
         title: str | None,
         source_kind: str,
+        kind: str = "fact_source",
+        notes: list[str] | None = None,
+        proxy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if dataset_id:
             existing = self.store.get(DATASETS_TABLE, dataset_id)
@@ -276,10 +367,64 @@ class DatasetService:
             "owner": owner,
             "status": str(DatasetStatus.PROCESSING),
             "source_kind": source_kind,
+            "kind": kind,
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
             "version_count": 0,
             "latest_version": None,
         }
         return self.store.insert(DATASETS_TABLE, record)
+
+    def ensure_dataset(
+        self,
+        *,
+        dataset_id: str,
+        data_type: str,
+        station_code: str | None,
+        owner: str,
+        title: str | None = None,
+        kind: str = "fact_source",
+        notes: list[str] | None = None,
+        proxy: dict[str, Any] | None = None,
+        source_kind: str = "baseline",
+    ) -> dict[str, Any]:
+        """Create a dataset under a fixed id, or return the existing one.
+
+        The registration bootstrap uses this so dataset ids are stable across
+        runs (``wq_wusongkou``, ``weather_shanghai``, …) rather than random, so
+        the committed registration table can name them.
+        """
+        existing = self.store.get(DATASETS_TABLE, dataset_id)
+        if existing is not None:
+            return existing
+        record = {
+            "dataset_id": dataset_id,
+            "created_at": utc_now(),
+            "updated_at": utc_now(),
+            "title": title or f"{data_type}-{dataset_id}",
+            "data_type": data_type,
+            "station_code": station_code,
+            "owner": owner,
+            "status": str(DatasetStatus.PROCESSING),
+            "source_kind": source_kind,
+            "kind": kind,
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
+            "version_count": 0,
+            "latest_version": None,
+        }
+        return self.store.insert(DATASETS_TABLE, record)
+
+    def has_version_with_sha(self, dataset_id: str, sha256: str) -> bool:
+        """True when the dataset already ingested a version with this content hash.
+
+        Lets the bootstrap re-run without creating duplicate versions (review
+        item 8: re-importing the same file must not create duplicate facts).
+        """
+        return any(
+            version.get("source_sha256") == sha256
+            for version in self.list_versions(dataset_id)
+        )
 
     def _next_version(self, dataset_id: str) -> int:
         versions = self.store.list(DATASET_VERSIONS_TABLE, filters={"dataset_id": dataset_id})
@@ -300,6 +445,12 @@ class DatasetService:
             "latest_version": latest.get("version") if latest else None,
             "latest_version_id": latest.get("version_id") if latest else None,
             "latest_accepted_version_id": (
+                latest_accepted.get("version_id") if latest_accepted else None
+            ),
+            # The single effective version a reader should consume. Accepted is
+            # preferred; a dataset with only rejected versions has no effective
+            # data, so this stays null rather than pointing at a broken version.
+            "current_version_id": (
                 latest_accepted.get("version_id") if latest_accepted else None
             ),
             "quality_grade": (
@@ -323,6 +474,269 @@ class DatasetService:
                 DatasetStatus.ACCEPTED if latest_accepted else DatasetStatus.REJECTED
             )
         return self.store.update(DATASETS_TABLE, dataset_id, updates)
+
+    def register_derived_file(
+        self,
+        *,
+        source_path: Path,
+        data_type: str,
+        station_code: str | None,
+        owner: str,
+        dataset_id: str | None = None,
+        title: str | None = None,
+        kind: str = "derived",
+        notes: list[str] | None = None,
+        proxy: dict[str, Any] | None = None,
+        source_version_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Register an already-standardized file as a dataset version.
+
+        Used for derived/fusion/proxy/static-reference files that are not raw
+        fact inputs to the modelling chain, so they should not be forced through
+        field mapping. It still produces the same artifacts — a canonical copy,
+        a quality report, a field dictionary, lineage and a content hash — so the
+        asset centre treats every file the same way (review item 8).
+        """
+        source = Path(source_path).resolve()
+        if not source.is_file():
+            raise UploadRejected(ErrorCode.NOT_FOUND, f"Source file does not exist: {source}")
+
+        dataset = self._resolve_or_create_dataset(
+            dataset_id=dataset_id,
+            data_type=str(data_type).strip(),
+            station_code=station_code,
+            owner=owner,
+            title=title,
+            source_kind="baseline",
+            kind=kind,
+            notes=notes,
+            proxy=proxy,
+        )
+        dataset_id = str(dataset["dataset_id"])
+        version = self._next_version(dataset_id)
+        version_root = self._version_root(dataset_id, version)
+
+        stored = copy_managed_file(
+            source=source,
+            target_path=self._raw_path(dataset_id, version, source.name),
+            allowed_suffixes=SUPPORTED_SUFFIXES,
+            max_bytes=self.settings.max_upload_bytes,
+            max_compression_ratio=self.settings.max_compression_ratio,
+        )
+
+        frame = self._read_tabular(stored.path)
+        summary = self._summarize_frame(frame, data_type=str(data_type).strip())
+
+        lineage = {
+            "dataset_id": dataset_id,
+            "version": version,
+            "source_name": stored.filename,
+            "source_kind": "baseline",
+            "raw_path": str(stored.path),
+            "source_sha256": sha256_file(stored.path),
+            "ingested_at": utc_now(),
+            "ingested_by": owner,
+            "kind": kind,
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
+            "source_version_id": source_version_id,
+            "used_by_cases": [],
+        }
+
+        version_root.mkdir(parents=True, exist_ok=True)
+        artifacts: dict[str, str] = {}
+        if frame is not None and not frame.empty:
+            data_path = version_root / CANONICAL_DATA_FILENAME
+            frame.to_csv(data_path, index=False, encoding="utf-8-sig")
+            artifacts["data"] = str(data_path)
+
+        quality_report = {
+            "data_type": summary["data_type"],
+            "kind": kind,
+            "source_name": stored.filename,
+            "source_sha256": lineage["source_sha256"],
+            "rows": summary["rows"],
+            "columns": summary["columns"],
+            "missing_rates": summary["missing_rates"],
+            "coverage_start": summary["coverage_start"],
+            "coverage_end": summary["coverage_end"],
+            "stations": summary["stations"],
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
+            "grade": summary["grade"],
+            "modelable": kind == "fact_source",
+        }
+        quality_path = version_root / QUALITY_REPORT_FILENAME
+        quality_path.write_text(
+            json.dumps(quality_report, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        artifacts["quality_report"] = str(quality_path)
+
+        dictionary_path = version_root / FIELD_DICTIONARY_FILENAME
+        dictionary_path.write_text(
+            json.dumps(
+                {"data_type": summary["data_type"], "fields": summary["field_dictionary"]},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        artifacts["field_dictionary"] = str(dictionary_path)
+
+        lineage_path = version_root / LINEAGE_FILENAME
+        lineage_path.write_text(
+            json.dumps(lineage, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        artifacts["lineage"] = str(lineage_path)
+
+        record = {
+            "version_id": f"{dataset_id}-v{version}",
+            "dataset_id": dataset_id,
+            "version": str(version),
+            "created_at": utc_now(),
+            "created_by": owner,
+            "data_type": str(data_type).strip(),
+            "source_name": stored.filename,
+            "source_kind": "baseline",
+            "source_sha256": lineage["source_sha256"],
+            "raw_path": str(stored.path),
+            "size_bytes": stored.size_bytes,
+            "kind": kind,
+            "notes": list(notes or []),
+            "proxy": dict(proxy or {}),
+            "source_version_id": source_version_id,
+            "status": str(DatasetStatus.ACCEPTED),
+            "stage": str(IngestionStage.ACCEPTED),
+            "blocked_at": None,
+            "quality_grade": summary["grade"],
+            "modelable": "1" if kind == "fact_source" else "0",
+            "modelable_rows": summary["rows"] if kind == "fact_source" else 0,
+            "aligned_rows": summary["rows"],
+            "source_rows": summary["rows"],
+            "missing_rate": summary["missing_rate"],
+            "duplicate_rows": 0,
+            "coverage_start": summary["coverage_start"],
+            "coverage_end": summary["coverage_end"],
+            "station_coverage": summary["stations"],
+            "blocking_reasons": [],
+            "artifacts": artifacts,
+            "stages": [],
+            "used_by_cases": [],
+        }
+        self.store.insert(DATASET_VERSIONS_TABLE, record)
+        self._refresh_dataset_rollup(dataset_id)
+        return record
+
+    def _read_tabular(self, path: Path) -> pd.DataFrame | None:
+        suffix = path.suffix.lower()
+        try:
+            if suffix == ".csv":
+                return pd.read_csv(path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+            if suffix in {".xls", ".xlsx"}:
+                return pd.read_excel(path, dtype=str).fillna("")
+            if suffix == ".parquet":
+                return pd.read_parquet(path).astype(str)
+            if suffix == ".json":
+                payload = json.loads(path.read_text(encoding="utf-8-sig"))
+                records = payload.get("records", payload) if isinstance(payload, dict) else payload
+                if isinstance(records, list):
+                    return pd.DataFrame(records).astype(str)
+        except Exception:
+            return None
+        return None
+
+    def _summarize_frame(self, frame: pd.DataFrame | None, data_type: str) -> dict[str, Any]:
+        if frame is None or frame.empty:
+            return {
+                "data_type": data_type,
+                "rows": 0,
+                "columns": [],
+                "missing_rates": {},
+                "missing_rate": 0.0,
+                "coverage_start": None,
+                "coverage_end": None,
+                "stations": [],
+                "grade": str(QualityGrade.D),
+                "field_dictionary": [],
+            }
+
+        rows = int(len(frame))
+        columns = [str(column) for column in frame.columns]
+        blank = frame.replace({"": None, "nan": None})
+        missing_rates = {
+            str(column): round(float(blank[column].isna().mean()), 6)
+            for column in frame.columns
+        }
+        # DataFrame.isna().mean() returns a per-column Series; collapse it to a
+        # single overall cell-missing rate.
+        missing_rate = float(blank.isna().to_numpy().mean()) if rows else 0.0
+
+        coverage_start = coverage_end = None
+        stations: list[str] = []
+        normalized_columns = {str(c): normalize_column(str(c)) for c in frame.columns}
+        # Primary date columns: a single per-row timestamp. Derived files use
+        # ``sample_date``; the raw fact files use ``date`` / ``监测时间``.
+        date_candidates = {
+            "date",
+            "datetime",
+            "时间",
+            "日期",
+            "sample_date",
+            "监测时间",
+            "采样日期",
+        }
+        for column, normalized in normalized_columns.items():
+            if normalized in date_candidates:
+                parsed = pd.to_datetime(frame[column], errors="coerce")
+                if parsed.notna().any():
+                    coverage_start = parsed.min().date().isoformat()
+                    coverage_end = parsed.max().date().isoformat()
+            if normalized in {"station_code", "站点", "站点编码"}:
+                stations = sorted(
+                    frame[column].dropna().astype(str).unique().tolist()
+                )
+        # Fallback: reference tables that only carry a validity interval, e.g.
+        # the station catalog's start_date/end_date.
+        if coverage_start is None:
+            start_col = next(
+                (c for c, n in normalized_columns.items() if n == "start_date"), None
+            )
+            end_col = next(
+                (c for c, n in normalized_columns.items() if n == "end_date"), None
+            )
+            if start_col is not None:
+                starts = pd.to_datetime(frame[start_col], errors="coerce")
+                if starts.notna().any():
+                    coverage_start = starts.min().date().isoformat()
+            if end_col is not None:
+                ends = pd.to_datetime(frame[end_col], errors="coerce")
+                if ends.notna().any():
+                    coverage_end = ends.max().date().isoformat()
+
+        field_dictionary = [
+            {
+                "column": str(column),
+                "dtype": str(frame[column].dtype),
+                "missing_rate": missing_rates.get(str(column), 0.0),
+            }
+            for column in frame.columns
+        ]
+
+        grade = QualityGrade.A if missing_rate <= 0.05 else (
+            QualityGrade.B if missing_rate <= 0.20 else QualityGrade.C
+        )
+        return {
+            "data_type": data_type,
+            "rows": rows,
+            "columns": columns,
+            "missing_rates": missing_rates,
+            "missing_rate": missing_rate,
+            "coverage_start": coverage_start,
+            "coverage_end": coverage_end,
+            "stations": stations,
+            "grade": str(grade),
+            "field_dictionary": field_dictionary,
+        }
 
     # -- queries -------------------------------------------------------------
 
@@ -407,13 +821,44 @@ class DatasetService:
             "dataset_id": version.get("dataset_id"),
             "source_name": version.get("source_name"),
             "source_kind": version.get("source_kind"),
+            "source_sha256": version.get("source_sha256"),
             "raw_path": version.get("raw_path"),
             "created_at": version.get("created_at"),
             "created_by": version.get("created_by"),
             "stage": version.get("stage"),
             "status": version.get("status"),
+            "kind": version.get("kind", "fact_source"),
+            "notes": version.get("notes", []),
+            "proxy": version.get("proxy", {}),
             "used_by_cases": version.get("used_by_cases", []),
         }
+
+    def get_current_version(self, dataset_id: str) -> dict[str, Any]:
+        """The single effective version a reader should consume.
+
+        Prefers the latest accepted version; if the dataset has none (e.g. every
+        version was rejected), raises ``DatasetNotFound`` so a reader fails
+        loudly instead of silently falling back to an unregistered raw file.
+        """
+        dataset = self.get_dataset(dataset_id)
+        current_id = dataset.get("current_version_id")
+        if not current_id:
+            raise DatasetNotFound(f"{dataset_id}:no_accepted_version")
+        return self.get_version(str(current_id))
+
+    def resolve_reading_path(self, dataset_id: str, *, raw: bool = False) -> Path:
+        """Filesystem path a reader should consume for the current version.
+
+        ``raw=True`` returns the byte-for-byte copy of the ingested source;
+        the default returns the canonicalized ``data.csv``.
+        """
+        version = self.get_current_version(dataset_id)
+        if raw:
+            return Path(str(version["raw_path"]))
+        data_path = (version.get("artifacts") or {}).get("data")
+        if not data_path or not Path(str(data_path)).exists():
+            raise DatasetNotFound(f"{version['version_id']}:no_canonical_data")
+        return Path(str(data_path))
 
     # -- the modelling gate --------------------------------------------------
 

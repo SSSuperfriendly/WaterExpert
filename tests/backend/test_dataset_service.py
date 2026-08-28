@@ -11,7 +11,11 @@ import pandas as pd
 
 from backend.app.config import get_settings
 from backend.app.domain.codes import DatasetStatus, ErrorCode, IngestionStage
-from backend.app.services.dataset_service import DatasetNotFound, DatasetService
+from backend.app.services.dataset_service import (
+    DatasetNotFound,
+    DatasetService,
+    sha256_file,
+)
 from backend.app.services.state_store import SqliteStateStore
 from backend.app.services.upload_guard import UploadRejected
 
@@ -284,6 +288,150 @@ class ReportingSurfaceTest(DatasetServiceTestCase):
         alerts = self.service.quality_alerts()
         self.assertEqual(len(alerts), 1)
         self.assertIn("missing_required_fields", alerts[0]["blocking_reasons"])
+
+
+class BaselineRegistrationTest(DatasetServiceTestCase):
+    """The 2026-08-28 data-layer remediation: register committed data/ files.
+
+    These mirror what ``scripts/data/register_baseline_datasets.py`` does, so the
+    tests pin the contract the bootstrap relies on: a fixed dataset id, a content
+    hash on every version, and idempotent re-runs.
+    """
+
+    def _write_source(self, name: str, payload: bytes) -> Path:
+        path = self.settings.runtime_root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+        return path
+
+    def test_ingest_source_path_registers_a_baseline_fact_file(self) -> None:
+        source = self._write_source("raw/wq.csv", _water_quality_csv())
+        self.service.ensure_dataset(
+            dataset_id="wq_wusongkou",
+            data_type="water_quality",
+            station_code="2586",
+            owner="baseline",
+        )
+
+        record = self.service.ingest_source_path(
+            source_path=source,
+            data_type="water_quality",
+            station_code="2586",
+            owner="baseline",
+            dataset_id="wq_wusongkou",
+        )
+
+        self.assertEqual(record["dataset_id"], "wq_wusongkou")
+        self.assertEqual(record["status"], str(DatasetStatus.ACCEPTED))
+        self.assertEqual(record["source_sha256"], sha256_file(source))
+        self.assertEqual(record["kind"], "fact_source")
+
+    def test_has_version_with_sha_enables_idempotent_rerun(self) -> None:
+        source = self._write_source("raw/wq.csv", _water_quality_csv())
+        self.service.ensure_dataset(
+            dataset_id="wq_wusongkou",
+            data_type="water_quality",
+            station_code="2586",
+            owner="baseline",
+        )
+        self.service.ingest_source_path(
+            source_path=source,
+            data_type="water_quality",
+            station_code="2586",
+            owner="baseline",
+            dataset_id="wq_wusongkou",
+        )
+
+        digest = sha256_file(source)
+        self.assertTrue(self.service.has_version_with_sha("wq_wusongkou", digest))
+        self.assertFalse(self.service.has_version_with_sha("wq_wusongkou", "0" * 64))
+        # The bootstrap guards on has_version_with_sha before ingesting, so no
+        # duplicate version exists after one registration.
+        self.assertEqual(len(self.service.list_versions("wq_wusongkou")), 1)
+
+    def test_register_derived_file_writes_canonical_and_quality_artifacts(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "date": ["2024-01-01", "2024-01-02"],
+                "station_code": ["2586", "2586"],
+                "turbidity": ["30.0", "31.0"],
+                "secchi_depth_sd_m": ["0.8", "0.81"],
+            }
+        )
+        source = self._write_source(
+            "full_station_database/secchi.csv", frame.to_csv(index=False).encode("utf-8-sig")
+        )
+        self.service.ensure_dataset(
+            dataset_id="wq_secchi",
+            data_type="water_quality",
+            station_code=None,
+            owner="baseline",
+            kind="derived",
+        )
+
+        record = self.service.register_derived_file(
+            source_path=source,
+            data_type="water_quality",
+            station_code=None,
+            owner="baseline",
+            dataset_id="wq_secchi",
+            kind="derived",
+            notes=["透明度由浊度公式计算"],
+        )
+
+        self.assertEqual(record["status"], str(DatasetStatus.ACCEPTED))
+        self.assertEqual(record["modelable"], "0")  # derived, not a fact source
+        self.assertEqual(record["source_sha256"], sha256_file(source))
+        self.assertTrue(record["artifacts"]["data"].endswith("data.csv"))
+        for artifact_key in ("quality_report", "field_dictionary", "lineage"):
+            self.assertTrue(Path(record["artifacts"][artifact_key]).is_file())
+        # Coverage is derived from the date column.
+        self.assertEqual(record["coverage_start"], "2024-01-01")
+        self.assertEqual(record["coverage_end"], "2024-01-02")
+
+    def test_current_version_and_reading_path(self) -> None:
+        frame = pd.DataFrame({"date": ["2024-01-01"], "station_code": ["2586"], "turbidity": ["30.0"]})
+        source = self._write_source("secchi.csv", frame.to_csv(index=False).encode("utf-8-sig"))
+        self.service.ensure_dataset(
+            dataset_id="wq_secchi",
+            data_type="water_quality",
+            station_code=None,
+            owner="baseline",
+            kind="derived",
+        )
+        self.service.register_derived_file(
+            source_path=source,
+            data_type="water_quality",
+            station_code=None,
+            owner="baseline",
+            dataset_id="wq_secchi",
+            kind="derived",
+        )
+
+        current = self.service.get_current_version("wq_secchi")
+        self.assertEqual(current["version_id"], "wq_secchi-v1")
+        canonical = self.service.resolve_reading_path("wq_secchi")
+        self.assertTrue(canonical.is_file())
+        self.assertEqual(canonical.name, "data.csv")
+
+    def test_register_derived_file_rejects_a_missing_source(self) -> None:
+        self.service.ensure_dataset(
+            dataset_id="wq_secchi",
+            data_type="water_quality",
+            station_code=None,
+            owner="baseline",
+            kind="derived",
+        )
+        with self.assertRaises(UploadRejected) as ctx:
+            self.service.register_derived_file(
+                source_path=self.settings.runtime_root / "nope.csv",
+                data_type="water_quality",
+                station_code=None,
+                owner="baseline",
+                dataset_id="wq_secchi",
+                kind="derived",
+            )
+        self.assertEqual(ctx.exception.code, ErrorCode.NOT_FOUND)
 
 
 if __name__ == "__main__":

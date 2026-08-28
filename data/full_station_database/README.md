@@ -13,8 +13,10 @@ This directory contains processed reference tables for the broader Shanghai wate
 | `multimodal_daily_all_stations_modality_summary.csv` | Per-station modality coverage summary. |
 | `station_weather_match_summary.csv` | Weather-station matching summary for each water-quality station. |
 | `excluded_station_files.csv` | Stations excluded from the processed main table and the reason for exclusion. |
-| `delivery_summary.json` | Structured summary for the processed database. |
-| `file_inventory.csv` | Current file inventory for this directory. |
+
+The static `delivery_summary.json` and `file_inventory.csv` that used to live here have been
+removed. Directory-level summaries and file inventories are now produced from the dataset/version
+registry — see `data/dataset_registry.json` and the asset centre (`/datasets`).
 
 ## Processing Scope
 
