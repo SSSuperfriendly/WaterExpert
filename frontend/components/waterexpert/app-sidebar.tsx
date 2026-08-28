@@ -13,6 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -92,20 +93,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="gap-3 border-b p-4">
-        <Link href="/" className="flex items-center gap-2.5 px-1">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-sky-500 to-blue-700 text-white">
-            <span className="text-base leading-none">💧</span>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">
-              {t("app.shortName")}
-            </p>
-            <p className="text-muted-foreground truncate text-[11px] leading-tight">
-              {t("app.tagline")}
-            </p>
-          </div>
-        </Link>
+      <SidebarHeader className="border-b">
+        <div className="flex h-14 items-center gap-2 px-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <Link
+            href="/"
+            className="flex min-w-0 flex-1 items-center group-data-[collapsible=icon]:hidden"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/ui/assets/waterexpert.png"
+              alt={t("app.shortName")}
+              className="h-11 w-auto"
+            />
+          </Link>
+          <SidebarTrigger className="hidden shrink-0 md:inline-flex" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="gap-3 px-3 py-3">
@@ -118,6 +120,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={isActive(item.href)}
+                      tooltip={t(item.labelKey)}
                       render={<Link href={item.href} />}
                     >
                       <HugeiconsIcon icon={item.icon} className="size-5" />

@@ -7,7 +7,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { translateFactor } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState, EmptyState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState, EmptyState } from "@/components/waterexpert/ui-states";
 import { DataTable, type ColumnDef } from "@/components/waterexpert/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -60,7 +60,6 @@ export default function SensitivityPage() {
 
   return (
     <AppShell title={t("nav.sensitivity")}>
-      <PageHeading title={t("sensitivity.title")} subtitle={t("sensitivity.subtitle")} />
 
       {loading ? (
         <LoadingState />

@@ -1,25 +1,33 @@
 from __future__ import annotations
 
+import os
+import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
+from fastapi_users import exceptions as user_exceptions
 
 from backend.app.config import get_settings
+from backend.app.db import Base, engine
 from backend.app.schemas import (
     DataImportRequest,
     KnowledgeGraphBuildRequest,
     KnowledgeGraphPreprocessRequest,
     KnowledgeGraphQARequest,
     LoginRequest,
+    RegisterRequest,
     PredictionJobCreateRequest,
     ReportExportFormat,
+    UserCreate,
+    UserRead,
+    UserUpdate,
 )
-from backend.app.services.auth_service import DemoAuthService
 from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
 from backend.app.services.cross_modal_repository import CrossModalRepository
 from backend.app.services.data_explorer import DataExplorerService
@@ -28,22 +36,71 @@ from backend.app.services.realtime_validation import RealtimeValidationService
 from backend.app.services.report_builder import get_report_media_type, write_report
 from backend.app.services.runtime_jobs import RuntimeJobService
 from backend.app.services.state_store import SqliteStateStore
+from backend.app.users import (
+    SECRET,
+    UserManager,
+    authenticate_token,
+    auth_backend,
+    demo_credentials,
+    fastapi_users,
+    get_jwt_strategy,
+    get_user_manager,
+    seed_demo_user,
+)
 
 
 settings = get_settings()
 repository = ArtifactRepository(settings)
 store = SqliteStateStore(settings.state_root)
 runtime_jobs = RuntimeJobService(settings, repository, store)
-auth_service = DemoAuthService()
 data_explorer = DataExplorerService(settings)
 realtime_validation_service = RealtimeValidationService(settings)
 cross_modal_repository = CrossModalRepository(settings)
 kg_service = KnowledgeGraphService(settings)
 
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _requires_auth(path: str) -> bool:
+    """Whether ``path`` is a protected API route (auth gate applies)."""
+    if not path.startswith("/api/"):
+        return False
+    return not path.startswith(
+        (
+            "/api/v1/auth/",
+            "/api/v1/report/files/",
+            "/api/v1/knowledge-graph/files/",
+            "/api/v1/cross-modal/media",
+        )
+    )
+
+
+async def auth_guard(request: Request) -> None:
+    """Global dependency: enforce a valid bearer token on protected API routes."""
+    if not _requires_auth(request.url.path):
+        return
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    token = authorization[7:].strip()
+    if await authenticate_token(token) is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    await seed_demo_user()
+    yield
+
+
 app = FastAPI(
     title=settings.app_name,
     description="Integrated software product with embedded WaterExpert algorithm runtime.",
     version="0.3.0",
+    lifespan=lifespan,
+    dependencies=[Depends(auth_guard)],
 )
 
 app.add_middleware(
@@ -141,20 +198,103 @@ def _healthz_payload() -> dict[str, str]:
 
 
 @app.post("/api/v1/auth/login")
-def login(payload: LoginRequest) -> dict:
-    profile = auth_service.authenticate(payload.username, payload.password)
-    if profile is None:
+async def login(
+    payload: LoginRequest,
+    user_manager: UserManager = Depends(get_user_manager),
+) -> dict:
+    user = await user_manager.authenticate_identifier(payload.username, payload.password)
+    if user is None:
         raise HTTPException(status_code=401, detail="Invalid username or password.")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="User account is inactive.")
+    access_token = await get_jwt_strategy().write_token(user)
     return {
-        "username": profile.username,
-        "display_name": profile.display_name,
-        "role": profile.role,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "username": user.username,
+        "display_name": user.display_name or user.username,
+        "role": user.role,
     }
 
 
 @app.get("/api/v1/auth/hint")
 def auth_hint() -> dict[str, str]:
-    return auth_service.credential_hint()
+    return demo_credentials()
+
+
+@app.post("/api/v1/auth/register")
+async def register(
+    payload: RegisterRequest,
+    user_manager: UserManager = Depends(get_user_manager),
+) -> dict:
+    if payload.password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match.")
+    username = payload.username.strip()
+    email = payload.email.strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required.")
+    if not _EMAIL_RE.fullmatch(email):
+        raise HTTPException(status_code=400, detail="Invalid email address.")
+    try:
+        user = await user_manager.create(
+            UserCreate(
+                username=username,
+                email=email,
+                password=payload.password,
+                display_name=username,
+                role="reviewer",
+            ),
+            safe=True,
+        )
+    except user_exceptions.UserAlreadyExists:
+        raise HTTPException(
+            status_code=409, detail="Username or email is already registered."
+        )
+    access_token = await get_jwt_strategy().write_token(user)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "username": user.username,
+        "display_name": user.display_name or user.username,
+        "role": user.role,
+    }
+
+
+# fastapi-users routers: password reset, email verification, user management.
+app.include_router(
+    fastapi_users.get_reset_password_router(),
+    prefix="/api/v1/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/api/v1/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/api/v1/users",
+    tags=["users"],
+)
+
+# GitHub OAuth (mounted only when credentials are configured).
+github_client_id = os.environ.get("WATEREXPERT_GITHUB_CLIENT_ID")
+github_client_secret = os.environ.get("WATEREXPERT_GITHUB_CLIENT_SECRET")
+if github_client_id and github_client_secret:
+    from httpx_oauth.clients.github import GitHubOAuth2
+
+    github_client = GitHubOAuth2(github_client_id, github_client_secret)
+    app.include_router(
+        fastapi_users.get_oauth_router(
+            github_client,
+            auth_backend,
+            SECRET,
+            associate_by_email=True,
+            is_verified_by_default=True,
+        ),
+        prefix="/api/v1/auth/oauth/github",
+        tags=["auth"],
+    )
 
 
 @app.get("/api/v1/meta")

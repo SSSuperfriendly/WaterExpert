@@ -4,7 +4,6 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { endpoints } from "@/lib/api/endpoints";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +39,6 @@ export default function KnowledgeGraphQaPage() {
 
   return (
     <AppShell title={t("nav.waterExpert")}>
-      <PageHeading title={t("kg.qaTitle")} subtitle={t("kg.qaSubtitle")} />
 
       <Card>
         <CardHeader>

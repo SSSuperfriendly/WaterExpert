@@ -19,6 +19,8 @@ export type ModelKey =
 export type ReportFormat = "html" | "md" | "json" | "pdf";
 
 export interface LoginResponse {
+  access_token?: string;
+  token_type?: string;
   username: string;
   display_name: string;
   role: string;

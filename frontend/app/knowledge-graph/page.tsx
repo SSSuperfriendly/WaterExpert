@@ -2,7 +2,6 @@
 
 import { useT } from "@/lib/i18n/use-t";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading } from "@/components/waterexpert/ui-states";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { KgOverviewPanel } from "@/components/waterexpert/panels/kg-overview-panel";
 import { KgUploadPanel } from "@/components/waterexpert/panels/kg-upload-panel";
@@ -15,7 +14,6 @@ export default function KnowledgeGraphPage() {
 
   return (
     <AppShell title={t("nav.knowledgeGraph")}>
-      <PageHeading title={t("nav.knowledgeGraph")} subtitle={t("hub.knowledgeGraph.subtitle")} />
 
       <Tabs defaultValue="uploadBuild">
         <TabsList>

@@ -1,6 +1,6 @@
 "use client";
 
-import { apiClient } from "./client";
+import { apiClient, apiBaseUrl } from "./client";
 import type {
   BoundarySummary,
   CredentialHint,
@@ -32,6 +32,21 @@ export const endpoints = {
   login: (username: string, password: string) =>
     apiClient.post<LoginResponse>("/api/v1/auth/login", { username, password }),
   credentialHint: () => apiClient.get<CredentialHint>("/api/v1/auth/hint"),
+  register: (payload: {
+    username: string;
+    email: string;
+    password: string;
+    confirm_password: string;
+  }) => apiClient.post<LoginResponse>("/api/v1/auth/register", payload),
+  forgotPassword: (email: string) =>
+    apiClient.post<null>("/api/v1/auth/forgot-password", { email }),
+  resetPassword: (token: string, password: string) =>
+    apiClient.post<null>("/api/v1/auth/reset-password", { token, password }),
+  githubOAuthAuthorize: () =>
+    apiClient.get<{ authorization_url: string }>(
+      "/api/v1/auth/oauth/github/authorize"
+    ),
+  githubOAuthUrl: () => `${apiBaseUrl()}/api/v1/auth/oauth/github/authorize`,
 
   // Meta & overview
   meta: () => apiClient.get<Record<string, unknown>>("/api/v1/meta"),

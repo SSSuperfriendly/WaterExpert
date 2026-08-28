@@ -7,7 +7,7 @@ import { translateModel } from "@/lib/domain";
 import { formatNumber, formatMaybeDate } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { StatCard } from "@/components/waterexpert/stat-card";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { ScenarioHighPriorityTable, ScenarioCountBadges } from "@/components/waterexpert/scenario-feed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -33,7 +33,6 @@ export default function OverviewPage() {
 
   return (
     <AppShell title={t("nav.overview")}>
-      <PageHeading title={t("overview.title")} subtitle={t("overview.subtitle")} />
 
       {loading ? (
         <LoadingState />

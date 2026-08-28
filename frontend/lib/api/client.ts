@@ -1,5 +1,7 @@
 "use client";
 
+import { clearStoredAuth, getStoredToken } from "@/lib/auth-token";
+
 // Default to same-origin (empty base) so the statically exported frontend calls
 // the backend that serves it — FastAPI mounts the app at `/ui` and the API at
 // `/api/v1/...` on the same host, so a relative URL works for any deployment
@@ -9,6 +11,13 @@
 export function apiBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
   return (fromEnv || "").replace(/\/+$/, "");
+}
+
+const AUTH_PATH_PREFIX = "/api/v1/auth/";
+
+/** Paths that never carry (or need) a bearer token. */
+function isAuthPath(path: string): boolean {
+  return path.startsWith(AUTH_PATH_PREFIX);
 }
 
 export class ApiError extends Error {
@@ -68,6 +77,11 @@ async function request<T>(
 
   const headers: Record<string, string> = { ...options.headers };
 
+  if (!isAuthPath(path)) {
+    const token = getStoredToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
+
   let body: BodyInit | undefined;
   if (options.formData) {
     body = options.formData;
@@ -83,6 +97,16 @@ async function request<T>(
   } catch {
     throw new ApiError(0, "Network error");
   }
+
+  if (response.status === 401 && !isAuthPath(path)) {
+    // Token missing/expired on a protected endpoint: clear the session and
+    // bounce to the login page (full reload rebuilds the client auth gate).
+    clearStoredAuth();
+    if (typeof window !== "undefined" && !window.location.pathname.endsWith("/login")) {
+      window.location.assign("/ui/login/");
+    }
+  }
+
   return parseResponse<T>(response);
 }
 

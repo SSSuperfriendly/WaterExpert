@@ -49,26 +49,3 @@ export function ErrorState({
     </div>
   );
 }
-
-/** Section heading used at the top of every page. */
-export function PageHeading({
-  title,
-  subtitle,
-  actions,
-}: {
-  title: string;
-  subtitle?: string;
-  actions?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0 space-y-1">
-        <h1 className="truncate text-lg font-semibold leading-tight">{title}</h1>
-        {subtitle && (
-          <p className="text-muted-foreground text-sm leading-snug">{subtitle}</p>
-        )}
-      </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-    </div>
-  );
-}

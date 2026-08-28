@@ -2,7 +2,6 @@
 
 import { useT } from "@/lib/i18n/use-t";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading } from "@/components/waterexpert/ui-states";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ThresholdsPanel } from "@/components/waterexpert/panels/thresholds-panel";
 import { ScenarioPanel } from "@/components/waterexpert/panels/scenario-panel";
@@ -13,7 +12,6 @@ export default function ResponsePage() {
 
   return (
     <AppShell title={t("nav.responsePlaybook")}>
-      <PageHeading title={t("nav.responsePlaybook")} subtitle={t("hub.response.subtitle")} />
 
       <Tabs defaultValue="thresholds">
         <TabsList>

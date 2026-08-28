@@ -4,7 +4,7 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { DriverDiagnosis } from "@/components/waterexpert/driver-diagnosis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/format";
@@ -18,7 +18,6 @@ export default function DiagnosisPage() {
 
   return (
     <AppShell title={t("nav.diagnosis")}>
-      <PageHeading title={t("diagnosis.title")} subtitle={t("diagnosis.subtitle")} />
 
       {loading ? (
         <LoadingState />

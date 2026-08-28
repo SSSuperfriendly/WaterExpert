@@ -2,8 +2,12 @@
 
 import { create } from "zustand";
 import type { LoginResponse } from "@/lib/api/contracts";
-
-const SESSION_STORAGE_KEY = "waterexpert.auth.profile";
+import {
+  clearStoredAuth,
+  readStoredAuth,
+  writeStoredAuth,
+  type StoredAuth,
+} from "@/lib/auth-token";
 
 export interface AuthProfile {
   username: string;
@@ -11,11 +15,13 @@ export interface AuthProfile {
   role: string;
 }
 
+export type AuthCredentials = AuthProfile & { access_token?: string };
+
 interface AppState {
   // Auth
   session: AuthProfile | null;
   authReady: boolean;
-  setSession: (session: AuthProfile | null) => void;
+  setSession: (session: AuthCredentials | null) => void;
   clearSession: () => void;
 
   // Station context (default "2586").
@@ -27,58 +33,41 @@ interface AppState {
   setActiveJobId: (jobId: string | null) => void;
 }
 
-function readSession(): AuthProfile | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<AuthProfile>;
-    if (parsed && parsed.username) {
-      return {
-        username: String(parsed.username),
-        display_name: String(parsed.display_name ?? parsed.username),
-        role: String(parsed.role ?? "reviewer"),
-      };
-    }
-  } catch {
-    // ignore parse errors
-  }
-  return null;
+function toProfile(stored: StoredAuth): AuthProfile {
+  return {
+    username: stored.username,
+    display_name: stored.display_name,
+    role: stored.role,
+  };
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  session: readSession(),
-  authReady: true,
-  setSession: (session) => {
-    if (typeof window !== "undefined") {
-      try {
-        if (session) {
-          window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-        } else {
-          window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
-        }
-      } catch {
-        // ignore storage errors
-      }
-    }
-    set({ session });
-  },
-  clearSession: () => {
-    if (typeof window !== "undefined") {
-      try {
-        window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
-      } catch {
-        // ignore storage errors
-      }
-    }
-    set({ session: null });
-  },
+export const useAppStore = create<AppState>((set) => {
+  const stored = readStoredAuth();
 
-  stationCode: "2586",
-  setStationCode: (stationCode) => set({ stationCode }),
+  return {
+    session: stored ? toProfile(stored) : null,
+    authReady: true,
+    setSession: (session) => {
+      if (session) {
+        writeStoredAuth(session);
+      } else {
+        clearStoredAuth();
+      }
+      set({
+        session: session ? toProfile(session) : null,
+      });
+    },
+    clearSession: () => {
+      clearStoredAuth();
+      set({ session: null });
+    },
 
-  activeJobId: null,
-  setActiveJobId: (activeJobId) => set({ activeJobId }),
-}));
+    stationCode: "2586",
+    setStationCode: (stationCode) => set({ stationCode }),
+
+    activeJobId: null,
+    setActiveJobId: (activeJobId) => set({ activeJobId }),
+  };
+});
 
 export { LoginResponse };

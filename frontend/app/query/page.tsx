@@ -2,7 +2,6 @@
 
 import { useT } from "@/lib/i18n/use-t";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading } from "@/components/waterexpert/ui-states";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DatabaseQueryPanel } from "@/components/waterexpert/panels/database-query-panel";
 import { VisualizationPanel } from "@/components/waterexpert/panels/visualization-panel";
@@ -12,7 +11,6 @@ export default function QueryPage() {
 
   return (
     <AppShell title={t("nav.queryVisualization")}>
-      <PageHeading title={t("nav.queryVisualization")} subtitle={t("hub.query.subtitle")} />
 
       <Tabs defaultValue="query">
         <TabsList>

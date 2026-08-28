@@ -4,7 +4,7 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { AppShell } from "@/components/waterexpert/app-shell";
-import { PageHeading, LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { BoundarySummaryView } from "@/components/waterexpert/boundary-summary";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -14,7 +14,6 @@ export default function BoundaryPage() {
 
   return (
     <AppShell title={t("nav.boundary")}>
-      <PageHeading title={t("boundary.title")} subtitle={t("boundary.subtitle")} />
 
       {loading ? (
         <LoadingState />
