@@ -5,7 +5,8 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { useAppStore } from "@/lib/stores/app-store";
 import { endpoints } from "@/lib/api/endpoints";
-import { translateModel } from "@/lib/domain";
+import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
+import { translateModel, translateSplit } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { TimeSeriesChart } from "@/components/waterexpert/time-series-chart";
@@ -33,8 +34,8 @@ type MetricView = "turbidity" | "clearness" | "probability";
 
 export function PredictionPanel() {
   const { t } = useT();
-  const activeJobId = useAppStore((s) => s.activeJobId);
   const setActiveJobId = useAppStore((s) => s.setActiveJobId);
+  const scope = useArtifactScope();
 
   const [model, setModel] = React.useState<string>("");
   const [split, setSplit] = React.useState<string>("test");
@@ -45,9 +46,9 @@ export function PredictionPanel() {
       endpoints.predictions({
         model: model || undefined,
         split,
-        job_id: activeJobId || undefined,
+        ...scope,
       }),
-    [model, split, activeJobId]
+    [model, split, scope]
   );
 
   const series = (data?.series ?? []) as Record<string, unknown>[];
@@ -120,7 +121,7 @@ export function PredictionPanel() {
                   <SelectContent>
                     {availableSplits.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {s}
+                        {translateSplit(t, s)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -146,7 +147,7 @@ export function PredictionPanel() {
           {loading ? (
             <LoadingState />
           ) : error ? (
-            <ErrorState message={error} onRetry={reload} />
+            <ErrorState error={error} onRetry={reload} />
           ) : series.length > 0 ? (
             <TimeSeriesChart data={series} series={chartSeries} height={360} />
           ) : (

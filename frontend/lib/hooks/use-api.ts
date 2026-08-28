@@ -6,13 +6,15 @@ import { ApiError } from "@/lib/api/client";
 type State<T> = {
   data: T | null;
   loading: boolean;
-  error: string | null;
+  error: unknown | null;
 };
 
 /**
  * Lightweight data-fetching hook for backend GET endpoints. Re-runs whenever
- * `deps` change. Returns the data, loading flag, error message, and a `reload`
- * function.
+ * `deps` change. Returns the data, loading flag, error object, and a `reload`
+ * function. The error is kept as the thrown value (an ``ApiError`` carries the
+ * stable backend ``code``) so the UI can localize it via
+ * ``describeApiError`` rather than render the backend's detail string.
  */
 export function useApi<T>(
   fetcher: () => Promise<T>,
@@ -33,13 +35,7 @@ export function useApi<T>(
       const data = await fetcherRef.current();
       setState({ data, loading: false, error: null });
     } catch (err) {
-      const message =
-        err instanceof ApiError && err.status === 0
-          ? "Network error"
-          : err instanceof Error
-            ? err.message
-            : "Request failed";
-      setState({ data: null, loading: false, error: message });
+      setState({ data: null, loading: false, error: err });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

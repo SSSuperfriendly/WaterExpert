@@ -50,7 +50,10 @@ JWT_AUDIENCE = ["fastapi-users:auth"]
 JWT_LIFETIME_SECONDS = int(os.environ.get("WATEREXPERT_JWT_LIFETIME_SECONDS", "3600"))
 
 DEMO_USERNAME = os.environ.get("WATEREXPERT_DEMO_USERNAME", "2510709")
-DEMO_PASSWORD = os.environ.get("WATEREXPERT_DEMO_PASSWORD", "AI4S666")
+# Review item 7: the default password was a hardcoded constant ("AI4S666") that
+# also leaked through ``/api/v1/auth/hint``. When not set explicitly, it is now
+# random per deployment and printed once to the server log at seed time.
+DEMO_PASSWORD = os.environ.get("WATEREXPERT_DEMO_PASSWORD") or secrets.token_urlsafe(12)
 DEMO_DISPLAY_NAME = os.environ.get("WATEREXPERT_DEMO_DISPLAY_NAME", "AI4S Demo User")
 DEMO_ROLE = os.environ.get("WATEREXPERT_DEMO_ROLE", "reviewer")
 
@@ -303,4 +306,8 @@ async def seed_demo_user() -> None:
         )
         session.add(user)
         await session.commit()
-        logger.info("Seeded demo user %r", DEMO_USERNAME)
+        logger.info("Seeded demo user %r with a generated password.", DEMO_USERNAME)
+        if "WATEREXPERT_DEMO_PASSWORD" not in os.environ:
+            # Printed once, at first seed, so a fresh deployment still has a way
+            # in without the password living in source control.
+            logger.warning("Demo password for %r: %s", DEMO_USERNAME, DEMO_PASSWORD)

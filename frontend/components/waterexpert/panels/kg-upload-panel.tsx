@@ -111,7 +111,7 @@ export function KgUploadPanel() {
           {uploads.loading ? (
             <LoadingState rows={3} />
           ) : uploads.error ? (
-            <ErrorState message={uploads.error} onRetry={uploads.reload} />
+            <ErrorState error={uploads.error} onRetry={uploads.reload} />
           ) : list.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("kg.noUploads")}</p>
           ) : (

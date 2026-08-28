@@ -1,0 +1,48 @@
+# WaterExpert — app + reverse proxy (review item 25).
+#
+#   cp .env.example .env          # fill in secrets (JWT, demo password, AppCode)
+#   mkdir -p certs                # drop in server.crt / server.key (see nginx.conf)
+#   docker compose up --build
+#
+# The app container holds the whole product (API + `/ui` static frontend) and is
+# the single scheduler; nginx in front terminates TLS. Data and state live on
+# named volumes so they survive image rebuilds.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      # Resolve runtime state to the mounted volume (matches Dockerfile default).
+      WATEREXPERT_RUNTIME_ROOT: /app
+    volumes:
+      - waterexpert_data:/app/data
+      - waterexpert_var:/app/var
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/readyz').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  waterexpert_data:
+  waterexpert_var:

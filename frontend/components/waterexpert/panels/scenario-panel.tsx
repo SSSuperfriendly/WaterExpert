@@ -3,6 +3,7 @@
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
 import { translateScenario } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
@@ -11,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function ScenarioPanel() {
   const { t } = useT();
-  const { data, loading, error, reload } = useApi(() => endpoints.scenarioTriage());
+  const scope = useArtifactScope();
+  const { data, loading, error, reload } = useApi(() => endpoints.scenarioTriage(scope), [scope]);
 
   const meanScores = data?.mean_primary_scores_by_scenario ?? {};
   const scenarioDefs = data?.scenario_definitions ?? {};
@@ -21,7 +23,7 @@ export function ScenarioPanel() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <Card>

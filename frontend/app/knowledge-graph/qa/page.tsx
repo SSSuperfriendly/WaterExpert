@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { endpoints } from "@/lib/api/endpoints";
+import { translateKgSource } from "@/lib/domain";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export default function KnowledgeGraphQaPage() {
               <CardTitle className="flex items-center gap-2">
                 {t("kg.answerResult")}
                 <Badge variant="outline" className="text-xs">
-                  {result.source}
+                  {translateKgSource(t, result.source)}
                 </Badge>
               </CardTitle>
             </CardHeader>

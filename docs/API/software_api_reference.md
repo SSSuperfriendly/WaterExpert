@@ -9,7 +9,7 @@
 - **Base URL**：本地启动后为 `http://127.0.0.1:8000`。
 - **版本前缀**：所有业务接口统一以 `/api/v1/` 开头。
 - **字符编码**：全部请求/响应文本为 **UTF-8**。`text/html`、`text/plain`、`text/markdown` 响应均显式携带 `charset=utf-8`；JSON 响应由 FastAPI 以 UTF-8 编码返回。仓库内所有文本文件遵循 UTF-8（无 BOM 亦可），编辑器请参照 `.editorconfig` 的 `charset = utf-8`。
-- **CORS**：已开启 `allow_origins=["*"]`，便于前端跨端口联调。
+- **CORS**：跨域来源通过 `WATEREXPERT_CORS_ORIGINS` 环境变量白名单控制，默认仅放行 `http://localhost:3000` 与同源请求。
 
 ### 错误模型
 
@@ -42,18 +42,14 @@ API 路径下的错误统一返回 `{"detail": "<message>"}`。
 **响应**（200）：
 
 ```json
-{ "username": "2510709", "display_name": "AI4S Demo User", "role": "reviewer" }
+{ "access_token": "<JWT>", "token_type": "bearer" }
 ```
 
-默认演示凭据可通过环境变量覆盖（见下文「环境变量」）。
+默认演示账号的用户名与初始口令均通过环境变量配置（见下文「环境变量」）；未显式设置时，初始口令在首次启动时随机生成并打印一次到服务端日志。
 
 ### `GET /api/v1/auth/hint`
 
-返回当前演示凭据提示（用户名与密码），供前端登录页展示。响应：
-
-```json
-{ "username": "2510709", "password": "AI4S666" }
-```
+仅在 `WATEREXPERT_ENABLE_DEMO_HINT=1` 时返回演示凭据提示（用户名与初始口令），供前端登录页展示；默认关闭（返回 404）。
 
 ---
 
@@ -266,7 +262,7 @@ API 路径下的错误统一返回 `{"detail": "<message>"}`。
 | `WATEREXPERT_RUNTIME_ROOT` / `WATERTURBIDITY_RUNTIME_ROOT` | 运行时根目录（`outputs/`、`data/` 相对此根） | 仓库根目录 |
 | `WATEREXPERT_REALTIME_APPCODE` / `ALIYUN_APPCODE` | 实时国控数据接口 AppCode | 无（必需） |
 | `WATEREXPERT_DEMO_USERNAME` | 演示登录用户名 | `2510709` |
-| `WATEREXPERT_DEMO_PASSWORD` | 演示登录密码 | `AI4S666` |
+| `WATEREXPERT_DEMO_PASSWORD` | 演示登录密码 | 随机生成（首次启动打印到日志） |
 | `WATEREXPERT_DEMO_DISPLAY_NAME` | 演示用户显示名 | `AI4S Demo User` |
 | `WATEREXPERT_DEMO_ROLE` | 演示用户角色 | `reviewer` |
 

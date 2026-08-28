@@ -16,14 +16,19 @@ class ReportApiTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             report_root = Path(tmp_dir)
             test_settings = replace(main_module.settings, report_root=report_root)
+            provenance = {"case_id": "case-1", "run_id": "job-1", "scope": "case"}
             with patch.object(main_module, "settings", test_settings), patch.object(
                 main_module,
-                "resolve_repository",
-                return_value=FakeRepository(),
+                "resolve_artifacts",
+                return_value=(FakeRepository(), provenance),
             ):
-                payload = main_module.export_report(format="md")
+                payload = main_module.export_report(
+                    case_id="case-1", format="md", actor="tester", _=None
+                )
                 self.assertEqual(payload["format"], "md")
                 self.assertTrue(payload["filename"].endswith(".md"))
+                # The rendered file is attributable to the run it came from.
+                self.assertEqual(payload["provenance"], provenance)
 
                 response = main_module.download_report(payload["filename"])
                 self.assertIn("text/markdown", response.media_type)

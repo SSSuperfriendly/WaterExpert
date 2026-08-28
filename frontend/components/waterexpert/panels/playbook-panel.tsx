@@ -3,6 +3,7 @@
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
 import { translateScenario, translateRisk, riskBadgeVariant } from "@/lib/domain";
 import { formatNumber, formatMaybeDate } from "@/lib/format";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
@@ -11,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 
 export function PlaybookPanel() {
   const { t } = useT();
-  const { data, loading, error, reload } = useApi(() => endpoints.responsePlaybook());
+  const scope = useArtifactScope();
+  const { data, loading, error, reload } = useApi(() => endpoints.responsePlaybook(scope), [scope]);
 
   const playbook = (data?.scenario_response_playbook ?? {}) as Record<string, Record<string, unknown>>;
   const prioritized = (data?.prioritized_cases ?? []) as Record<string, unknown>[];
@@ -25,7 +27,7 @@ export function PlaybookPanel() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

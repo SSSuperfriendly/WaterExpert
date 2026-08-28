@@ -3,6 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/use-t";
+import { describeApiError } from "@/lib/domain";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FileEmpty01Icon, AlertCircleIcon, RefreshIcon } from "@hugeicons/core-free-icons";
 
@@ -29,17 +30,22 @@ export function EmptyState({ title, description }: { title?: string; description
 
 export function ErrorState({
   message,
+  error,
   onRetry,
 }: {
+  /** Localized message; takes precedence when provided. */
   message?: string;
+  /** Raw thrown error (e.g. an ``ApiError``); localized via ``describeApiError``. */
+  error?: unknown;
   onRetry?: () => void;
 }) {
   const { t } = useT();
+  const text = message ?? describeApiError(t, error);
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 py-10 text-center">
       <HugeiconsIcon icon={AlertCircleIcon} className="text-destructive size-8" />
       <p className="text-sm font-medium text-destructive">{t("common.error")}</p>
-      {message && <p className="text-muted-foreground max-w-md text-xs">{message}</p>}
+      {text && <p className="text-muted-foreground max-w-md text-xs">{text}</p>}
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
           <HugeiconsIcon icon={RefreshIcon} className="size-4" />

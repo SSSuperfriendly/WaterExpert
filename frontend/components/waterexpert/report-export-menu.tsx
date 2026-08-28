@@ -4,7 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useAppStore } from "@/lib/stores/app-store";
 import { endpoints, REPORT_FORMATS } from "@/lib/api/endpoints";
-import { absoluteAssetUrl } from "@/lib/api/client";
+import { downloadAuthenticated } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,14 +32,10 @@ export function ReportExportMenu({ jobId }: { jobId?: string | null }) {
       setBusyFormat(format);
       setDoneFormat(null);
       try {
-        const result = await endpoints.exportReport(format, jobId ?? undefined);
-        const url = absoluteAssetUrl(result.download_url);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = result.filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        const result = await endpoints.exportReport(format, {
+          job_id: jobId ?? undefined,
+        });
+        await downloadAuthenticated(result.download_url, result.filename);
         setDoneFormat(format);
       } catch (err) {
         console.error("Report export failed:", err);

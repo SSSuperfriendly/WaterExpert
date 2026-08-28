@@ -3,16 +3,18 @@
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { DriverDiagnosis } from "@/components/waterexpert/driver-diagnosis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/format";
-import { translateDomain } from "@/lib/domain";
+import { translateFactor } from "@/lib/domain";
 
 export default function DiagnosisPage() {
   const { t } = useT();
-  const { data, loading, error, reload } = useApi(() => endpoints.diagnostics());
+  const scope = useArtifactScope();
+  const { data, loading, error, reload } = useApi(() => endpoints.diagnostics(scope), [scope]);
 
   const decomposition = (data?.process_decomposition ?? []) as Record<string, unknown>[];
 
@@ -22,7 +24,7 @@ export default function DiagnosisPage() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <DriverDiagnosis data={data} />
@@ -40,10 +42,14 @@ export default function DiagnosisPage() {
                       className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                     >
                       <span className="truncate">
-                        {String(row.label ?? row.process ?? row.name ?? "—")}
+                        {translateFactor(
+                          t,
+                          String(row.process_key ?? ""),
+                          String(row.process_label ?? "—")
+                        )}
                       </span>
                       <span className="font-mono tabular-nums">
-                        {formatNumber(row.contribution ?? row.value, 3)}
+                        {formatNumber(row.mean_contribution, 3)}
                       </span>
                     </li>
                   ))}

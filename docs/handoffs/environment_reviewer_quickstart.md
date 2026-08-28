@@ -78,7 +78,7 @@ uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 
 ## 4. 进入后先看什么
 
-默认登录账号：用户名 `2510709`，密码 `AI4S666`（登录页有「一键填入」按钮）。
+默认登录账号：用户名 `2510709`，密码由 `WATEREXPERT_DEMO_PASSWORD` 指定；未设置时首次启动随机生成并打印到服务端日志（登录页「一键填入」需 `WATEREXPERT_ENABLE_DEMO_HINT=1`）。
 
 建议按下面顺序看：
 

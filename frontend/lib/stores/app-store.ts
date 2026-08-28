@@ -31,6 +31,30 @@ interface AppState {
   // Active prediction job (kept in memory only).
   activeJobId: string | null;
   setActiveJobId: (jobId: string | null) => void;
+
+  // Case context — the object every result page is attributed to. Persisted so
+  // the evidence chain survives a refresh; results resolve against this case.
+  activeCaseId: string | null;
+  targetDate: string | null;
+  setCaseContext: (caseId: string | null, targetDate?: string | null) => void;
+  clearCaseContext: () => void;
+}
+
+const CASE_CONTEXT_KEY = "waterexpert.case.context";
+
+function readCaseContext(): { caseId: string | null; targetDate: string | null } {
+  if (typeof window === "undefined") return { caseId: null, targetDate: null };
+  try {
+    const raw = window.sessionStorage.getItem(CASE_CONTEXT_KEY);
+    if (!raw) return { caseId: null, targetDate: null };
+    const parsed = JSON.parse(raw) as { caseId?: string; targetDate?: string };
+    return {
+      caseId: typeof parsed.caseId === "string" ? parsed.caseId : null,
+      targetDate: typeof parsed.targetDate === "string" ? parsed.targetDate : null,
+    };
+  } catch {
+    return { caseId: null, targetDate: null };
+  }
 }
 
 function toProfile(stored: StoredAuth): AuthProfile {
@@ -43,6 +67,7 @@ function toProfile(stored: StoredAuth): AuthProfile {
 
 export const useAppStore = create<AppState>((set) => {
   const stored = readStoredAuth();
+  const caseContext = readCaseContext();
 
   return {
     session: stored ? toProfile(stored) : null,
@@ -67,6 +92,32 @@ export const useAppStore = create<AppState>((set) => {
 
     activeJobId: null,
     setActiveJobId: (activeJobId) => set({ activeJobId }),
+
+    activeCaseId: caseContext.caseId,
+    targetDate: caseContext.targetDate,
+    setCaseContext: (activeCaseId, targetDate) => {
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.setItem(
+            CASE_CONTEXT_KEY,
+            JSON.stringify({ caseId: activeCaseId, targetDate: targetDate ?? null })
+          );
+        } catch {
+          // ignore storage errors
+        }
+      }
+      set({ activeCaseId, targetDate: targetDate ?? null });
+    },
+    clearCaseContext: () => {
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.removeItem(CASE_CONTEXT_KEY);
+        } catch {
+          // ignore storage errors
+        }
+      }
+      set({ activeCaseId: null, targetDate: null });
+    },
   };
 });
 

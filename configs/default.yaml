@@ -4,6 +4,18 @@ weather_filename: "shanghai_weather_daily.csv"
 rag_artifacts_dir: "data/knowledge_graph"
 output_dir: "outputs"
 
+# What a single run covers. The service layer overwrites these per job so the
+# model/date/station a user picks in the UI actually reaches the pipeline.
+# start_date/end_date are inclusive; null means "whatever the data covers".
+run_scope:
+  station_code: "2586"
+  start_date: null
+  end_date: null
+
+models:
+  enabled: ["mscim", "mscim_no_kg", "cmfbe_stgcn"]
+  baselines: ["ridge_window_baseline", "persistence_baseline"]
+
 hydrodynamics:
   enabled: true
   source_path: "data/raw/shanghai_hydrodynamics.xls"

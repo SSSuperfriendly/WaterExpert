@@ -196,7 +196,7 @@ For collaborator-facing setup on the software branch, see `docs/handoffs/environ
 | --- | --- | --- |
 | `WATEREXPERT_RUNTIME_ROOT` / `WATERTURBIDITY_RUNTIME_ROOT` | runtime root for `outputs/` and `data/` | repository root |
 | `WATEREXPERT_REALTIME_APPCODE` / `ALIYUN_APPCODE` | realtime API AppCode (required) | — |
-| `WATEREXPERT_DEMO_USERNAME` / `WATEREXPERT_DEMO_PASSWORD` | demo login credentials | `2510709` / `AI4S666` |
+| `WATEREXPERT_DEMO_USERNAME` / `WATEREXPERT_DEMO_PASSWORD` | demo login credentials | `2510709` / random (printed once at first seed) |
 | `WATEREXPERT_DEMO_DISPLAY_NAME` / `WATEREXPERT_DEMO_ROLE` | demo profile | `AI4S Demo User` / `reviewer` |
 
 ## Software Launch
@@ -252,10 +252,10 @@ On macOS/Linux, the equivalent is:
 ```
 ```
 
-The root route now opens the login page first. Default demo credentials are:
-
-- Username: `2510709`
-- Password: `AI4S666`
+The root route now opens the login page first. The demo account is seeded with the
+username from `WATEREXPERT_DEMO_USERNAME` (`2510709`); its password is random per
+deployment unless `WATEREXPERT_DEMO_PASSWORD` is set. Set `WATEREXPERT_ENABLE_DEMO_HINT=1`
+to surface the credentials on the login page.
 
 After login, the main navigation is:
 

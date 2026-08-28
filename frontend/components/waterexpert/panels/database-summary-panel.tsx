@@ -17,7 +17,7 @@ export function DatabaseSummaryPanel() {
       {summary.loading ? (
         <LoadingState />
       ) : summary.error ? (
-        <ErrorState message={summary.error} onRetry={summary.reload} />
+        <ErrorState error={summary.error} onRetry={summary.reload} />
       ) : summary.data ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard

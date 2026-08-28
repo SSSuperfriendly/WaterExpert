@@ -20,7 +20,7 @@ export function RealtimePanel() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         data.status === "missing" ? (
           <EmptyState title={t("realtime.missing")} />

@@ -23,12 +23,19 @@ function isAuthPath(path: string): boolean {
 export class ApiError extends Error {
   status: number;
   detail: string;
+  /**
+   * Stable error code from a `{code, detail}` refusal, when the backend sent
+   * one. Render this through `describeApiError` rather than showing `detail`,
+   * which is written for operators and is not localized.
+   */
+  code: string | null;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, code: string | null = null) {
     super(detail || `Request failed with status ${status}`);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.code = code;
   }
 }
 
@@ -52,12 +59,22 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     let detail = "";
+    let code: string | null = null;
     if (body && typeof body === "object" && "detail" in body) {
-      detail = String((body as { detail: unknown }).detail);
+      const raw = (body as { detail: unknown }).detail;
+      // Refusals the backend models arrive as `{"detail": {"code", "detail"}}`;
+      // everything else (FastAPI's own validation errors, plain strings) is
+      // stringified as before.
+      if (raw && typeof raw === "object" && "code" in raw) {
+        code = String((raw as { code: unknown }).code);
+        detail = String((raw as { detail?: unknown }).detail ?? "");
+      } else {
+        detail = String(raw);
+      }
     } else if (typeof body === "string") {
       detail = body;
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, code);
   }
 
   return body as T;
@@ -114,8 +131,11 @@ export const apiClient = {
   get: <T>(path: string, query?: QueryParams) => request<T>("GET", path, { query }),
   post: <T>(path: string, body?: unknown, query?: QueryParams) =>
     request<T>("POST", path, { body, query }),
+  patch: <T>(path: string, body?: unknown, query?: QueryParams) =>
+    request<T>("PATCH", path, { body, query }),
   upload: <T>(path: string, formData: FormData, query?: QueryParams) =>
     request<T>("POST", path, { formData, query }),
+  delete: <T>(path: string, query?: QueryParams) => request<T>("DELETE", path, { query }),
 };
 
 /** Resolve a backend-relative asset URL (e.g. download_url / media paths). */
@@ -123,4 +143,38 @@ export function absoluteAssetUrl(path: string): string {
   if (!path) return "";
   if (/^https?:\/\//.test(path)) return path;
   return `${apiBaseUrl()}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+/**
+ * Download a protected backend file with the bearer token attached, then save
+ * it client-side.
+ *
+ * The backend now requires auth on every non-``/api/v1/auth/`` path (review
+ * item 7), so a plain ``<a download href=...>`` — which never sends an
+ * ``Authorization`` header — would always draw a 401. Fetching here keeps the
+ * token on the request; the returned blob is handed back to the browser as an
+ * object URL so the download still behaves like a normal file save.
+ */
+export async function downloadAuthenticated(
+  path: string,
+  filename?: string
+): Promise<void> {
+  const url = absoluteAssetUrl(path);
+  const headers: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    throw new ApiError(response.status, `Download failed (${response.status})`);
+  }
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename || path.split("/").pop() || "download";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 }

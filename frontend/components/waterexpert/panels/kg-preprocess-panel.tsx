@@ -79,7 +79,7 @@ export function KgPreprocessPanel() {
           {uploads.loading ? (
             <LoadingState rows={3} />
           ) : uploads.error ? (
-            <ErrorState message={uploads.error} onRetry={uploads.reload} />
+            <ErrorState error={uploads.error} onRetry={uploads.reload} />
           ) : uploadList.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("kg.noPdfToProcess")}</p>
           ) : (
@@ -148,7 +148,7 @@ export function KgPreprocessPanel() {
           {texts.loading ? (
             <LoadingState rows={3} />
           ) : texts.error ? (
-            <ErrorState message={texts.error} onRetry={texts.reload} />
+            <ErrorState error={texts.error} onRetry={texts.reload} />
           ) : txtList.length === 0 && jsonList.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("kg.noTxt")}</p>
           ) : (

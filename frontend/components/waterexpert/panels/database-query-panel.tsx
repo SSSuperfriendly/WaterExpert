@@ -4,6 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { translateColumn } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import { DataTable, type ColumnDef } from "@/components/waterexpert/data-table";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
@@ -54,7 +55,7 @@ export function DatabaseQueryPanel() {
     const keys = result?.columns ?? Object.keys(sample);
     return keys.slice(0, 12).map((key) => ({
       key,
-      header: key,
+      header: translateColumn(t, key),
       render: (row: Record<string, unknown>) => {
         const v = row[key];
         if (v === null || v === undefined || v === "") return "—";
@@ -62,7 +63,7 @@ export function DatabaseQueryPanel() {
         return String(v);
       },
     }));
-  }, [result]);
+  }, [result, t]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -131,7 +132,7 @@ export function DatabaseQueryPanel() {
           {query.loading ? (
             <LoadingState />
           ) : query.error ? (
-            <ErrorState message={query.error} onRetry={query.reload} />
+            <ErrorState error={query.error} onRetry={query.reload} />
           ) : result && result.rows && result.rows.length > 0 ? (
             <>
               <DataTable

@@ -33,6 +33,11 @@ import {
   Globe02Icon,
   Book01Icon,
   AiNetworkIcon,
+  Task01Icon,
+  Folder02Icon,
+  AiBrain01Icon,
+  DocumentAttachmentIcon,
+  Alert01Icon,
 } from "@hugeicons/core-free-icons";
 
 type NavItem = {
@@ -44,7 +49,19 @@ type NavItem = {
 const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   {
     labelKey: "nav.groupOverview",
-    items: [{ href: "/", labelKey: "nav.overview", icon: DashboardSquare01Icon }],
+    items: [
+      { href: "/", labelKey: "nav.overview", icon: DashboardSquare01Icon },
+      { href: "/tasks", labelKey: "nav.tasks", icon: Task01Icon },
+      { href: "/cases", labelKey: "nav.cases", icon: Folder02Icon },
+    ],
+  },
+  {
+    labelKey: "nav.groupGovernance",
+    items: [
+      { href: "/models", labelKey: "nav.models", icon: AiBrain01Icon },
+      { href: "/reports", labelKey: "nav.reports", icon: DocumentAttachmentIcon },
+      { href: "/events", labelKey: "nav.events", icon: Alert01Icon },
+    ],
   },
   {
     labelKey: "nav.groupDatabase",

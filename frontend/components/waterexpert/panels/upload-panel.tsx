@@ -5,12 +5,28 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { formatDateTime } from "@/lib/format";
+import {
+  describeApiError,
+  translateBlockingReason,
+  translateDataType,
+  translateDatasetStatus,
+  translateQualityGrade,
+  translateStage,
+} from "@/lib/domain";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -20,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Upload01Icon, FileImportIcon } from "@hugeicons/core-free-icons";
+import type { DatasetVersion } from "@/lib/api/contracts";
 
 const DATA_TYPES = [
   { value: "water_quality", labelKey: "upload.waterQuality" },
@@ -30,65 +47,75 @@ const DATA_TYPES = [
   { value: "spatial", labelKey: "upload.spatial" },
 ];
 
+/** A→D. Only A and B may feed a prediction run. */
+function gradeBadge(t: ReturnType<typeof useT>["t"], grade?: string) {
+  if (!grade) return null;
+  const variant =
+    grade === "a" ? "secondary" : grade === "b" ? "outline" : "destructive";
+  return <Badge variant={variant}>{translateQualityGrade(t, grade)}</Badge>;
+}
+
 export function UploadPanel() {
   const { t } = useT();
-  const history = useApi(() => endpoints.imports());
+  const datasets = useApi(() => endpoints.datasets());
 
   const [dataType, setDataType] = React.useState("water_quality");
-  const [timeGranularity, setTimeGranularity] = React.useState("daily");
-  const [sourceName, setSourceName] = React.useState("");
-  const [filePath, setFilePath] = React.useState("");
-  const [files, setFiles] = React.useState<File[]>([]);
+  const [stationCode, setStationCode] = React.useState("2586");
+  const [relativePath, setRelativePath] = React.useState("");
+  const [file, setFile] = React.useState<File | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [result, setResult] = React.useState<DatasetVersion | null>(null);
 
-  const handleFiles = (list: FileList | null) => {
-    if (!list) return;
-    setFiles(Array.from(list));
-  };
-
-  const handleUpload = async () => {
-    if (files.length === 0) return;
+  /**
+   * Both entry points run the same acceptance chain, so they report the same
+   * way: the resulting version, its grade, and — when it was refused — the
+   * stage that stopped it. "Uploaded" is no longer the same as "usable".
+   */
+  const submit = async (run: () => Promise<DatasetVersion>) => {
     setBusy(true);
     setMessage(null);
+    setResult(null);
     try {
-      const formData = new FormData();
-      formData.set("data_type", dataType);
-      formData.set("station_code", "2586");
-      formData.set("time_granularity", timeGranularity);
-      files.forEach((f) => formData.append("files", f));
-      await endpoints.uploadData(formData);
-      setMessage(t("upload.uploadSuccess"));
-      setFiles([]);
-      history.reload();
+      const version = await run();
+      setResult(version);
+      setMessage(
+        version.status === "accepted"
+          ? t("upload.acceptedWithRows", {
+              rows: String(version.modelable_rows ?? version.row_count ?? 0),
+            })
+          : t("upload.rejectedAtStage", {
+              stage: translateStage(t, version.blocked_at ?? version.stage),
+            })
+      );
+      setFile(null);
+      datasets.reload();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : t("common.error"));
+      setMessage(describeApiError(t, err));
     } finally {
       setBusy(false);
     }
   };
 
-  const handleImport = async () => {
-    setBusy(true);
-    setMessage(null);
-    try {
-      await endpoints.importData({
+  const handleUpload = () => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.set("data_type", dataType);
+    formData.set("station_code", stationCode);
+    formData.set("file", file);
+    return submit(() => endpoints.uploadDataset(formData));
+  };
+
+  const handleImport = () =>
+    submit(() =>
+      endpoints.importDataset({
         data_type: dataType,
-        source_name: sourceName,
-        file_path: filePath,
-        time_granularity: timeGranularity,
-        station_code: "2586",
-      });
-      setMessage(t("upload.importSuccess"));
-      history.reload();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : t("common.error"));
-    } finally {
-      setBusy(false);
-    }
-  };
+        relative_path: relativePath,
+        station_code: stationCode,
+      })
+    );
 
-  const imports = (history.data ?? []) as Record<string, unknown>[];
+  const rows = datasets.data ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -118,16 +145,11 @@ export function UploadPanel() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{t("upload.timeGranularity")}</Label>
-                <Select value={timeGranularity} onValueChange={(v) => setTimeGranularity(v as string)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">{t("upload.daily")}</SelectItem>
-                    <SelectItem value="hourly">{t("upload.hourly")}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>{t("upload.stationCode")}</Label>
+                <Input
+                  value={stationCode}
+                  onChange={(e) => setStationCode(e.target.value)}
+                />
               </div>
             </div>
 
@@ -136,23 +158,19 @@ export function UploadPanel() {
               <span className="text-sm">{t("upload.dragHint")}</span>
               <input
                 type="file"
-                multiple
                 className="hidden"
-                onChange={(e) => handleFiles(e.target.files)}
+                accept=".csv,.xls,.xlsx,.json"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
 
-            {files.length > 0 && (
-              <ul className="space-y-1">
-                {files.map((f, i) => (
-                  <li key={i} className="text-muted-foreground truncate text-xs">
-                    {f.name} ({f.size} B)
-                  </li>
-                ))}
-              </ul>
+            {file && (
+              <p className="text-muted-foreground truncate text-xs">
+                {file.name} ({file.size} B)
+              </p>
             )}
 
-            <Button onClick={handleUpload} disabled={busy || files.length === 0} className="w-full">
+            <Button onClick={handleUpload} disabled={busy || !file} className="w-full">
               {busy ? t("upload.uploading") : t("upload.upload")}
             </Button>
           </CardContent>
@@ -162,80 +180,95 @@ export function UploadPanel() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HugeiconsIcon icon={FileImportIcon} className="text-muted-foreground size-4" />
-              {t("upload.filePath")}
+              {t("upload.managedImport")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("upload.dataType")}</Label>
-                <Select value={dataType} onValueChange={(v) => setDataType(v as string)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DATA_TYPES.map((dt) => (
-                      <SelectItem key={dt.value} value={dt.value}>
-                        {t(dt.labelKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("upload.sourceName")}</Label>
-                <Input value={sourceName} onChange={(e) => setSourceName(e.target.value)} />
-              </div>
-            </div>
             <div className="space-y-1.5">
-              <Label>{t("upload.filePath")}</Label>
+              <Label>{t("upload.relativePath")}</Label>
               <Input
-                value={filePath}
-                onChange={(e) => setFilePath(e.target.value)}
-                placeholder="/data/raw/example.csv"
+                value={relativePath}
+                onChange={(e) => setRelativePath(e.target.value)}
+                placeholder="wusongkou_water_quality_2586.csv"
               />
+              <p className="text-muted-foreground text-xs">{t("upload.managedImportHint")}</p>
             </div>
-            <Button onClick={handleImport} disabled={busy || !filePath} className="w-full">
-              {busy ? t("upload.uploading") : t("upload.upload")}
+            <Button
+              onClick={handleImport}
+              disabled={busy || !relativePath}
+              className="w-full"
+            >
+              {busy ? t("upload.uploading") : t("upload.import")}
             </Button>
           </CardContent>
         </Card>
       </div>
 
       {message && (
-        <p className="text-muted-foreground rounded-lg border px-3 py-2 text-sm">{message}</p>
+        <div className="rounded-lg border px-3 py-2 text-sm">
+          <p>{message}</p>
+          {result?.blocking_reasons?.length ? (
+            <ul className="text-muted-foreground mt-1 list-disc pl-5 text-xs">
+              {result.blocking_reasons.map((reason) => (
+                <li key={reason}>{translateBlockingReason(t, reason)}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("upload.importHistory")}</CardTitle>
+          <CardTitle>{t("upload.datasetList")}</CardTitle>
         </CardHeader>
         <CardContent>
-          {history.loading ? (
+          {datasets.loading ? (
             <LoadingState rows={3} />
-          ) : history.error ? (
-            <ErrorState message={history.error} onRetry={history.reload} />
-          ) : imports.length === 0 ? (
+          ) : datasets.error ? (
+            <ErrorState error={datasets.error} onRetry={datasets.reload} />
+          ) : rows.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("common.noData")}</p>
           ) : (
-            <ul className="space-y-2">
-              {imports.slice(0, 20).map((row, i) => (
-                <li
-                  key={i}
-                  className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
-                >
-                  <span className="min-w-0 truncate">
-                    {String(row.source_name ?? row.data_type ?? "—")}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <Badge variant="outline">{String(row.status ?? "")}</Badge>
-                    <span className="text-muted-foreground text-xs">
-                      {formatDateTime(row.created_at)}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("upload.dataset")}</TableHead>
+                    <TableHead>{t("upload.dataType")}</TableHead>
+                    <TableHead>{t("upload.coverage")}</TableHead>
+                    <TableHead>{t("upload.quality")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("prediction.createdAt")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((dataset) => (
+                    <TableRow key={dataset.dataset_id}>
+                      <TableCell className="max-w-[16rem] truncate">
+                        {dataset.title ?? dataset.dataset_id}
+                      </TableCell>
+                      <TableCell>
+                        {translateDataType(t, dataset.data_type)}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {dataset.coverage_start && dataset.coverage_end
+                          ? `${dataset.coverage_start} → ${dataset.coverage_end}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{gradeBadge(t, dataset.quality_grade)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {translateDatasetStatus(t, dataset.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {formatDateTime(dataset.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

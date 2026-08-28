@@ -1,10 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { translateModel } from "@/lib/domain";
-import { formatNumber, formatMaybeDate } from "@/lib/format";
+import { integratedScope } from "@/lib/hooks/use-artifact-scope";
+import {
+  translateModel,
+  translateRiskMetric,
+  translateJobStatus,
+  translateDataType,
+} from "@/lib/domain";
+import { formatNumber, formatMaybeDate, formatDateTime } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
@@ -22,7 +29,11 @@ import { Database01Icon, Activity01Icon, Flag01Icon, Target01Icon } from "@hugei
 
 export default function OverviewPage() {
   const { t } = useT();
-  const { data, loading, error, reload } = useApi(() => endpoints.dashboard());
+  const { data, loading, error, reload } = useApi(() => endpoints.dashboard(integratedScope()));
+
+  const recentJobs = useApi(() => endpoints.jobs());
+  const qualityAlerts = useApi(() => endpoints.datasetQualityAlerts(5));
+  const caseSummary = useApi(() => endpoints.caseSummary());
 
   const station = data?.station_profile;
   const testModels = data?.test_models ?? {};
@@ -37,7 +48,7 @@ export default function OverviewPage() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -62,6 +73,70 @@ export default function OverviewPage() {
               value={formatNumber(station?.matched_model_rows, 0)}
               icon={Target01Icon}
             />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>{t("overview.recentTasks")}</CardTitle>
+                <Link href="/tasks" className="text-muted-foreground text-xs hover:underline">
+                  {t("overview.viewAll")}
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {recentJobs.data && recentJobs.data.length > 0 ? (
+                  recentJobs.data.slice(0, 5).map((j) => (
+                    <div key={j.job_id} className="flex items-center justify-between gap-2">
+                      <span className="truncate font-medium">{translateModel(t, j.model_name)}</span>
+                      <span className="text-muted-foreground shrink-0 text-xs">
+                        {translateJobStatus(t, j.status)} · {formatDateTime(j.created_at)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-xs">{t("overview.noRecentTasks")}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>{t("overview.qualityAlerts")}</CardTitle>
+                <Link href="/database" className="text-muted-foreground text-xs hover:underline">
+                  {t("overview.viewAll")}
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {qualityAlerts.data && qualityAlerts.data.length > 0 ? (
+                  qualityAlerts.data.map((d) => (
+                    <div key={d.version_id} className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {translateDataType(t, d.data_type)} · {d.source_name ?? d.version}
+                      </span>
+                      <span className="text-muted-foreground shrink-0 text-xs">
+                        {translateJobStatus(t, d.status)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-xs">{t("overview.noQualityAlerts")}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>{t("overview.pendingCases")}</CardTitle>
+                <Link href="/cases" className="text-muted-foreground text-xs hover:underline">
+                  {t("overview.viewAll")}
+                </Link>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Row label={t("case.total")} value={formatNumber(caseSummary.data?.total, 0)} />
+                <Row label={t("case.pending")} value={formatNumber(caseSummary.data?.pending_count, 0)} />
+                <Row label={t("case.staleCount")} value={formatNumber(caseSummary.data?.stale_count, 0)} />
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -107,7 +182,7 @@ export default function OverviewPage() {
                   <p className="text-muted-foreground text-xs">{t("common.noData")}</p>
                 ) : (
                   Object.entries(risk).map(([key, value]) => (
-                    <Row key={key} label={key} value={formatNumber(value, 3)} />
+                    <Row key={key} label={translateRiskMetric(t, key)} value={formatNumber(value, 3)} />
                   ))
                 )}
               </CardContent>

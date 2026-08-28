@@ -16,21 +16,33 @@ from uuid import uuid4
 
 import pandas as pd
 import yaml
-from fastapi import UploadFile
 
 from backend.app.config import Settings
-from backend.app.schemas import DataImportRequest, PredictionJobCreateRequest
+from backend.app.domain.codes import ErrorCode, JobStatus, TERMINAL_JOB_STATUSES
+from backend.app.domain.models import MODEL_KEYS, is_known_model, models_for_request
+from backend.app.schemas import PredictionJobCreateRequest
 from backend.app.services.artifact_repository import ArtifactRepository
-from backend.app.services.state_store import SqliteStateStore
+from backend.app.services.state_store import JOBS_TABLE, SqliteStateStore
+from backend.app.services.task_progress import task_view
 
 JOB_ID_LENGTH = 12
 LOG_PREVIEW_LINE_COUNT = 20
-RUNNING_STATUS = "running"
-COMPLETED_STATUS = "completed"
-FAILED_STATUS = "failed"
-ORPHANED_STATUS = "orphaned"
-TERMINAL_STATUSES = {COMPLETED_STATUS, FAILED_STATUS, ORPHANED_STATUS}
-DEFAULT_IMPORT_FAILURE_MESSAGE = "Source file does not exist."
+QUEUED_STATUS = str(JobStatus.QUEUED)
+RUNNING_STATUS = str(JobStatus.RUNNING)
+CANCELLING_STATUS = str(JobStatus.CANCELLING)
+CANCELLED_STATUS = str(JobStatus.CANCELLED)
+COMPLETED_STATUS = str(JobStatus.COMPLETED)
+FAILED_STATUS = str(JobStatus.FAILED)
+TIMEOUT_STATUS = str(JobStatus.TIMEOUT)
+ORPHANED_STATUS = str(JobStatus.ORPHANED)
+TERMINAL_STATUSES = {str(status) for status in TERMINAL_JOB_STATUSES}
+#: Statuses that occupy a concurrency slot.
+OCCUPYING_STATUSES = {RUNNING_STATUS, CANCELLING_STATUS}
+QUEUED_MESSAGE = "Waiting for a free execution slot."
+CANCEL_REQUESTED_MESSAGE = "Cancellation requested; stopping the run."
+CANCELLED_MESSAGE = "Job cancelled."
+TIMEOUT_MESSAGE_TEMPLATE = "Job exceeded the {seconds}s time limit and was stopped."
+DEFAULT_JOB_PRIORITY = 5
 EXISTING_ARTIFACT_MESSAGE = "Snapshot created from currently integrated runtime artifacts."
 LAUNCHED_MESSAGE = "Pipeline launched in job-scoped runtime directory."
 DETACHED_WAIT_MESSAGE = "Job is still running in detached mode; waiting for status file completion."
@@ -44,18 +56,18 @@ CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 HYDRODYNAMICS_OUTPUT_DIR_NAME = "hydrodynamics_preprocessed"
 HYDRODYNAMICS_WIDE_FILENAME = "shanghai_hydrodynamics_daily_wide.csv"
 NDTI_OUTPUT_DIR_NAME = "ndti_preprocessed"
+#: Written by run_full_pipeline.py with the scope it actually applied.
+RUN_SCOPE_FILENAME = "run_scope.json"
 ACTIVE_PROCESS_EXIT_CODE = 259
-IMPORTED_STATUS = "imported"
-IMPORT_COPY_FAILURE_PREFIX = "Copy failed: "
-SUPPORTED_IMPORT_TYPES = {
-    "water_quality",
-    "weather",
-    "hydrodynamics",
-    "water_control",
-    "boundary_labels",
-    "spatial",
-}
-SUPPORTED_UPLOAD_SUFFIXES = {".csv", ".xls", ".xlsx", ".json"}
+
+
+class JobParameterError(ValueError):
+    """A job was submitted with parameters that cannot be honoured."""
+
+    def __init__(self, code: ErrorCode, detail: str) -> None:
+        super().__init__(detail)
+        self.code = code
+        self.detail = detail
 
 
 @dataclass(frozen=True)
@@ -97,121 +109,27 @@ class RuntimeJobService:
         self.store = store
         self._processes: dict[str, subprocess.Popen[Any]] = {}
         self._process_lock = threading.Lock()
+        # Serializes queue draining: two concurrent requests must not both
+        # decide there is one free slot and start a job into it.
+        self._dispatch_lock = threading.RLock()
         self.settings.imports_root.mkdir(parents=True, exist_ok=True)
         self.settings.job_logs_root.mkdir(parents=True, exist_ok=True)
         self.settings.job_runs_root.mkdir(parents=True, exist_ok=True)
 
-    def import_data(self, payload: DataImportRequest) -> dict[str, Any]:
-        source = Path(payload.file_path).expanduser()
-        record = self._build_import_record(payload, source)
-        if not source.exists() or not source.is_file():
-            return self._append_import_failure(record, DEFAULT_IMPORT_FAILURE_MESSAGE)
-
-        target_path = self._import_target_path(payload.data_type, record["import_id"], source.name)
-        try:
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target_path)
-        except OSError as exc:
-            return self._append_import_failure(
-                record,
-                f"{IMPORT_COPY_FAILURE_PREFIX}{exc}",
-            )
-
-        finalized_record = {
-            **record,
-            "status": IMPORTED_STATUS,
-            "stored_path": str(target_path),
-            "file_size_bytes": target_path.stat().st_size,
-        }
-        rows_detected = self._detect_rows(target_path)
-        if rows_detected is not None:
-            finalized_record["rows_detected"] = rows_detected
-        return self.store.append_import(finalized_record)
-
-    def list_imports(self) -> list[dict[str, Any]]:
-        return sorted(
-            self.store.list_imports(),
-            key=lambda item: item.get("created_at", ""),
-            reverse=True,
-        )
-
-    def upload_data_files(
-        self,
-        *,
-        data_type: str,
-        station_code: str,
-        time_granularity: str,
-        files: list[UploadFile],
-    ) -> dict[str, Any]:
-        normalized_type = str(data_type or "").strip()
-        if normalized_type not in SUPPORTED_IMPORT_TYPES:
-            raise ValueError(f"Unsupported data_type '{data_type}'.")
-        if not files:
-            raise ValueError("No files were uploaded.")
-
-        records: list[dict[str, Any]] = []
-        for upload in files:
-            filename = Path(upload.filename or "uploaded-file").name
-            record = {
-                "import_id": uuid4().hex[:JOB_ID_LENGTH],
-                "created_at": utc_now(),
-                "data_type": normalized_type,
-                "source_name": filename,
-                "source_path": "browser-upload",
-                "time_granularity": time_granularity,
-                "station_code": station_code or "2586",
-            }
-            suffix = Path(filename).suffix.lower()
-            if suffix not in SUPPORTED_UPLOAD_SUFFIXES:
-                records.append(
-                    self.store.append_import(
-                        {
-                            **record,
-                            "status": FAILED_STATUS,
-                            "message": "Unsupported file format.",
-                        }
-                    )
-                )
-                continue
-
-            target_path = self._import_target_path(normalized_type, record["import_id"], filename)
-            try:
-                target_path.parent.mkdir(parents=True, exist_ok=True)
-                with target_path.open("wb") as handle:
-                    shutil.copyfileobj(upload.file, handle)
-            except OSError as exc:
-                records.append(
-                    self.store.append_import(
-                        {
-                            **record,
-                            "status": FAILED_STATUS,
-                            "message": f"{IMPORT_COPY_FAILURE_PREFIX}{exc}",
-                        }
-                    )
-                )
-                continue
-            finally:
-                upload.file.close()
-
-            finalized_record = {
-                **record,
-                "status": IMPORTED_STATUS,
-                "stored_path": str(target_path),
-                "file_size_bytes": target_path.stat().st_size,
-            }
-            rows_detected = self._detect_rows(target_path)
-            if rows_detected is not None:
-                finalized_record["rows_detected"] = rows_detected
-            records.append(self.store.append_import(finalized_record))
-
-        return {
-            "uploaded_count": len([item for item in records if item.get("status") == IMPORTED_STATUS]),
-            "records": records,
-        }
-
     def create_prediction_job(
-        self, payload: PredictionJobCreateRequest
+        self,
+        payload: PredictionJobCreateRequest,
+        *,
+        coverage: tuple[str, str] | None = None,
     ) -> dict[str, Any]:
+        """Start a job, or refuse it before anything expensive happens.
+
+        ``coverage`` is the ``(start, end)`` window the selected datasets
+        actually cover; the API layer reads it from :class:`DatasetService`. When
+        supplied, a requested range outside it is rejected here rather than
+        discovered hours into a run.
+        """
+        self.validate_job_parameters(payload, coverage=coverage)
         config_path = self._resolve_config_path(payload.config_path)
         paths = self._reserve_job_paths()
         job_id = paths.run_root.name
@@ -219,6 +137,7 @@ class RuntimeJobService:
             run_root=paths.run_root,
             output_root=paths.output_root,
             config_path=config_path,
+            payload=payload,
         )
         record = self._build_job_record(
             job_id=job_id,
@@ -230,7 +149,393 @@ class RuntimeJobService:
 
         if payload.use_existing_artifacts:
             return self._complete_existing_artifact_job(record, paths, config_snapshot_path)
+        if self._free_slots() <= 0:
+            # Review item 10: the old service spawned a pipeline per request with
+            # no ceiling, so two impatient clicks could put two trainings on one
+            # machine. Over quota, the job waits in the queue instead.
+            return self._enqueue_prediction_job(record, paths)
         return self._launch_prediction_job(record, paths, config_snapshot_path)
+
+    # -- queue -------------------------------------------------------------
+
+    def _active_jobs(self) -> list[dict[str, Any]]:
+        return [
+            job
+            for job in self.store.list_jobs()
+            if str(job.get("status", "")) in OCCUPYING_STATUSES
+        ]
+
+    def _free_slots(self) -> int:
+        return max(0, int(self.settings.max_concurrent_jobs) - len(self._active_jobs()))
+
+    def _enqueue_prediction_job(
+        self,
+        record: dict[str, Any],
+        paths: JobRuntimePaths,
+    ) -> dict[str, Any]:
+        queued_at = utc_now()
+        queued_record = {
+            **record,
+            "status": QUEUED_STATUS,
+            "queued_at": queued_at,
+            "updated_at": queued_at,
+            "stage": QUEUED_STATUS,
+            "message": QUEUED_MESSAGE,
+        }
+        self._write_status_file(
+            paths.status_file,
+            {
+                "status": QUEUED_STATUS,
+                "queued_at": queued_at,
+                "artifact_root": str(paths.output_root),
+                "message": QUEUED_MESSAGE,
+            },
+        )
+        return self.store.append_job(queued_record)
+
+    def queued_jobs(self) -> list[dict[str, Any]]:
+        """Waiting jobs, in the order they will run.
+
+        Higher priority first, then oldest first — so a routine batch cannot
+        starve an urgent re-run, and equal-priority work stays fair.
+        """
+        queued = [
+            job for job in self.store.list_jobs() if str(job.get("status", "")) == QUEUED_STATUS
+        ]
+        return sorted(
+            queued,
+            key=lambda job: (
+                -int(job.get("priority") or DEFAULT_JOB_PRIORITY),
+                str(job.get("queued_at") or job.get("created_at") or ""),
+            ),
+        )
+
+    def dispatch_queue(self) -> list[dict[str, Any]]:
+        """Start as many waiting jobs as there is capacity for.
+
+        Called whenever job state is read or written, so the queue drains
+        without a background thread — one process, one scheduler, no risk of two
+        workers claiming the same job.
+        """
+        started: list[dict[str, Any]] = []
+        with self._dispatch_lock:
+            for job in self.queued_jobs():
+                if self._free_slots() <= 0:
+                    break
+                job_id = str(job["job_id"])
+                snapshot = job.get("config_snapshot_path")
+                if not snapshot:
+                    started.append(self._fail_job(job_id, "Queued job lost its config snapshot."))
+                    continue
+                try:
+                    started.append(
+                        self._launch_prediction_job(job, self._job_paths(job_id), Path(str(snapshot)))
+                    )
+                except Exception as exc:  # noqa: BLE001 - the queue must survive one bad job
+                    started.append(self._fail_job(job_id, f"Failed to start queued job: {exc}"))
+        return started
+
+    def _fail_job(self, job_id: str, message: str) -> dict[str, Any]:
+        return self.store.update_job(
+            job_id,
+            {
+                "status": FAILED_STATUS,
+                "finished_at": utc_now(),
+                "updated_at": utc_now(),
+                "return_code": -1,
+                "message": message,
+            },
+        )
+
+    def queue_snapshot(self) -> dict[str, Any]:
+        """What the task centre shows above the job list."""
+        jobs = self.store.list_jobs()
+        by_status: dict[str, int] = {}
+        for job in jobs:
+            status = str(job.get("status", ""))
+            by_status[status] = by_status.get(status, 0) + 1
+        return {
+            "max_concurrent_jobs": int(self.settings.max_concurrent_jobs),
+            "running": by_status.get(RUNNING_STATUS, 0),
+            "queued": by_status.get(QUEUED_STATUS, 0),
+            "free_slots": self._free_slots(),
+            "by_status": by_status,
+            "job_timeout_seconds": int(self.settings.job_timeout_seconds),
+        }
+
+    # -- cancel / retry ----------------------------------------------------
+
+    def cancel_job(self, job_id: str) -> dict[str, Any]:
+        """Stop a job. Queued work stops immediately; a running process is killed."""
+        record = self.store.get_job(job_id)
+        if record is None:
+            raise KeyError(job_id)
+        status = str(record.get("status", ""))
+
+        if status in TERMINAL_STATUSES:
+            raise JobParameterError(
+                ErrorCode.JOB_NOT_CANCELLABLE,
+                f"Job {job_id} already finished with status '{status}'.",
+            )
+
+        if status == QUEUED_STATUS:
+            cancelled = self.store.update_job(
+                job_id,
+                {
+                    "status": CANCELLED_STATUS,
+                    "finished_at": utc_now(),
+                    "updated_at": utc_now(),
+                    "message": CANCELLED_MESSAGE,
+                },
+            )
+            self.dispatch_queue()
+            return cancelled
+
+        self.store.update_job(
+            job_id,
+            {
+                "status": CANCELLING_STATUS,
+                "updated_at": utc_now(),
+                "message": CANCEL_REQUESTED_MESSAGE,
+            },
+        )
+        self._stop_running_job(job_id, record)
+        cancelled = self.store.update_job(
+            job_id,
+            {
+                "status": CANCELLED_STATUS,
+                "finished_at": utc_now(),
+                "updated_at": utc_now(),
+                "return_code": -1,
+                "message": CANCELLED_MESSAGE,
+            },
+        )
+        self.dispatch_queue()
+        return cancelled
+
+    def _stop_running_job(self, job_id: str, record: dict[str, Any]) -> None:
+        """Kill the job's process, whether we own its handle or only its pid."""
+        process = self._get_process(job_id)
+        if process is not None:
+            self._terminate_process(process)
+            self._discard_process(job_id)
+            return
+        pid = record.get("pid")
+        if isinstance(pid, int) and self._pid_exists(pid):
+            import os
+            import signal
+
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+
+    def retry_job(self, job_id: str) -> dict[str, Any]:
+        """Resubmit a finished job with the parameters it was originally given.
+
+        A retry is a new job, not a mutation of the old one: the failed run stays
+        readable so the failure can still be diagnosed after the retry succeeds.
+        """
+        record = self.store.get_job(job_id)
+        if record is None:
+            raise KeyError(job_id)
+        status = str(record.get("status", ""))
+        if status not in TERMINAL_STATUSES:
+            raise JobParameterError(
+                ErrorCode.INVALID_STATE_TRANSITION,
+                f"Job {job_id} is '{status}'; cancel it before retrying.",
+            )
+
+        requested = record.get("requested_parameters") or {}
+        payload = PredictionJobCreateRequest(
+            model_name=str(requested.get("model_name") or record.get("model_name") or "cmfbe_stgcn"),
+            station_code=str(requested.get("station_code") or record.get("station_code") or "2586"),
+            config_path=record.get("config_path"),
+            start_date=requested.get("start_date") or record.get("start_date"),
+            end_date=requested.get("end_date") or record.get("end_date"),
+            use_existing_artifacts=bool(record.get("use_existing_artifacts", False)),
+            case_id=record.get("case_id"),
+            priority=int(record.get("priority") or DEFAULT_JOB_PRIORITY),
+        )
+        retried = self.create_prediction_job(payload)
+        return self.store.update_job(
+            str(retried["job_id"]),
+            {"retry_of": job_id, "retry_count": int(record.get("retry_count") or 0) + 1},
+        )
+
+    # -- timeout -----------------------------------------------------------
+
+    def _timed_out(self, record: dict[str, Any]) -> bool:
+        limit = int(self.settings.job_timeout_seconds)
+        if limit <= 0 or str(record.get("status", "")) != RUNNING_STATUS:
+            return False
+        started = record.get("started_at") or record.get("created_at")
+        if not started:
+            return False
+        try:
+            begin = datetime.fromisoformat(str(started).replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if begin.tzinfo is None:
+            begin = begin.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - begin).total_seconds() > limit
+
+    def _time_out_job(self, record: dict[str, Any]) -> dict[str, Any]:
+        job_id = str(record["job_id"])
+        self._stop_running_job(job_id, record)
+        timed_out = self.store.update_job(
+            job_id,
+            {
+                "status": TIMEOUT_STATUS,
+                "finished_at": utc_now(),
+                "updated_at": utc_now(),
+                "return_code": -1,
+                "message": TIMEOUT_MESSAGE_TEMPLATE.format(
+                    seconds=int(self.settings.job_timeout_seconds)
+                ),
+            },
+        )
+        self.dispatch_queue()
+        return timed_out
+
+    # -- logs and retention ------------------------------------------------
+
+    def log_path(self, job_id: str, stream: str) -> Path:
+        """The on-disk log for a job, for download.
+
+        ``stream`` is validated against a fixed pair rather than interpolated,
+        so this cannot be turned into a read of an arbitrary file.
+        """
+        record = self.store.get_job(job_id)
+        if record is None:
+            raise KeyError(job_id)
+        key = {"stdout": "stdout_log", "stderr": "stderr_log"}.get(stream)
+        if key is None:
+            raise JobParameterError(
+                ErrorCode.VALIDATION_FAILED,
+                f"Unknown log stream '{stream}'. Use 'stdout' or 'stderr'.",
+            )
+        raw = record.get(key)
+        if not raw:
+            raise FileNotFoundError(f"Job {job_id} has no {stream} log.")
+        path = Path(str(raw))
+        if not path.exists():
+            raise FileNotFoundError(f"Job {job_id} {stream} log is no longer on disk.")
+        return path
+
+    def job_artifacts(self, job_id: str) -> list[dict[str, Any]]:
+        """Every file the run produced, with size — the task centre's output list."""
+        record = self.refresh_job(job_id)
+        artifact_root = record.get("artifact_root")
+        if not artifact_root:
+            return []
+        root = Path(str(artifact_root))
+        if not root.exists():
+            return []
+        entries: list[dict[str, Any]] = []
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            try:
+                size = path.stat().st_size
+            except OSError:
+                continue
+            entries.append(
+                {
+                    "relative_path": str(path.relative_to(root)),
+                    "size_bytes": size,
+                    "category": path.relative_to(root).parts[0] if path.parent != root else "root",
+                }
+            )
+        return entries
+
+    def purge_expired_jobs(self, *, now: datetime | None = None) -> dict[str, Any]:
+        """Delete run directories past the retention window (review item 26).
+
+        Only terminal jobs are eligible, and the state record is removed with the
+        directory so the task centre never lists a run whose artifacts are gone.
+        """
+        days = int(self.settings.job_run_retention_days)
+        if days <= 0:
+            return {"removed": [], "retention_days": days, "skipped": "retention_disabled"}
+        cutoff = (now or datetime.now(timezone.utc)).timestamp() - days * 86400
+        removed: list[str] = []
+        for job in self.store.list_jobs():
+            if str(job.get("status", "")) not in TERMINAL_STATUSES:
+                continue
+            finished = job.get("finished_at") or job.get("updated_at") or job.get("created_at")
+            try:
+                stamp = datetime.fromisoformat(str(finished).replace("Z", "+00:00"))
+            except (TypeError, ValueError):
+                continue
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            if stamp.timestamp() > cutoff:
+                continue
+            job_id = str(job["job_id"])
+            run_root = job.get("run_root")
+            if run_root:
+                try:
+                    shutil.rmtree(self._assert_managed_path(Path(str(run_root))), ignore_errors=True)
+                except ValueError:
+                    pass
+            self.store.delete(JOBS_TABLE, job_id)
+            removed.append(job_id)
+        return {"removed": removed, "retention_days": days}
+
+    def validate_job_parameters(
+        self,
+        payload: PredictionJobCreateRequest,
+        *,
+        coverage: tuple[str, str] | None = None,
+    ) -> None:
+        """Reject a job whose parameters cannot be satisfied.
+
+        Review item 1: the old submit path accepted anything and let the run
+        fail — or worse, quietly ignore the parameter and return results for a
+        different scope. Everything checkable is checked here instead.
+        """
+        if not is_known_model(payload.model_name):
+            raise JobParameterError(
+                ErrorCode.VALIDATION_FAILED,
+                f"Unknown model '{payload.model_name}'. Available: {list(MODEL_KEYS)}.",
+            )
+
+        start = self._parse_job_date(payload.start_date, field="start_date")
+        end = self._parse_job_date(payload.end_date, field="end_date")
+        if start and end and start > end:
+            raise JobParameterError(
+                ErrorCode.VALIDATION_FAILED,
+                f"start_date {payload.start_date} is after end_date {payload.end_date}.",
+            )
+
+        if coverage is None:
+            return
+        coverage_start, coverage_end = coverage
+        if start and str(start.date()) < coverage_start:
+            raise JobParameterError(
+                ErrorCode.DATE_RANGE_OUT_OF_COVERAGE,
+                f"start_date {payload.start_date} precedes the available data, "
+                f"which starts {coverage_start}.",
+            )
+        if end and str(end.date()) > coverage_end:
+            raise JobParameterError(
+                ErrorCode.DATE_RANGE_OUT_OF_COVERAGE,
+                f"end_date {payload.end_date} exceeds the available data, "
+                f"which ends {coverage_end}.",
+            )
+
+    @staticmethod
+    def _parse_job_date(value: str | None, *, field: str) -> pd.Timestamp | None:
+        if value in (None, ""):
+            return None
+        try:
+            return pd.Timestamp(str(value))
+        except (ValueError, TypeError) as exc:
+            raise JobParameterError(
+                ErrorCode.VALIDATION_FAILED,
+                f"{field} '{value}' is not a valid date.",
+            ) from exc
 
     def list_jobs(self) -> list[dict[str, Any]]:
         refreshed: list[dict[str, Any]] = []
@@ -243,7 +548,7 @@ class RuntimeJobService:
             except Exception as exc:
                 refreshed.append(self._failed_refresh_view(job, exc))
         return sorted(
-            refreshed,
+            [task_view(job) for job in refreshed],
             key=lambda item: item.get("created_at", ""),
             reverse=True,
         )
@@ -253,10 +558,17 @@ class RuntimeJobService:
         if record is None:
             raise KeyError(job_id)
 
+        if record.get("status") == QUEUED_STATUS:
+            # Reading a queued job is a chance to see whether it can start now.
+            self.dispatch_queue()
+            record = self.store.get_job(job_id) or record
+
         process = self._get_process(job_id)
         if process is not None and record.get("status") == RUNNING_STATUS:
             return_code = process.poll()
             if return_code is None:
+                if self._timed_out(record):
+                    return self._time_out_job(record)
                 return self._attach_log_preview(record)
             self._discard_process(job_id)
             return self._attach_log_preview(
@@ -264,7 +576,11 @@ class RuntimeJobService:
             )
 
         if record.get("status") not in self.TERMINAL_STATUSES:
+            # Reconcile against the on-disk status file first: a job that finished
+            # is reported as finished before its age is judged.
             record = self._reconcile_job_state(record)
+        if record.get("status") == RUNNING_STATUS and self._timed_out(record):
+            return self._time_out_job(record)
         return self._attach_log_preview(record)
 
     def get_job_series(self, job_id: str) -> dict[str, Any]:
@@ -283,27 +599,6 @@ class RuntimeJobService:
         if require_completed and record.get("status") != COMPLETED_STATUS:
             raise RuntimeError("Job artifacts are not ready yet.")
         return self._repository_from_record(record)
-
-    def _build_import_record(
-        self,
-        payload: DataImportRequest,
-        source: Path,
-    ) -> dict[str, Any]:
-        return {
-            "import_id": uuid4().hex[:JOB_ID_LENGTH],
-            "created_at": utc_now(),
-            "data_type": payload.data_type,
-            "source_name": payload.source_name,
-            "source_path": str(source),
-            "time_granularity": payload.time_granularity,
-            "station_code": payload.station_code,
-        }
-
-    def _append_import_failure(self, record: dict[str, Any], message: str) -> dict[str, Any]:
-        return self.store.append_import({**record, "status": FAILED_STATUS, "message": message})
-
-    def _import_target_path(self, data_type: str, import_id: str, source_name: str) -> Path:
-        return self.settings.imports_root / data_type / f"{import_id}-{source_name}"
 
     def _resolve_config_path(self, config_path: str | None) -> Path:
         resolved = (
@@ -352,14 +647,28 @@ class RuntimeJobService:
             "job_id": job_id,
             "created_at": timestamp,
             "updated_at": timestamp,
-            "mode": payload.mode,
             "model_name": payload.model_name,
             "station_code": payload.station_code,
+            # The case this run answers for. Projected as a column so the task
+            # centre and the case view can find each other's records.
+            "case_id": payload.case_id,
+            "priority": payload.priority,
             "config_path": str(config_path),
             "config_snapshot_path": str(config_snapshot_path),
             "start_date": payload.start_date,
             "end_date": payload.end_date,
             "use_existing_artifacts": payload.use_existing_artifacts,
+            # What the caller asked for. The pipeline writes what it actually
+            # applied to metrics/run_scope.json, which `refresh_job` reads back
+            # as `effective_parameters` — the two are reported separately so a
+            # silently-clipped date range is visible rather than assumed.
+            "requested_parameters": {
+                "model_name": payload.model_name,
+                "models": models_for_request(payload.model_name),
+                "station_code": payload.station_code,
+                "start_date": payload.start_date,
+                "end_date": payload.end_date,
+            },
             "runtime_root": str(self.settings.runtime_root),
             "run_root": str(paths.run_root),
             "artifact_root": str(paths.output_root),
@@ -534,11 +843,15 @@ class RuntimeJobService:
         run_root: Path,
         output_root: Path,
         config_path: Path,
+        payload: PredictionJobCreateRequest | None = None,
     ) -> Path:
         resolved = copy.deepcopy(self._load_config_mapping(config_path))
         resolved["output_dir"] = str(output_root)
         resolved["hydrodynamics"] = self._resolved_hydrodynamics_config(resolved, output_root)
         resolved["ndti"] = self._resolved_ndti_config(resolved, output_root)
+        if payload is not None:
+            resolved["run_scope"] = self._resolved_run_scope(resolved, payload)
+            resolved["models"] = self._resolved_model_selection(resolved, payload)
 
         snapshot_path = run_root / "configs" / f"{config_path.stem}-job.yaml"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -582,6 +895,42 @@ class RuntimeJobService:
         ndti = dict(config.get("ndti", {}))
         ndti["output_dir"] = str(output_root / NDTI_OUTPUT_DIR_NAME)
         return ndti
+
+    def _resolved_run_scope(
+        self,
+        config: dict[str, Any],
+        payload: PredictionJobCreateRequest,
+    ) -> dict[str, Any]:
+        """Write the requested station and date range into the config snapshot.
+
+        Review item 1: these were collected by the UI, stored on the job record
+        and then never reached the pipeline. The snapshot is the only thing the
+        runner hands to ``run_full_pipeline.py``, so the parameters have to live
+        here to take effect.
+        """
+        run_scope = dict(config.get("run_scope") or {})
+        run_scope["station_code"] = payload.station_code or run_scope.get("station_code")
+        run_scope["start_date"] = payload.start_date or None
+        run_scope["end_date"] = payload.end_date or None
+        return run_scope
+
+    def _resolved_model_selection(
+        self,
+        config: dict[str, Any],
+        payload: PredictionJobCreateRequest,
+    ) -> dict[str, Any]:
+        """Narrow ``models.enabled`` to the requested model plus its dependencies.
+
+        The requested model is kept first so it is the one the job reports on;
+        :data:`REQUIRED_MODEL_KEYS` models are appended because the threshold,
+        sensitivity and agent-context artifacts are derived from them.
+        """
+        models = dict(config.get("models") or {})
+        requested = str(payload.model_name or "").strip()
+        if not requested:
+            return models
+        models["enabled"] = models_for_request(requested)
+        return models
 
     def _write_status_file(self, path: Path, payload: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -689,7 +1038,31 @@ class RuntimeJobService:
                 "return_code": updates.get("return_code", -1) if updates.get("return_code", -1) != 0 else -1,
                 "message": ARTIFACT_VALIDATION_FAILURE_MESSAGE,
             }
-        return {**updates, "artifacts": manifest}
+        completed = {**updates, "artifacts": manifest}
+        effective = self._effective_parameters(record)
+        if effective is not None:
+            completed["effective_parameters"] = effective
+        return completed
+
+    def _effective_parameters(self, record: dict[str, Any]) -> dict[str, Any] | None:
+        """What the pipeline actually ran, as it reported it.
+
+        ``run_scope.json`` is written by the pipeline after clipping the dataset,
+        so its dates are the real ones — a request for 2020-01-01 against data
+        starting 2020-11-02 shows up here as the later date instead of being
+        silently assumed to have been honoured.
+        """
+        artifact_root = record.get("artifact_root")
+        if not artifact_root:
+            return None
+        scope_path = Path(str(artifact_root)) / "metrics" / RUN_SCOPE_FILENAME
+        if not scope_path.exists():
+            return None
+        try:
+            payload = json.loads(scope_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, JSONDecodeError):
+            return None
+        return payload if isinstance(payload, dict) else None
 
     def _verified_artifact_manifest(self, record: dict[str, Any]) -> dict[str, str] | None:
         artifact_root = record.get("artifact_root")
@@ -753,20 +1126,6 @@ class RuntimeJobService:
         except OSError as exc:
             return [f"Log preview unavailable: {exc}"]
         return lines[-line_count:]
-
-    def _detect_rows(self, path: Path) -> int | None:
-        suffix = path.suffix.lower()
-        try:
-            if suffix == ".csv":
-                return int(len(pd.read_csv(path)))
-            if suffix in {".xls", ".xlsx"}:
-                return int(len(pd.read_excel(path)))
-            if suffix == ".json":
-                payload = json.loads(path.read_text(encoding="utf-8"))
-                return len(payload) if isinstance(payload, list) else 1
-        except Exception:
-            return None
-        return None
 
     def _pid_exists(self, pid: int) -> bool:
         if pid <= 0:

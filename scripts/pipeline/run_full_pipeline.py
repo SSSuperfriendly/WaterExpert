@@ -4,6 +4,7 @@ import argparse
 import copy
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +64,236 @@ def to_repo_relative(path_value: str | Path) -> str:
         return str(path.resolve().relative_to(PROJECT_ROOT)).replace("/", "\\")
     except Exception:
         return str(path)
+
+
+class RunScopeError(ValueError):
+    """The requested run scope cannot be satisfied by the configured data.
+
+    Raised before training starts so an impossible request fails in seconds
+    instead of after a full training run.
+    """
+
+
+@dataclass(frozen=True)
+class ModelSpec:
+    """How one trainable model differs from the others.
+
+    The three models share every hyper-parameter except these three fields, so
+    the pipeline builds, trains and evaluates them from this table rather than
+    from three copies of the same call. Adding a model means adding a row here;
+    selecting a subset means listing names under ``models.enabled`` in the config.
+    """
+
+    key: str
+    builder: Any
+    use_kg_adjacency: bool
+    include_physics: bool
+    risk_weight_key: str
+
+
+MODEL_SPECS: dict[str, ModelSpec] = {
+    "mscim": ModelSpec(
+        key="mscim",
+        builder=MSCIMPrototype,
+        use_kg_adjacency=True,
+        include_physics=False,
+        risk_weight_key="risk_weight_mscim",
+    ),
+    "mscim_no_kg": ModelSpec(
+        key="mscim_no_kg",
+        builder=MSCIMPrototype,
+        # The ablation: an identity adjacency, i.e. the same architecture with the
+        # knowledge-graph priors switched off.
+        use_kg_adjacency=False,
+        include_physics=False,
+        risk_weight_key="risk_weight_mscim_no_kg",
+    ),
+    "cmfbe_stgcn": ModelSpec(
+        key="cmfbe_stgcn",
+        builder=CMFBE_STGCNPrototype,
+        use_kg_adjacency=True,
+        include_physics=True,
+        risk_weight_key="risk_weight_cmfbe",
+    ),
+}
+
+#: Model whose saliency drives the turbidity diagnosis artifacts.
+DIAGNOSIS_MODEL_KEY = "mscim"
+#: Model that carries the physics coefficients exported to ``physics/``.
+PHYSICS_MODEL_KEY = "cmfbe_stgcn"
+
+DEFAULT_ENABLED_MODELS = ("mscim", "mscim_no_kg", "cmfbe_stgcn")
+DEFAULT_ENABLED_BASELINES = ("ridge_window_baseline", "persistence_baseline")
+
+#: Every downstream artifact step — threshold analysis, Sobol sensitivity,
+#: counterfactuals, the agent context export — filters predictions to
+#: ``model == "cmfbe_stgcn"`` and reads its physics coefficients. Dropping it
+#: would produce a run that only fails at the artifact-validation step, so the
+#: dependency is refused up front instead.
+REQUIRED_MODEL_KEYS = ("cmfbe_stgcn",)
+
+#: A run needs enough rows to build history/horizon windows and a three-way split.
+MIN_SCOPED_ROWS = 30
+
+
+def _resolve_selection(
+    requested: Any, *, available: dict[str, Any] | tuple[str, ...], default: tuple[str, ...], label: str
+) -> list[str]:
+    """Validate a config-supplied name list against what the pipeline can run.
+
+    An unknown name is an error rather than a silent skip: the whole point of
+    review item 1 is that a requested parameter must either take effect or be
+    refused, never be quietly ignored.
+    """
+    if requested is None:
+        requested = list(default)
+    if isinstance(requested, str):
+        requested = [requested]
+    if not isinstance(requested, (list, tuple)):
+        raise RunScopeError(f"'{label}' must be a list of names, got {type(requested).__name__}.")
+
+    known = set(available)
+    selected: list[str] = []
+    for raw in requested:
+        name = str(raw).strip()
+        if not name:
+            continue
+        if name not in known:
+            raise RunScopeError(
+                f"Unknown {label} '{name}'. Available: {sorted(known)}."
+            )
+        if name not in selected:
+            selected.append(name)
+    if not selected:
+        raise RunScopeError(f"'{label}' selected nothing; at least one entry is required.")
+    return selected
+
+
+def resolve_enabled_models(config: dict[str, Any]) -> list[str]:
+    selected = _resolve_selection(
+        config.get("models", {}).get("enabled"),
+        available=MODEL_SPECS,
+        default=DEFAULT_ENABLED_MODELS,
+        label="models.enabled",
+    )
+    missing = [key for key in REQUIRED_MODEL_KEYS if key not in selected]
+    if missing:
+        raise RunScopeError(
+            f"models.enabled must include {missing}: the threshold, sensitivity, "
+            "counterfactual and agent-context artifacts are all derived from those "
+            "models' predictions and physics coefficients."
+        )
+    return selected
+
+
+def resolve_enabled_baselines(config: dict[str, Any]) -> list[str]:
+    return _resolve_selection(
+        config.get("models", {}).get("baselines"),
+        available=DEFAULT_ENABLED_BASELINES,
+        default=DEFAULT_ENABLED_BASELINES,
+        label="models.baselines",
+    )
+
+
+def resolve_water_pattern(config: dict[str, Any]) -> str:
+    """Resolve the water-quality filename for the requested station.
+
+    Two forms are supported: a pattern containing ``{station_code}``, or a fixed
+    filename. For a fixed filename the station code must still appear in it —
+    otherwise a request for station 4001 would silently train on station 2586's
+    file, which is precisely the "parameters don't take effect" defect.
+    """
+    pattern = str(config["water_pattern"])
+    station_code = config.get("run_scope", {}).get("station_code")
+    if station_code in (None, ""):
+        return pattern
+
+    station_code = str(station_code)
+    if "{station_code}" in pattern:
+        return pattern.format(station_code=station_code)
+    if station_code not in pattern:
+        raise RunScopeError(
+            f"run_scope.station_code '{station_code}' does not match water_pattern "
+            f"'{pattern}'. Use a '{{station_code}}' placeholder or a matching filename."
+        )
+    return pattern
+
+
+def apply_run_scope(
+    dataset_df: pd.DataFrame, dataset_summary: dict[str, Any], config: dict[str, Any]
+) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any]]:
+    """Clip the merged dataset to ``run_scope.start_date`` / ``end_date``.
+
+    Returns the clipped frame, a summary refreshed to describe *that* frame, and
+    a scope report. ``clearness_transform`` is recomputed rather than carried
+    over: it normalises the model's clearness target, so leaving it derived from
+    rows the run excludes would train the model against the wrong range.
+    """
+    run_scope = config.get("run_scope") or {}
+    start_raw = run_scope.get("start_date")
+    end_raw = run_scope.get("end_date")
+
+    report: dict[str, Any] = {
+        "station_code": run_scope.get("station_code"),
+        "requested_start_date": None if start_raw in (None, "") else str(start_raw),
+        "requested_end_date": None if end_raw in (None, "") else str(end_raw),
+        "rows_before_scope": int(len(dataset_df)),
+        "available_start_date": dataset_summary["date_range"]["start"],
+        "available_end_date": dataset_summary["date_range"]["end"],
+    }
+
+    if start_raw in (None, "") and end_raw in (None, ""):
+        report.update(
+            {
+                "applied": False,
+                "rows_after_scope": int(len(dataset_df)),
+                "effective_start_date": report["available_start_date"],
+                "effective_end_date": report["available_end_date"],
+            }
+        )
+        return dataset_df, dataset_summary, report
+
+    scoped = dataset_df
+    for raw, comparison in ((start_raw, "start"), (end_raw, "end")):
+        if raw in (None, ""):
+            continue
+        try:
+            bound = pd.Timestamp(str(raw))
+        except (ValueError, TypeError) as exc:
+            raise RunScopeError(f"run_scope.{comparison}_date '{raw}' is not a date.") from exc
+        scoped = scoped[scoped["date"] >= bound] if comparison == "start" else scoped[scoped["date"] <= bound]
+
+    scoped = scoped.reset_index(drop=True)
+    if len(scoped) < MIN_SCOPED_ROWS:
+        raise RunScopeError(
+            f"run_scope keeps only {len(scoped)} rows between "
+            f"{report['requested_start_date']} and {report['requested_end_date']}; "
+            f"at least {MIN_SCOPED_ROWS} are needed. Available data covers "
+            f"{report['available_start_date']} to {report['available_end_date']}."
+        )
+
+    log_turbidity = np.log1p(scoped["turbidity"].clip(lower=0.0))
+    scoped_summary = {
+        **dataset_summary,
+        "rows_after_merge": int(len(scoped)),
+        "date_range": {
+            "start": str(scoped["date"].min().date()),
+            "end": str(scoped["date"].max().date()),
+        },
+        "clearness_transform": {
+            "log_turbidity_min": float(log_turbidity.min()),
+            "log_turbidity_max": float(log_turbidity.max()),
+        },
+    }
+    report.update(
+        {
+            "applied": True,
+            "rows_after_scope": int(len(scoped)),
+            "effective_start_date": scoped_summary["date_range"]["start"],
+            "effective_end_date": scoped_summary["date_range"]["end"],
+        }
+    )
+    return scoped, scoped_summary, report
 
 
 def choose_device(config_device: str) -> torch.device:
@@ -869,9 +1100,21 @@ def export_agent_threshold_knowledge(
     return knowledge_graph
 
 
+BASELINE_BUILDERS = {
+    "ridge_window_baseline": build_ridge_baseline,
+    "persistence_baseline": build_persistence_baseline,
+}
+
+
 def main() -> None:
     args = parse_args()
     config = load_yaml(args.config)
+
+    # Resolve the requested scope before any expensive work: an unknown model
+    # name or a station/pattern mismatch should fail in milliseconds.
+    enabled_models = resolve_enabled_models(config)
+    enabled_baselines = resolve_enabled_baselines(config)
+    water_pattern = resolve_water_pattern(config)
 
     set_seed(int(config["random_seed"]))
     device = choose_device(config.get("device", "auto"))
@@ -894,7 +1137,7 @@ def main() -> None:
 
     dataset_df, dataset_summary = build_multimodal_dataset(
         data_root=resolve_repo_path(config["data_root"]),
-        water_pattern=config["water_pattern"],
+        water_pattern=water_pattern,
         weather_filename=config["weather_filename"],
         output_dir=output_dir,
         hydrodynamics_enabled=bool(hydrodynamics_config.get("enabled", False)),
@@ -906,6 +1149,17 @@ def main() -> None:
         ndti_output_dir=resolve_repo_path(ndti_config.get("output_dir")),
         boundary_config=boundary_config,
     )
+    dataset_df, dataset_summary, scope_report = apply_run_scope(
+        dataset_df, dataset_summary, config
+    )
+    run_scope_manifest = {
+        **scope_report,
+        "models": enabled_models,
+        "baselines": enabled_baselines,
+        "water_pattern": water_pattern,
+    }
+    save_json(run_scope_manifest, output_dir / "metrics" / "run_scope.json")
+
     prepared = prepare_dataloaders(
         df=dataset_df,
         feature_columns=dataset_summary["feature_columns"],
@@ -946,9 +1200,12 @@ def main() -> None:
         "adjacency": np.eye(len(prepared.feature_columns), dtype=np.float32),
     }
 
-    mscim_model = MSCIMPrototype(**model_kwargs).to(device)
-    mscim_no_kg_model = MSCIMPrototype(**no_kg_kwargs).to(device)
-    cmfbe_model = CMFBE_STGCNPrototype(**model_kwargs).to(device)
+    models = {
+        name: MODEL_SPECS[name]
+        .builder(**(model_kwargs if MODEL_SPECS[name].use_kg_adjacency else no_kg_kwargs))
+        .to(device)
+        for name in enabled_models
+    }
 
     clearness_weight = float(config["loss"]["clearness_weight"])
     physics_weight = float(config["loss"]["physics_weight"])
@@ -956,73 +1213,32 @@ def main() -> None:
     mechanism_weight = float(config["loss"].get("mechanism_weight", 0.18))
     risk_weight_default = float(config["loss"].get("risk_weight", 0.0))
     boundary_weight = float(config["loss"].get("boundary_weight", 0.0))
-    risk_weight_mscim = float(config["loss"].get("risk_weight_mscim", risk_weight_default))
-    risk_weight_mscim_no_kg = float(
-        config["loss"].get("risk_weight_mscim_no_kg", risk_weight_default)
-    )
-    risk_weight_cmfbe = float(config["loss"].get("risk_weight_cmfbe", risk_weight_default))
     epochs = int(config["epochs"])
     learning_rate = float(config["learning_rate"])
     weight_decay = float(config["weight_decay"])
 
-    mscim_model, mscim_history = train_model(
-        model=mscim_model,
-        prepared=prepared,
-        device=device,
-        epochs=epochs,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-        clearness_weight=clearness_weight,
-        physics_weight=physics_weight,
-        change_weight=change_weight,
-        mechanism_weight=mechanism_weight,
-        risk_weight=risk_weight_mscim,
-        boundary_weight=boundary_weight,
-        include_physics=False,
-    )
-    mscim_no_kg_model, mscim_no_kg_history = train_model(
-        model=mscim_no_kg_model,
-        prepared=prepared,
-        device=device,
-        epochs=epochs,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-        clearness_weight=clearness_weight,
-        physics_weight=physics_weight,
-        change_weight=change_weight,
-        mechanism_weight=mechanism_weight,
-        risk_weight=risk_weight_mscim_no_kg,
-        boundary_weight=boundary_weight,
-        include_physics=False,
-    )
-    cmfbe_model, cmfbe_history = train_model(
-        model=cmfbe_model,
-        prepared=prepared,
-        device=device,
-        epochs=epochs,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-        clearness_weight=clearness_weight,
-        physics_weight=physics_weight,
-        change_weight=change_weight,
-        mechanism_weight=mechanism_weight,
-        risk_weight=risk_weight_cmfbe,
-        boundary_weight=boundary_weight,
-        include_physics=True,
-    )
+    history_by_model = {}
+    for name, model in models.items():
+        spec = MODEL_SPECS[name]
+        models[name], history_by_model[name] = train_model(
+            model=model,
+            prepared=prepared,
+            device=device,
+            epochs=epochs,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+            clearness_weight=clearness_weight,
+            physics_weight=physics_weight,
+            change_weight=change_weight,
+            mechanism_weight=mechanism_weight,
+            risk_weight=float(config["loss"].get(spec.risk_weight_key, risk_weight_default)),
+            boundary_weight=boundary_weight,
+            include_physics=spec.include_physics,
+        )
 
-    history_by_model = {
-        "mscim": mscim_history,
-        "mscim_no_kg": mscim_no_kg_history,
-        "cmfbe_stgcn": cmfbe_history,
-    }
     save_training_history(history_by_model, output_dir)
     save_model_checkpoints(
-        models={
-            "mscim": mscim_model,
-            "mscim_no_kg": mscim_no_kg_model,
-            "cmfbe_stgcn": cmfbe_model,
-        },
+        models=models,
         prepared=prepared,
         output_dir=output_dir,
         config=config,
@@ -1039,11 +1255,9 @@ def main() -> None:
         }
     }
 
-    for model_name, model in [
-        ("mscim", mscim_model),
-        ("mscim_no_kg", mscim_no_kg_model),
-        ("cmfbe_stgcn", cmfbe_model),
-    ]:
+    metrics["data"]["run_scope"] = run_scope_manifest
+
+    for model_name, model in models.items():
         model_predictions = []
         saliency_parts = []
         for split_name, loader in [
@@ -1068,11 +1282,10 @@ def main() -> None:
         )
         metrics[model_name] = evaluate_model(prediction_df)
 
-    ridge_predictions = build_ridge_baseline(prepared)
-    persistence_predictions = build_persistence_baseline(prepared)
-    all_predictions.extend([ridge_predictions, persistence_predictions])
-    metrics["ridge_window_baseline"] = evaluate_model(ridge_predictions)
-    metrics["persistence_baseline"] = evaluate_model(persistence_predictions)
+    for baseline_name in enabled_baselines:
+        baseline_predictions = BASELINE_BUILDERS[baseline_name](prepared)
+        all_predictions.append(baseline_predictions)
+        metrics[baseline_name] = evaluate_model(baseline_predictions)
 
     all_predictions_df = pd.concat(all_predictions, ignore_index=True)
     all_predictions_df.to_csv(
@@ -1086,27 +1299,32 @@ def main() -> None:
         saliency_by_model=saliency_by_model,
         output_path=output_dir / "interpretability" / "feature_importance.csv",
     )
-    diagnosis_outputs = diagnose_mscim_turbidity(
-        model=mscim_model,
-        loader=prepared.test_loader,
-        feature_columns=prepared.feature_columns,
-        feature_to_domains=graph_summary["feature_to_domains"],
-        device=device,
-        output_dir=output_dir,
-        top_k=3,
-    )
+    # The turbidity diagnosis and the physics export each read one specific
+    # model, so they are produced only when that model is part of the run.
+    diagnosis_outputs: dict[str, Any] = {}
+    if DIAGNOSIS_MODEL_KEY in models:
+        diagnosis_outputs = diagnose_mscim_turbidity(
+            model=models[DIAGNOSIS_MODEL_KEY],
+            loader=prepared.test_loader,
+            feature_columns=prepared.feature_columns,
+            feature_to_domains=graph_summary["feature_to_domains"],
+            device=device,
+            output_dir=output_dir,
+            top_k=3,
+        )
 
     model_comparison = save_model_comparison(metrics, output_dir)
     knowledge_summary = build_knowledge_enhancement_summary(metrics)
     save_json(knowledge_summary, output_dir / "metrics" / "knowledge_enhancement_summary.json")
 
-    physics_coefficients = cmfbe_model.get_physics_coefficients()
-    save_json(physics_coefficients, output_dir / "physics" / "physics_coefficients.json")
-    export_physics_note(
-        output_dir / "physics" / "physics_equations.md",
-        coefficients=physics_coefficients,
-        data_summary=dataset_summary,
-    )
+    if PHYSICS_MODEL_KEY in models:
+        physics_coefficients = models[PHYSICS_MODEL_KEY].get_physics_coefficients()
+        save_json(physics_coefficients, output_dir / "physics" / "physics_coefficients.json")
+        export_physics_note(
+            output_dir / "physics" / "physics_equations.md",
+            coefficients=physics_coefficients,
+            data_summary=dataset_summary,
+        )
 
     save_json(metrics, output_dir / "metrics" / "metrics.json")
     save_prediction_plots(all_predictions_df, output_dir)

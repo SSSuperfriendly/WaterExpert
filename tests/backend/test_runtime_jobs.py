@@ -51,7 +51,6 @@ class RuntimeJobsTest(unittest.TestCase):
 
             record = service.create_prediction_job(
                 PredictionJobCreateRequest(
-                    mode="inference",
                     model_name="cmfbe_stgcn",
                     station_code="2586",
                     use_existing_artifacts=True,
@@ -254,7 +253,6 @@ class RuntimeJobsTest(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     service.create_prediction_job(
                         PredictionJobCreateRequest(
-                            mode="full_pipeline",
                             model_name="cmfbe_stgcn",
                             station_code="2586",
                             use_existing_artifacts=False,

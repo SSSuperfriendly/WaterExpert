@@ -4,7 +4,8 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { translateFactor } from "@/lib/domain";
+import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
+import { translateFactor, translateColumn } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState, EmptyState } from "@/components/waterexpert/ui-states";
@@ -13,7 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SensitivityPage() {
   const { t } = useT();
-  const { data, loading, error, reload } = useApi(() => endpoints.sensitivity());
+  const scope = useArtifactScope();
+  const { data, loading, error, reload } = useApi(() => endpoints.sensitivity(scope), [scope]);
 
   const sobol = data?.sobol ?? {};
   const topFactors = (sobol.top_factors ?? []) as Record<string, unknown>[];
@@ -50,7 +52,7 @@ export default function SensitivityPage() {
     const keys = Object.keys(sample).slice(0, 8);
     return keys.map((k) => ({
       key: k,
-      header: k,
+      header: translateColumn(t, k),
       render: (row: Record<string, unknown>) => {
         const v = row[k];
         return typeof v === "number" ? formatNumber(v, 3) : String(v ?? "—");
@@ -64,7 +66,7 @@ export default function SensitivityPage() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <Card>
@@ -108,9 +110,18 @@ export default function SensitivityPage() {
                 <ul className="space-y-2">
                   {joint.slice(0, 10).map((row, i) => (
                     <li key={i} className="rounded-md border px-3 py-2 text-sm">
-                      <span className="text-muted-foreground font-mono text-xs">
-                        {JSON.stringify(row)}
-                      </span>
+                      <p className="font-medium">
+                        {String(row.factor_labels ?? row.factors ?? row.bundle_name ?? "—")}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {translateColumn(t, "interventions")}: {String(row.interventions ?? "—")}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {translateColumn(t, "mean_turbidity_delta")}:{" "}
+                        {formatNumber(row.mean_turbidity_delta, 3)} ·{" "}
+                        {translateColumn(t, "synergy_vs_additive")}:{" "}
+                        {formatNumber(row.synergy_vs_additive, 3)}
+                      </p>
                     </li>
                   ))}
                 </ul>

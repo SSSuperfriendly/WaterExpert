@@ -78,7 +78,7 @@ export function VisualizationPanel() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

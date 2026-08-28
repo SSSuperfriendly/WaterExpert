@@ -3,6 +3,8 @@
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
+import { translateRiskMetric } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { ThresholdBrowser } from "@/components/waterexpert/threshold-browser";
@@ -10,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function ThresholdsPanel() {
   const { t } = useT();
-  const { data, loading, error, reload } = useApi(() => endpoints.thresholds({}));
+  const scope = useArtifactScope();
+  const { data, loading, error, reload } = useApi(() => endpoints.thresholds(scope), [scope]);
 
   const risk = data?.risk_snapshot ?? {};
 
@@ -19,7 +22,7 @@ export function ThresholdsPanel() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           {Object.keys(risk).length > 0 && (
@@ -30,7 +33,7 @@ export function ThresholdsPanel() {
               <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {Object.entries(risk).map(([key, value]) => (
                   <div key={key} className="rounded-md border px-3 py-2">
-                    <p className="text-muted-foreground truncate text-xs">{key}</p>
+                    <p className="text-muted-foreground truncate text-xs">{translateRiskMetric(t, key)}</p>
                     <p className="font-mono text-sm font-medium tabular-nums">
                       {formatNumber(value, 3)}
                     </p>

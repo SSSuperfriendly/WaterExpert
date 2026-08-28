@@ -32,8 +32,22 @@ import { Activity01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
 import type { PredictionJob } from "@/lib/api/contracts";
 
 const MODELS = ["cmfbe_stgcn", "mscim", "mscim_no_kg"] as const;
-const MODES = ["inference", "full_pipeline"] as const;
 const POLL_INTERVAL_MS = 5000;
+
+/**
+ * The date range the pipeline actually ran on.
+ *
+ * A job may ask for a window wider than the data covers; the pipeline clips it
+ * and reports what it used in `effective_parameters`. Showing that rather than
+ * the request keeps the table honest about what produced the results.
+ */
+function effectiveRange(t: ReturnType<typeof useT>["t"], job: PredictionJob) {
+  const effective = job.effective_parameters;
+  const start = effective?.effective_start_date ?? job.start_date;
+  const end = effective?.effective_end_date ?? job.end_date;
+  if (!start && !end) return t("prediction.rangeFullCoverage");
+  return `${start ?? "—"} → ${end ?? "—"}`;
+}
 
 function statusBadge(t: ReturnType<typeof useT>["t"], status: string) {
   if (status === "completed") {
@@ -64,7 +78,6 @@ export function JobRunnerPanel({
 
   // Form state
   const [model, setModel] = React.useState<string>("cmfbe_stgcn");
-  const [mode, setMode] = React.useState<string>("inference");
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [useExisting, setUseExisting] = React.useState(true);
@@ -98,7 +111,6 @@ export function JobRunnerPanel({
     setError(null);
     try {
       await endpoints.createJob({
-        mode,
         model_name: model,
         station_code: "2586",
         start_date: startDate || undefined,
@@ -133,22 +145,6 @@ export function JobRunnerPanel({
                 {MODELS.map((m) => (
                   <SelectItem key={m} value={m}>
                     {translateModel(t, m)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>{t("prediction.mode")}</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as string)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MODES.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {m === "inference" ? t("prediction.modeInference") : t("prediction.modeFullPipeline")}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -201,7 +197,7 @@ export function JobRunnerPanel({
                   <TableRow>
                     <TableHead>{t("prediction.jobId")}</TableHead>
                     <TableHead>{t("prediction.modelName")}</TableHead>
-                    <TableHead>{t("prediction.mode")}</TableHead>
+                    <TableHead>{t("prediction.effectiveRange")}</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
                     <TableHead>{t("prediction.createdAt")}</TableHead>
                     <TableHead>{t("common.actions")}</TableHead>
@@ -212,10 +208,8 @@ export function JobRunnerPanel({
                     <TableRow key={job.job_id}>
                       <TableCell className="font-mono text-xs">{job.job_id.slice(0, 12)}</TableCell>
                       <TableCell>{translateModel(t, job.model_name)}</TableCell>
-                      <TableCell>
-                        {job.mode === "inference"
-                          ? t("prediction.modeInference")
-                          : t("prediction.modeFullPipeline")}
+                      <TableCell className="text-xs">
+                        {effectiveRange(t, job)}
                       </TableCell>
                       <TableCell>{statusBadge(t, job.status)}</TableCell>
                       <TableCell className="text-xs">{formatDateTime(job.created_at)}</TableCell>

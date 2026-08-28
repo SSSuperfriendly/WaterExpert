@@ -119,7 +119,7 @@ export function KgBuildPanel() {
           {texts.loading ? (
             <LoadingState rows={3} />
           ) : texts.error ? (
-            <ErrorState message={texts.error} onRetry={texts.reload} />
+            <ErrorState error={texts.error} onRetry={texts.reload} />
           ) : txtList.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("kg.noTextToBuild")}</p>
           ) : (

@@ -4,6 +4,8 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { downloadAuthenticated } from "@/lib/api/client";
+import { translateKgSource } from "@/lib/domain";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,22 +155,13 @@ export function KgViewPanel() {
       {loading ? (
         <LoadingState rows={3} />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             <StatCard label={t("kg.nodes")} value={data.node_count ?? 0} icon={NodeMoveUpIcon} />
             <StatCard label={t("kg.edges")} value={data.edge_count ?? 0} icon={AiNetworkIcon} />
-            <StatCard
-              label={t("kg.source")}
-              value={
-                data.source === "runtime"
-                  ? t("kg.sourceRuntime")
-                  : data.source === "baseline"
-                    ? t("kg.sourceBaseline")
-                    : t("kg.sourceNone")
-              }
-            />
+            <StatCard label={t("kg.sourceLabel")} value={translateKgSource(t, data.source)} />
           </div>
 
           <Card>
@@ -196,17 +189,22 @@ export function KgViewPanel() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {downloads.map((d) => (
-                <a
+                <button
                   key={d.name}
-                  href={endpoints.knowledgeGraph.downloadUrl(d.name)}
-                  download
+                  type="button"
+                  onClick={() =>
+                    downloadAuthenticated(
+                      endpoints.knowledgeGraph.downloadUrl(d.name),
+                      d.name
+                    ).catch((err) => console.error("KG download failed:", err))
+                  }
                   className="text-muted-foreground hover:bg-muted/40 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
                 >
                   <Badge variant="outline" className="font-mono text-xs">
                     {d.name}
                   </Badge>
                   {t(d.labelKey)}
-                </a>
+                </button>
               ))}
             </CardContent>
           </Card>

@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/waterexpert/app-sidebar";
 import { AppHeader } from "@/components/waterexpert/app-header";
+import { CaseContextBar } from "@/components/waterexpert/case-context-bar";
 import { useAppStore } from "@/lib/stores/app-store";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -56,7 +57,10 @@ export function AppShell({
       <AppSidebar />
       <SidebarInset>
         <AppHeader title={title} />
-        <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
+          <CaseContextBar />
+          <div className="flex flex-col gap-6">{children}</div>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

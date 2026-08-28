@@ -1,0 +1,47 @@
+# Version control & tooling
+.git
+.gitignore
+.vscode
+.claude
+.editorconfig
+.github
+
+# Python build/runtime caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ai4s/
+.venv/
+venv/
+
+# Frontend build & dependencies (rebuilt inside the image)
+frontend/node_modules/
+frontend/out/
+frontend/.next/
+frontend/tsconfig.tsbuildinfo
+
+# Runtime state — never baked into the image, mounted as volumes at run time
+var/
+outputs/
+data/raw/
+data/inbox/
+data/imports/
+outputs_h3/
+outputs_h7/
+outputs_ndti_baseline/
+outputs_tmp/
+
+# Large / local-only media and notes
+*.zip
+*.rar
+*.7z
+*.lance
+*.mp4
+*.mov
+*.avi
+*.pptx
+*.pdf
+docs/ops/
+vendor/
+scratch/

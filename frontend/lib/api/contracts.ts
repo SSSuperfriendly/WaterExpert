@@ -103,6 +103,90 @@ export interface ScenarioDay {
   [key: string]: unknown;
 }
 
+/**
+ * The data asset centre. A dataset groups versions of the same feed; a version
+ * is one accepted-or-rejected pass through the ingestion chain.
+ *
+ * `quality_grade` is "a" | "b" | "c" | "d" and `modelable` is "1" | "0" — both
+ * are stable codes the UI localises, never display strings.
+ */
+export interface Dataset {
+  dataset_id: string;
+  title?: string;
+  data_type: string;
+  station_code?: string;
+  owner?: string;
+  status: string;
+  version_count?: number;
+  latest_accepted_version_id?: string | null;
+  coverage_start?: string | null;
+  coverage_end?: string | null;
+  quality_grade?: string;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface DatasetVersion {
+  version_id: string;
+  dataset_id: string;
+  version: string;
+  data_type?: string;
+  status: string;
+  /** The chain stage reached; on a rejection this is where it stopped. */
+  stage: string;
+  blocked_at?: string | null;
+  blocking_reasons?: string[];
+  quality_grade?: string;
+  modelable?: string;
+  source_name?: string;
+  source_kind?: string;
+  row_count?: number;
+  modelable_rows?: number;
+  coverage_start?: string | null;
+  coverage_end?: string | null;
+  station_coverage?: string[];
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+export interface DatasetStageReport {
+  stage: string;
+  ok: boolean;
+  metrics?: Record<string, unknown>;
+  errors?: string[];
+}
+
+export interface DatasetQualityReport {
+  version_id?: string;
+  final_stage: string;
+  stages: DatasetStageReport[];
+  grade?: string;
+  missing_rate?: number;
+  duplicate_rows?: number;
+  out_of_range_count?: number;
+  modelable_rows?: number;
+  blocking_reasons?: string[];
+  unit_conversions?: { field: string; from: string; to: string; factor: number }[];
+  [key: string]: unknown;
+}
+
+export interface DatasetPreview {
+  available: boolean;
+  /** Present only when `available` is false: the stage that blocked it. */
+  reason?: string;
+  columns?: string[];
+  rows?: Record<string, unknown>[];
+}
+
+export interface DatasetFreshness {
+  dataset_count: number;
+  modelable_count: number;
+  latest_coverage_end?: string | null;
+  is_stale: boolean;
+  stale_after_days?: number;
+}
+
 export interface DatabaseSummary {
   total_records?: number;
   total_stations?: number;
@@ -171,18 +255,101 @@ export interface VisualizationPayload {
   available_indicators?: { key: string; label: string }[];
 }
 
+/** What the pipeline actually applied, as written to `metrics/run_scope.json`. */
+export interface EffectiveJobParameters {
+  models?: string[];
+  station_code?: string;
+  requested_start_date?: string | null;
+  requested_end_date?: string | null;
+  effective_start_date?: string;
+  effective_end_date?: string;
+  rows_before_scope?: number;
+  rows_after_scope?: number;
+  applied?: boolean;
+}
+
 export interface PredictionJob {
   job_id: string;
-  mode: string;
   model_name: string;
   station_code?: string;
   start_date?: string;
   end_date?: string;
   status: string;
   progress?: number;
+  priority?: number;
+  stage?: string;
+  elapsed_seconds?: number;
+  estimated_remaining_seconds?: number;
+  failure_category?: string;
   created_at?: string;
+  queued_at?: string;
+  started_at?: string;
+  finished_at?: string;
   completed_at?: string;
+  requested_parameters?: Record<string, unknown>;
+  effective_parameters?: EffectiveJobParameters;
   [key: string]: unknown;
+}
+
+export interface JobQueueSnapshot {
+  max_concurrent_jobs: number;
+  running: number;
+  queued: number;
+  free_slots: number;
+  by_status: Record<string, number>;
+  job_timeout_seconds: number;
+}
+
+export interface JobArtifact {
+  relative_path: string;
+  size_bytes: number;
+  category: string;
+}
+
+/** The version stamp every result payload carries (review item 5). */
+export interface Provenance {
+  case_id: string | null;
+  run_id: string | null;
+  job_id: string | null;
+  generated_at: string | null;
+  model_version: string | null;
+  config_hash: string | null;
+  is_stale: boolean;
+  stale_reason: string | null;
+  scope: "case" | "job" | "integrated";
+  is_integrated_default?: boolean;
+}
+
+export interface Case {
+  case_id: string;
+  title: string;
+  description?: string;
+  owner: string;
+  status: string;
+  station_code?: string;
+  target_date?: string;
+  input_dataset_versions: string[];
+  data_quality?: Record<string, unknown>;
+  coverage_start?: string | null;
+  coverage_end?: string | null;
+  job_id?: string | null;
+  run_id?: string | null;
+  config_hash?: string | null;
+  model_version?: string | null;
+  report_ids: string[];
+  artifacts_generated_at?: string | null;
+  is_stale?: boolean;
+  stale_reason?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface CaseSummary {
+  total: number;
+  by_status: Record<string, number>;
+  stale_count: number;
+  pending_count: number;
 }
 
 export interface PredictionSeriesRow {
@@ -402,4 +569,93 @@ export interface KgBuildJob {
   message?: string;
   error?: string;
   [key: string]: unknown;
+}
+
+/** A model-registry entry (review item 11). */
+export interface ModelVersion {
+  model_version_id: string;
+  model_key: string;
+  version: string;
+  stage: string;
+  station_code?: string | null;
+  training_dataset_version_id?: string | null;
+  config_hash?: string | null;
+  metrics?: Record<string, unknown>;
+  author?: string | null;
+  notes?: string | null;
+  published_at?: string | null;
+  published_by?: string | null;
+  retired_at?: string | null;
+  retired_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface ModelSummary {
+  total: number;
+  by_stage: Record<string, number>;
+  published: number;
+  current_by_key: Record<string, string>;
+}
+
+/** A report as a governed business object (review item 21). */
+export interface ReportRecord {
+  report_id: string;
+  title: string;
+  status: string;
+  author?: string | null;
+  reviewer?: string | null;
+  project_name?: string | null;
+  case_id?: string | null;
+  format?: string;
+  version?: number;
+  file_path?: string | null;
+  filename?: string | null;
+  download_url?: string | null;
+  time_range_start?: string | null;
+  time_range_end?: string | null;
+  content_selection?: string[];
+  review_comment?: string | null;
+  reviewed_at?: string | null;
+  generated_at?: string | null;
+  archived_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface ReportSummary {
+  total: number;
+  by_status: Record<string, number>;
+  pending_review: number;
+}
+
+/** An alert/event with a closed-loop state machine (review item 27). */
+export interface EventRecord {
+  event_id: string;
+  title: string;
+  description: string;
+  status: string;
+  severity: string;
+  source?: string;
+  case_id?: string | null;
+  target_date?: string | null;
+  assignee?: string | null;
+  creator?: string | null;
+  escalated?: boolean;
+  post_mortem?: string | null;
+  history?: { status: string; at?: string; by?: string | null; note?: string | null }[];
+  acknowledged_at?: string | null;
+  closed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface EventSummary {
+  total: number;
+  open: number;
+  by_status: Record<string, number>;
+  by_severity: Record<string, number>;
 }

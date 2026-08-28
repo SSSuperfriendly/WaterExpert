@@ -3,6 +3,7 @@
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { translateKgSource } from "@/lib/domain";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -20,19 +21,12 @@ export function KgOverviewPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.knowledgeGraph.summary());
 
-  const sourceKey =
-    data?.source === "runtime"
-      ? "kg.sourceRuntime"
-      : data?.source === "baseline"
-        ? "kg.sourceBaseline"
-        : "kg.sourceNone";
-
   return (
     <div className="flex flex-col gap-6">
       {loading ? (
         <LoadingState rows={3} />
       ) : error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -44,7 +38,7 @@ export function KgOverviewPanel() {
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">
-              {t("kg.source")}: {t(sourceKey)}
+              {t("kg.sourceLabel")}: {translateKgSource(t, data.source)}
             </Badge>
             <Badge variant="outline">
               <HugeiconsIcon
