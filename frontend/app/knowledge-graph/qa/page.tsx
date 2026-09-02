@@ -244,20 +244,9 @@ export default function WaterExpertAgentPage() {
             <CardTitle className="flex items-center gap-2">
               <HugeiconsIcon icon={AiNetworkIcon} className="text-muted-foreground size-4" />
               {t("agent.title")}
-              <Badge variant="secondary" className="text-xs">
-                {t("agent.deployedBadge")}
-              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-muted-foreground text-xs">{t("agent.subtitle")}</p>
-            {healthData?.service_url && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-xs">{t("agent.baseUrlLabel")}:</span>
-                <code className="text-xs">{healthData.service_url}</code>
-              </div>
-            )}
-
             <p className="text-sm font-medium">{t("agent.healthTitle")}</p>
             {healthError ? (
               <p className="text-destructive text-xs">{t("agent.healthFetchError")}</p>
@@ -509,9 +498,6 @@ export default function WaterExpertAgentPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 {t("agent.explainTitle")}
-                <Badge variant="secondary" className="text-xs">
-                  {t("agent.deployedBadge")}
-                </Badge>
               </CardTitle>
               <CardTitle className="text-muted-foreground text-xs font-normal">
                 {t("agent.explainSubtitle")}

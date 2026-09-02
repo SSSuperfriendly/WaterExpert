@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+#: Logger for the external-agent bridge. Uvicorn prints ``__main__``-level
+#: records to its console by default, so agent failures show up in the server
+#: log with the exact URL and cause instead of only as a client-side 502.
+logger = logging.getLogger("waterexpert.agent")
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -1716,19 +1722,25 @@ async def _agent_call(operation):
     try:
         return await operation()
     except AgentUnavailable as exc:
+        hint = ""
+        if "trycloudflare.com" in external_agent.base_url:
+            # Quick-tunnel hostnames are ephemeral: restarting cloudflared mints a
+            # new one and the old URL stops routing. Make that obvious in the log
+            # so "unreachable" reports are resolvable instead of mysterious.
+            hint = (
+                " The configured URL is a Cloudflare quick-tunnel; if the tunnel "
+                "owner restarted cloudflared the hostname may have rotated — confirm "
+                "it responds (curl the /api/health URL) and point "
+                "WATEREXPERT_AGENT_API_URL at the current one if not."
+            )
+        logger.error("External agent call failed (url=%s): %s%s", external_agent.base_url, exc, hint)
         raise error_response(ErrorCode.AGENT_UNAVAILABLE, str(exc), 502) from exc
 
 
 @app.get("/api/v1/agent/health")
 async def agent_health() -> dict:
-    """Readiness of every deployed model agent (MSCIM, CMFBE, RL-TGRR, ...).
-
-    Also reports the ``service_url`` the backend is configured to call
-    (``WATEREXPERT_AGENT_API_URL``), so the page never drifts from config.
-    """
-    payload = await _agent_call(external_agent.health)
-    payload["service_url"] = external_agent.base_url
-    return payload
+    """Readiness of every deployed model agent (MSCIM, CMFBE, RL-TGRR, ...)."""
+    return await _agent_call(external_agent.health)
 
 
 @app.get("/api/v1/agent/scenarios")

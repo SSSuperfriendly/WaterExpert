@@ -560,8 +560,6 @@ export interface AgentHealth {
   status?: string;
   timestamp?: string;
   agents?: Record<string, string>;
-  /** The base URL the backend actually proxies to (from backend config). */
-  service_url?: string;
   [key: string]: unknown;
 }
 
