@@ -158,15 +158,21 @@ class KnowledgeGraphQARequest(BaseModel):
 
 
 class AgentStateRequest(BaseModel):
-    """Current water-quality state handed to the deployed strategy model."""
+    """Current water-quality state handed to the deployed strategy model.
+
+    Bounds mirror the deployed ``WaterQualityState`` from the live ``/openapi.json``
+    (verified 2026-09 against the Cloudflare-tunnelled deployment); tightening a
+    field here lets a bad input fail fast at our API instead of as an opaque 502
+    from upstream.
+    """
 
     date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    turbidity: float = Field(ge=0)
-    flow_rate: float = Field(ge=0)
-    temperature: float | None = Field(default=None, ge=-50, le=60)
+    turbidity: float = Field(ge=0, le=500)
+    flow_rate: float = Field(ge=0, le=100)
+    temperature: float | None = Field(default=None, ge=0, le=50)
     ph: float | None = Field(default=None, ge=0, le=14)
-    dissolved_oxygen: float | None = Field(default=None, ge=0)
-    chlorophyll_a: float | None = Field(default=None, ge=0)
+    dissolved_oxygen: float | None = Field(default=None, ge=0, le=15)
+    chlorophyll_a: float | None = Field(default=None, ge=0, le=100)
     rainfall_3d: float | None = Field(default=None, ge=0)
     rainfall_7d: float | None = Field(default=None, ge=0)
 
@@ -178,6 +184,18 @@ class AgentStrategyRequest(BaseModel):
     state: AgentStateRequest
     episodes: int = Field(default=1, ge=1, le=10)
     backend: Literal["api", "local"] = "api"
+
+
+class AgentExplainRequest(BaseModel):
+    """Ask the deployed stack to explain a state under a scenario.
+
+    Drives the guide's unlisted ``POST /api/explain`` — the narrative
+    diagnosis + matched historical cases that make the lab page an answer
+    rather than just a number. ``state`` carries the same bounds as strategy.
+    """
+
+    scenario: str = Field(min_length=1, max_length=64)
+    state: AgentStateRequest
 
 
 # ---------------------------------------------------------------------------

@@ -560,6 +560,8 @@ export interface AgentHealth {
   status?: string;
   timestamp?: string;
   agents?: Record<string, string>;
+  /** The base URL the backend actually proxies to (from backend config). */
+  service_url?: string;
   [key: string]: unknown;
 }
 
@@ -622,6 +624,37 @@ export interface AgentStrategyResult {
   completed_at?: string;
   error?: string;
   [key: string]: unknown;
+}
+
+/** A matched historical case returned by the explain endpoint. */
+export interface AgentMatchedCase {
+  id?: string;
+  title?: string;
+  location?: string;
+  year?: number;
+  similarity?: number;
+  summary?: string;
+  reference?: string;
+  outcome?: {
+    turbidity_reduction_ratio?: number;
+    cost_saving_ratio?: number;
+    recovery_days?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/** Narrative diagnosis + matched cases for a state under a scenario. */
+export interface AgentExplainResult {
+  scenario?: string;
+  explanation?: string;
+  matched_cases?: AgentMatchedCase[];
+  [key: string]: unknown;
+}
+
+export interface AgentExplainRequest {
+  scenario: string;
+  state: AgentStrategyState;
 }
 
 export interface KgBuildJob {

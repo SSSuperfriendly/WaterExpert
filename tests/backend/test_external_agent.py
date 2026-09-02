@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import unittest
 
 import httpx
 from pydantic import ValidationError
 
-from backend.app.schemas import AgentStrategyRequest
+from backend.app.schemas import AgentExplainRequest, AgentStrategyRequest
 from backend.app.services.external_agent import AgentUnavailable, ExternalAgentService
 
 
@@ -60,6 +61,35 @@ class ExternalAgentServiceTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["strategy"]["release_rate"], 8.5)
+
+    async def test_explain_proxies_narrative(self) -> None:
+        sent: dict = {}
+        explain_payload = {
+            "scenario": "s1_external_input",
+            "state": {"date": "2025-10-31", "turbidity": 25.5, "flow_rate": 28.5},
+        }
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            sent["url"] = str(request.url)
+            sent["method"] = request.method
+            sent["body"] = json.loads(request.content.decode())
+            return httpx.Response(
+                200,
+                json={
+                    "scenario": "s1_external_input",
+                    "explanation": "场景诊断……",
+                    "matched_cases": [{"id": "case_002", "similarity": 0.904}],
+                },
+            )
+
+        service = self._service(httpx.MockTransport(handler))
+        result = await service.explain(explain_payload)
+
+        self.assertEqual(sent["method"], "POST")
+        self.assertTrue(sent["url"].endswith("/api/explain"))
+        self.assertEqual(sent["body"], explain_payload)
+        self.assertTrue(result["explanation"])
+        self.assertEqual(result["matched_cases"][0]["similarity"], 0.904)
 
     async def test_http_error_becomes_agent_unavailable(self) -> None:
         service = self._service(_handler({"detail": "boom"}, status=500))
@@ -139,6 +169,69 @@ class AgentStrategyRequestSchemaTest(unittest.TestCase):
         }
         with self.assertRaises(ValidationError):
             AgentStrategyRequest.model_validate(payload)
+
+    #: State bounds mirror the deployed WaterQualityState (live /openapi.json):
+    #: turbidity <=500, flow_rate <=100, temperature 0-50, DO <=15, chl-a <=100.
+    #: Tight bounds fail fast at our API instead of as an opaque 502 upstream.
+    def _state(self, **overrides: float) -> dict:
+        base = {"date": "2025-10-31", "turbidity": 25.5, "flow_rate": 28.5}
+        base.update(overrides)
+        return base
+
+    def test_rejects_turbidity_above_500(self) -> None:
+        with self.assertRaises(ValidationError):
+            AgentStrategyRequest.model_validate(
+                {"scenario": "s1_external_input", "state": self._state(turbidity=501)}
+            )
+
+    def test_rejects_flow_rate_above_100(self) -> None:
+        with self.assertRaises(ValidationError):
+            AgentStrategyRequest.model_validate(
+                {"scenario": "s1_external_input", "state": self._state(flow_rate=101)}
+            )
+
+    def test_rejects_temperature_outside_0_50(self) -> None:
+        with self.assertRaises(ValidationError):
+            AgentStrategyRequest.model_validate(
+                {"scenario": "s1_external_input", "state": self._state(temperature=51)}
+            )
+
+    def test_rejects_dissolved_oxygen_above_15(self) -> None:
+        with self.assertRaises(ValidationError):
+            AgentStrategyRequest.model_validate(
+                {"scenario": "s1_external_input", "state": self._state(dissolved_oxygen=16)}
+            )
+
+    def test_accepts_boundary_values(self) -> None:
+        request = AgentStrategyRequest.model_validate(
+            {
+                "scenario": "s1_external_input",
+                "state": self._state(
+                    turbidity=500, flow_rate=100, temperature=0, dissolved_oxygen=15
+                ),
+            }
+        )
+        self.assertEqual(request.state.turbidity, 500)
+
+
+class AgentExplainRequestSchemaTest(unittest.TestCase):
+    def test_accepts_scenario_and_state(self) -> None:
+        request = AgentExplainRequest.model_validate(
+            {
+                "scenario": "s1_external_input",
+                "state": {
+                    "date": "2025-10-31",
+                    "turbidity": 25.5,
+                    "flow_rate": 28.5,
+                },
+            }
+        )
+        self.assertEqual(request.scenario, "s1_external_input")
+        self.assertEqual(request.state.turbidity, 25.5)
+
+    def test_requires_state(self) -> None:
+        with self.assertRaises(ValidationError):
+            AgentExplainRequest.model_validate({"scenario": "s1_external_input"})
 
 
 if __name__ == "__main__":

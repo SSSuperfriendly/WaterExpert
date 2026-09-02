@@ -18,6 +18,7 @@ from backend.app.db import Base, engine
 from backend.app.domain.codes import ErrorCode
 from backend.app.domain.roles import Permission
 from backend.app.schemas import (
+    AgentExplainRequest,
     AgentStateRequest,
     AgentStrategyRequest,
     CaseCreateRequest,
@@ -1703,7 +1704,9 @@ def knowledge_graph_file(name: str) -> FileResponse:
 
 
 # ---------------------------------------------------------------------------
-# Externally deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md)
+# Externally deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md).
+# The guide documents health/scenarios/strategy; ``explain`` and ``stage`` were
+# found on the deployment's live /openapi.json and added once verified.
 # ---------------------------------------------------------------------------
 
 
@@ -1718,8 +1721,14 @@ async def _agent_call(operation):
 
 @app.get("/api/v1/agent/health")
 async def agent_health() -> dict:
-    """Readiness of every deployed model agent (MSCIM, CMFBE, RL-TGRR, ...)."""
-    return await _agent_call(external_agent.health)
+    """Readiness of every deployed model agent (MSCIM, CMFBE, RL-TGRR, ...).
+
+    Also reports the ``service_url`` the backend is configured to call
+    (``WATEREXPERT_AGENT_API_URL``), so the page never drifts from config.
+    """
+    payload = await _agent_call(external_agent.health)
+    payload["service_url"] = external_agent.base_url
+    return payload
 
 
 @app.get("/api/v1/agent/scenarios")
@@ -1744,3 +1753,17 @@ async def agent_strategy_create(payload: AgentStrategyRequest) -> dict:
 async def agent_strategy_status(job_id: str) -> dict:
     """Poll a queued strategy job; completed payloads carry ``strategy``/``metrics``."""
     return await _agent_call(lambda: external_agent.strategy(job_id))
+
+
+@app.post("/api/v1/agent/explain")
+async def agent_explain(payload: AgentExplainRequest) -> dict:
+    """Ask the deployed stack to explain a state under a scenario.
+
+    Returns the narrative diagnosis + matched historical cases that make the lab
+    page an answer rather than just a strategy number (``POST /api/explain``).
+    """
+    body = {
+        "scenario": payload.scenario,
+        "state": payload.state.model_dump(exclude_none=True),
+    }
+    return await _agent_call(lambda: external_agent.explain(body))

@@ -10,6 +10,8 @@ REST contract in ``docs/internal/INTEGRATION_GUIDE.md``:
 - ``GET  /scenarios``       — supported governance scenarios
 - ``POST /strategy``        — queue a strategy-generation job (async)
 - ``GET  /strategy/{id}``   — poll a queued job
+- ``POST /explain``         — narrative diagnosis + matched cases for a state
+                              (not in the guide; found on the live ``/openapi.json``)
 
 This service is the single hop between the platform and that deployment. It is
 deliberately thin: it validates nothing about the model itself, forwards the
@@ -23,7 +25,12 @@ import httpx
 
 #: Base URL used when ``WATEREXPERT_AGENT_API_URL`` is not set. Kept here so the
 #: module has one default even outside the FastAPI settings object.
-DEFAULT_AGENT_API_URL = "http://219.228.144.101:8000/api"
+#:
+#: The collaborator's server (public IP 219.228.144.101:8000) is firewalled, so
+#: this points at a Cloudflare quick-tunnel into it. A quick-tunnel URL changes
+#: on every ``cloudflared`` restart — flip the settings/env var to a permanent
+#: address once one exists.
+DEFAULT_AGENT_API_URL = "https://lewis-put-matrix-singing.trycloudflare.com/api"
 
 
 class AgentUnavailable(Exception):
@@ -89,3 +96,7 @@ class ExternalAgentService:
     async def strategy(self, job_id: str) -> dict[str, Any]:
         """Poll a queued strategy job by id."""
         return await self._request("GET", f"/strategy/{job_id}")
+
+    async def explain(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Narrative diagnosis + matched cases for a state under a scenario."""
+        return await self._request("POST", "/explain", json=payload)

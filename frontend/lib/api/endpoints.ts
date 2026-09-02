@@ -2,6 +2,8 @@
 
 import { apiClient, apiBaseUrl } from "./client";
 import type {
+  AgentExplainRequest,
+  AgentExplainResult,
   AgentHealth,
   AgentScenario,
   AgentStrategyJob,
@@ -313,6 +315,8 @@ export const endpoints = {
       apiClient.post<AgentStrategyJob>("/api/v1/agent/strategy", payload),
     strategyJob: (jobId: string) =>
       apiClient.get<AgentStrategyResult>(`/api/v1/agent/strategy/${jobId}`),
+    explain: (payload: AgentExplainRequest) =>
+      apiClient.post<AgentExplainResult>("/api/v1/agent/explain", payload),
   },
 
   // Knowledge graph

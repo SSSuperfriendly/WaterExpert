@@ -4,7 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { endpoints } from "@/lib/api/endpoints";
 import { describeApiError } from "@/lib/domain";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatPercent } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { LoadingState } from "@/components/waterexpert/ui-states";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiNetworkIcon } from "@hugeicons/core-free-icons";
 import type {
+  AgentExplainResult,
   AgentHealth,
   AgentScenario,
   AgentStrategyResult,
@@ -79,6 +80,18 @@ export default function WaterExpertAgentPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<AgentStrategyResult | null>(null);
   const [polling, setPolling] = React.useState(false);
+  //: The state/scenario that produced the current job — the /explain ask reuses
+  //: it so the explanation always matches the strategy that was just run.
+  const [explainRequest, setExplainRequest] = React.useState<{
+    scenario: string;
+    state: AgentStrategyState;
+  } | null>(null);
+  const [explainResult, setExplainResult] = React.useState<AgentExplainResult | null>(null);
+  const [explainBusy, setExplainBusy] = React.useState(false);
+  const [explainError, setExplainError] = React.useState(false);
+  //: Marks the job whose explanation was already fetched, so repeated completed
+  //: payloads for one job id don't re-ask upstream.
+  const explainFetchedFor = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -128,6 +141,32 @@ export default function WaterExpertAgentPage() {
     [t]
   );
 
+  //: Once a job completes, ask the deployed stack to explain the same input —
+  //: the narrative diagnosis + matched cases are the page's actual "answer".
+  React.useEffect(() => {
+    if (job?.status !== "completed" || !explainRequest) return;
+    if (explainFetchedFor.current === job.job_id) return;
+    explainFetchedFor.current = job.job_id;
+    let cancelled = false;
+    setExplainBusy(true);
+    setExplainError(false);
+    setExplainResult(null);
+    (async () => {
+      try {
+        const data = await endpoints.agent.explain(explainRequest);
+        if (!cancelled) setExplainResult(data);
+      } catch {
+        // The strategy already answered; an explanation failure is not fatal.
+        if (!cancelled) setExplainError(true);
+      } finally {
+        if (!cancelled) setExplainBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [job, explainRequest]);
+
   const handleGenerate = async () => {
     if (!scenarioKey || busy) return;
     const missing = REQUIRED_FIELDS.filter((k) => !form[k]?.trim());
@@ -161,6 +200,9 @@ export default function WaterExpertAgentPage() {
     setBusy(true);
     setError(null);
     setJob(null);
+    setExplainRequest({ scenario: scenarioKey, state });
+    setExplainResult(null);
+    setExplainError(false);
     try {
       const created = await endpoints.agent.strategy({
         scenario: scenarioKey,
@@ -209,10 +251,12 @@ export default function WaterExpertAgentPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-muted-foreground text-xs">{t("agent.subtitle")}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground text-xs">{t("agent.baseUrlLabel")}:</span>
-              <code className="text-xs">http://219.228.144.101:8000/api</code>
-            </div>
+            {healthData?.service_url && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-xs">{t("agent.baseUrlLabel")}:</span>
+                <code className="text-xs">{healthData.service_url}</code>
+              </div>
+            )}
 
             <p className="text-sm font-medium">{t("agent.healthTitle")}</p>
             {healthError ? (
@@ -458,6 +502,103 @@ export default function WaterExpertAgentPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Explanation & evidence — the narrative "answer" behind the strategy. */}
+        {job?.status === "completed" && explainRequest && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {t("agent.explainTitle")}
+                <Badge variant="secondary" className="text-xs">
+                  {t("agent.deployedBadge")}
+                </Badge>
+              </CardTitle>
+              <CardTitle className="text-muted-foreground text-xs font-normal">
+                {t("agent.explainSubtitle")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {explainBusy && <LoadingState rows={3} />}
+
+              {!explainBusy && explainError && !explainResult && (
+                <p className="text-muted-foreground text-xs">{t("agent.explainError")}</p>
+              )}
+
+              {!explainBusy && explainResult?.explanation && (
+                <div className="rounded-md border p-3">
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
+                    {explainResult.explanation}
+                  </p>
+                </div>
+              )}
+
+              {!explainBusy && explainResult && (
+                <div>
+                  <p className="mb-2 text-sm font-medium">{t("agent.matchedCases")}</p>
+                  {explainResult.matched_cases &&
+                  explainResult.matched_cases.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                      {explainResult.matched_cases.map((c, i) => {
+                        const loc = [c.location, c.year].filter(Boolean).join(" · ");
+                        const outcome = c.outcome ?? {};
+                        return (
+                          <div key={c.id ?? `case-${i}`} className="space-y-2 rounded-md border p-3">
+                            <p className="flex items-start justify-between gap-2 text-sm">
+                              <span className="font-medium">{c.title ?? c.id}</span>
+                              {c.similarity !== undefined && (
+                                <Badge variant="outline" className="shrink-0 text-xs">
+                                  {t("agent.caseSimilarity")} {formatPercent(c.similarity, 0)}
+                                </Badge>
+                              )}
+                            </p>
+                            {loc && (
+                              <p className="text-muted-foreground text-xs">{loc}</p>
+                            )}
+                            {c.summary && (
+                              <p className="text-muted-foreground text-xs leading-snug">
+                                {c.summary}
+                              </p>
+                            )}
+                            {(outcome.turbidity_reduction_ratio !== undefined ||
+                              outcome.cost_saving_ratio !== undefined ||
+                              outcome.recovery_days !== undefined) && (
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {outcome.turbidity_reduction_ratio !== undefined && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {t("agent.turbidityCutRatio")}{" "}
+                                    {formatPercent(outcome.turbidity_reduction_ratio, 0)}
+                                  </Badge>
+                                )}
+                                {outcome.cost_saving_ratio !== undefined && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {t("agent.costSavingRatio")}{" "}
+                                    {formatPercent(outcome.cost_saving_ratio, 0)}
+                                  </Badge>
+                                )}
+                                {outcome.recovery_days !== undefined && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {t("agent.recoveryDays")} {formatNumber(outcome.recovery_days, 0)} d
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                            {c.reference && (
+                              <p className="text-muted-foreground border-t pt-1.5 text-[11px] italic">
+                                {t("agent.caseReference")}: {c.reference}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">{t("agent.noMatchedCases")}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppShell>
   );

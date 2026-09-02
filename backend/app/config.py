@@ -196,7 +196,12 @@ def get_settings() -> Settings:
         notification_webhook_url=os.environ.get("WATEREXPERT_NOTIFICATION_WEBHOOK", "").strip(),
         data_freshness_warning_days=_env_int("WATEREXPERT_DATA_FRESHNESS_WARNING_DAYS", 7),
         agent_api_url=os.environ.get(
-            "WATEREXPERT_AGENT_API_URL", "http://219.228.144.101:8000/api"
+            "WATEREXPERT_AGENT_API_URL",
+            # Cloudflare quick-tunnel into the collaborator's server (the public
+            # IP 219.228.144.101:8000 is firewalled). A quick-tunnel URL changes
+            # on every `cloudflared` restart — override with the env var once a
+            # permanent address exists.
+            "https://lewis-put-matrix-singing.trycloudflare.com/api",
         ).strip(),
         agent_api_timeout_seconds=_env_float(
             "WATEREXPERT_AGENT_API_TIMEOUT_SECONDS", 30.0

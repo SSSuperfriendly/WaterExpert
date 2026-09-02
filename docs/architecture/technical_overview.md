@@ -132,10 +132,12 @@ These artifacts provide Monte Carlo Sobol-style sensitivity indices, one-factor 
 
 The lab page **WaterExpert** (`/knowledge-graph/qa`) now calls the collaborator-deployed
 model stack through the backend bridge `ExternalAgentService` (`backend/app/services/external_agent.py`),
-which proxies `docs/internal/INTEGRATION_GUIDE.md` endpoints: agent health, governance
-scenarios, and async RL-TGRR-style strategy generation. The browser never talks to the
+which proxies agent health, governance scenarios, async RL-TGRR-style strategy generation,
+and an explanation endpoint (narrative diagnosis plus matched historical cases) that turns
+the page into an answer rather than just a strategy number. The browser never talks to the
 external host directly; outages surface as a localized `agent_unavailable` (502). Target
-is configurable via `WATEREXPERT_AGENT_API_URL`.
+is configurable via `WATEREXPERT_AGENT_API_URL`, which defaults to a Cloudflare quick-tunnel
+because the collaborator's public IP is firewalled.
 
 ## Key Outputs
 
