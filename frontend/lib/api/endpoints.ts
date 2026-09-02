@@ -2,6 +2,11 @@
 
 import { apiClient, apiBaseUrl } from "./client";
 import type {
+  AgentHealth,
+  AgentScenario,
+  AgentStrategyJob,
+  AgentStrategyRequest,
+  AgentStrategyResult,
   BoundarySummary,
   Case,
   CaseSummary,
@@ -299,6 +304,16 @@ export const endpoints = {
     apiClient.post<EventRecord>(`/api/v1/events/${eventId}/false-positive`, { reason }),
   escalateEvent: (eventId: string, note?: string) =>
     apiClient.post<EventRecord>(`/api/v1/events/${eventId}/escalate`, { note }),
+
+  // Externally deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md).
+  agent: {
+    health: () => apiClient.get<AgentHealth>("/api/v1/agent/health"),
+    scenarios: () => apiClient.get<AgentScenario[]>("/api/v1/agent/scenarios"),
+    strategy: (payload: AgentStrategyRequest) =>
+      apiClient.post<AgentStrategyJob>("/api/v1/agent/strategy", payload),
+    strategyJob: (jobId: string) =>
+      apiClient.get<AgentStrategyResult>(`/api/v1/agent/strategy/${jobId}`),
+  },
 
   // Knowledge graph
   knowledgeGraph: {

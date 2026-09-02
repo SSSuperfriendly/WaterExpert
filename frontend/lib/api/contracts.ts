@@ -555,6 +555,75 @@ export interface KgQaResult {
   source: string;
 }
 
+/** Externally deployed WaterExpert agent API (docs/internal/INTEGRATION_GUIDE.md). */
+export interface AgentHealth {
+  status?: string;
+  timestamp?: string;
+  agents?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+export interface AgentScenario {
+  code: string;
+  name: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface AgentStrategyState {
+  date: string;
+  turbidity: number;
+  flow_rate: number;
+  temperature?: number;
+  ph?: number;
+  dissolved_oxygen?: number;
+  chlorophyll_a?: number;
+  rainfall_3d?: number;
+  rainfall_7d?: number;
+  [key: string]: unknown;
+}
+
+export interface AgentStrategyRequest {
+  scenario: string;
+  state: AgentStrategyState;
+  episodes?: number;
+  backend?: string;
+}
+
+export interface AgentStrategyJob {
+  job_id: string;
+  status: string;
+  scenario?: string;
+  created_at?: string;
+  message?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+export interface AgentStrategyResult {
+  job_id: string;
+  status: string;
+  scenario?: string;
+  strategy?: {
+    release_rate: number;
+    aeration_intensity: number;
+    chemical_dosage: number;
+    [key: string]: unknown;
+  };
+  metrics?: {
+    turbidity_reduction: number;
+    turbidity_reduction_ratio: number;
+    energy_cost: number;
+    cost_saving_ratio: number;
+    stability: number;
+    response_time_hours: number;
+    [key: string]: unknown;
+  };
+  completed_at?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
 export interface KgBuildJob {
   job_id: string;
   created_at?: string;

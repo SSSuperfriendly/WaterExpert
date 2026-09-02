@@ -90,6 +90,14 @@ class Settings:
     #: Generic webhook for event notifications (WeCom / DingTalk / Slack style).
     notification_webhook_url: str = ""
 
+    # -- external agent -----------------------------------------------------
+    #: Base URL of the externally deployed WaterExpert agent API
+    #: (docs/internal/INTEGRATION_GUIDE.md). Empty string keeps the platform
+    #: self-contained and surfaces ``agent_unavailable`` until configured.
+    agent_api_url: str = ""
+    #: Per-request timeout for calls out to the deployed agent API.
+    agent_api_timeout_seconds: float = 30.0
+
     data_freshness_warning_days: int = 7
 
     @property
@@ -187,4 +195,10 @@ def get_settings() -> Settings:
         ),
         notification_webhook_url=os.environ.get("WATEREXPERT_NOTIFICATION_WEBHOOK", "").strip(),
         data_freshness_warning_days=_env_int("WATEREXPERT_DATA_FRESHNESS_WARNING_DAYS", 7),
+        agent_api_url=os.environ.get(
+            "WATEREXPERT_AGENT_API_URL", "http://219.228.144.101:8000/api"
+        ).strip(),
+        agent_api_timeout_seconds=_env_float(
+            "WATEREXPERT_AGENT_API_TIMEOUT_SECONDS", 30.0
+        ),
     )

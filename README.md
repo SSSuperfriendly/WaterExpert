@@ -198,6 +198,8 @@ For collaborator-facing setup on the software branch, see `docs/handoffs/environ
 | `WATEREXPERT_REALTIME_APPCODE` / `ALIYUN_APPCODE` | realtime API AppCode (required) | — |
 | `WATEREXPERT_DEMO_USERNAME` / `WATEREXPERT_DEMO_PASSWORD` | demo login credentials | `2510709` / random (printed once at first seed) |
 | `WATEREXPERT_DEMO_DISPLAY_NAME` / `WATEREXPERT_DEMO_ROLE` | demo profile | `AI4S Demo User` / `reviewer` |
+| `WATEREXPERT_AGENT_API_URL` | base URL of the externally deployed WaterExpert agent API (see `docs/internal/INTEGRATION_GUIDE.md`) | `http://219.228.144.101:8000/api` |
+| `WATEREXPERT_AGENT_API_TIMEOUT_SECONDS` | per-request timeout for calls to the deployed agent API | `30.0` |
 
 ## Software Launch
 
@@ -218,6 +220,16 @@ The statically exported frontend calls the API on the **same origin** (relative 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 ```
+
+### External deployed model (WaterExpert agent)
+
+The lab page **WaterExpert** (`/knowledge-graph/qa`) is backed by the collaborator-deployed
+model stack instead of a local run. The backend proxies four endpoints to the deployed API —
+`GET /api/v1/agent/health`, `GET /api/v1/agent/scenarios`, `POST /api/v1/agent/strategy`,
+`GET /api/v1/agent/strategy/{job_id}` — so the browser never talks to the external host
+directly. If the deployed API is unreachable the page shows a localized
+`agent_unavailable` refusal; point `WATEREXPERT_AGENT_API_URL` at another deployment to
+re-target it without a rebuild.
 
 ### Start the backend
 

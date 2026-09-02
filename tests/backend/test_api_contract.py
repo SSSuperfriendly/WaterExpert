@@ -110,6 +110,10 @@ class ApiContractTest(unittest.TestCase):
             "/api/v1/knowledge-graph/kg/clear",
             "/api/v1/knowledge-graph/qa",
             "/api/v1/knowledge-graph/files/{name}",
+            "/api/v1/agent/health",
+            "/api/v1/agent/scenarios",
+            "/api/v1/agent/strategy",
+            "/api/v1/agent/strategy/{job_id}",
         }
         missing = expected - registered
         self.assertEqual(missing, set(), f"Missing registered routes: {missing}")

@@ -204,4 +204,6 @@ class ErrorCode(_Code):
     ARTIFACT_UNAVAILABLE = "artifact_unavailable"
     ARTIFACT_UNREADABLE = "artifact_unreadable"
     DEPENDENCY_UNAVAILABLE = "dependency_unavailable"
+    #: The externally deployed WaterExpert agent API could not be reached.
+    AGENT_UNAVAILABLE = "agent_unavailable"
     INTERNAL_ERROR = "internal_error"

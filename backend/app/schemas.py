@@ -153,6 +153,34 @@ class KnowledgeGraphQARequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# External deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md)
+# ---------------------------------------------------------------------------
+
+
+class AgentStateRequest(BaseModel):
+    """Current water-quality state handed to the deployed strategy model."""
+
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    turbidity: float = Field(ge=0)
+    flow_rate: float = Field(ge=0)
+    temperature: float | None = Field(default=None, ge=-50, le=60)
+    ph: float | None = Field(default=None, ge=0, le=14)
+    dissolved_oxygen: float | None = Field(default=None, ge=0)
+    chlorophyll_a: float | None = Field(default=None, ge=0)
+    rainfall_3d: float | None = Field(default=None, ge=0)
+    rainfall_7d: float | None = Field(default=None, ge=0)
+
+
+class AgentStrategyRequest(BaseModel):
+    """Queues a strategy-generation job on the deployed model."""
+
+    scenario: str = Field(min_length=1, max_length=64)
+    state: AgentStateRequest
+    episodes: int = Field(default=1, ge=1, le=10)
+    backend: Literal["api", "local"] = "api"
+
+
+# ---------------------------------------------------------------------------
 # Model registry (review item 11)
 # ---------------------------------------------------------------------------
 

@@ -18,6 +18,8 @@ from backend.app.db import Base, engine
 from backend.app.domain.codes import ErrorCode
 from backend.app.domain.roles import Permission
 from backend.app.schemas import (
+    AgentStateRequest,
+    AgentStrategyRequest,
     CaseCreateRequest,
     CaseRunRequest,
     CaseUpdateRequest,
@@ -49,6 +51,7 @@ from backend.app.services.cross_modal_repository import CrossModalRepository
 from backend.app.services.data_explorer import DataExplorerService
 from backend.app.services.dataset_service import DatasetNotFound, DatasetService
 from backend.app.services.event_service import EventNotFound, EventService
+from backend.app.services.external_agent import AgentUnavailable, ExternalAgentService
 from backend.app.services.health import HealthService
 from backend.app.services.kg_service import KnowledgeGraphService
 from backend.app.services.model_service import ModelNotFound, ModelService
@@ -88,6 +91,10 @@ data_explorer = DataExplorerService(settings, dataset_service)
 realtime_validation_service = RealtimeValidationService(settings)
 cross_modal_repository = CrossModalRepository(settings)
 kg_service = KnowledgeGraphService(settings)
+external_agent = ExternalAgentService(
+    base_url=settings.agent_api_url,
+    timeout_seconds=settings.agent_api_timeout_seconds,
+)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -1693,3 +1700,47 @@ def knowledge_graph_file(name: str) -> FileResponse:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return FileResponse(path, filename=path.name)
+
+
+# ---------------------------------------------------------------------------
+# Externally deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md)
+# ---------------------------------------------------------------------------
+
+
+async def _agent_call(operation):
+    """Proxy an async call to the deployed agent API, mapping outages to a 502
+    the frontend localizes as ``agent_unavailable``."""
+    try:
+        return await operation()
+    except AgentUnavailable as exc:
+        raise error_response(ErrorCode.AGENT_UNAVAILABLE, str(exc), 502) from exc
+
+
+@app.get("/api/v1/agent/health")
+async def agent_health() -> dict:
+    """Readiness of every deployed model agent (MSCIM, CMFBE, RL-TGRR, ...)."""
+    return await _agent_call(external_agent.health)
+
+
+@app.get("/api/v1/agent/scenarios")
+async def agent_scenarios() -> list[dict]:
+    """The governance scenarios the deployed strategy model supports."""
+    return await _agent_call(external_agent.scenarios)
+
+
+@app.post("/api/v1/agent/strategy")
+async def agent_strategy_create(payload: AgentStrategyRequest) -> dict:
+    """Queue a strategy-generation job on the deployed model and return its id."""
+    body = {
+        "scenario": payload.scenario,
+        "state": payload.state.model_dump(exclude_none=True),
+        "episodes": payload.episodes,
+        "backend": payload.backend,
+    }
+    return await _agent_call(lambda: external_agent.create_strategy(body))
+
+
+@app.get("/api/v1/agent/strategy/{job_id}")
+async def agent_strategy_status(job_id: str) -> dict:
+    """Poll a queued strategy job; completed payloads carry ``strategy``/``metrics``."""
+    return await _agent_call(lambda: external_agent.strategy(job_id))
