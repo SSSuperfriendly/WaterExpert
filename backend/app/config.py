@@ -197,11 +197,12 @@ def get_settings() -> Settings:
         data_freshness_warning_days=_env_int("WATEREXPERT_DATA_FRESHNESS_WARNING_DAYS", 7),
         agent_api_url=os.environ.get(
             "WATEREXPERT_AGENT_API_URL",
-            # Cloudflare quick-tunnel into the collaborator's server (the public
-            # IP 219.228.144.101:8000 is firewalled). A quick-tunnel URL changes
-            # on every `cloudflared` restart — override with the env var once a
-            # permanent address exists.
-            "https://lewis-put-matrix-singing.trycloudflare.com/api",
+            # Default: the collaborator's Water AI agent stack, now fully deployed
+            # locally from their source (docs/internal/AGENT_LOCAL_RUN.md) on the
+            # same host at :8001 (port kept clear of this backend's :8000). Reachable
+            # here because both run side by side; point the env var at any future
+            # remote/permanent address instead if the deployment moves.
+            "http://127.0.0.1:8001/api",
         ).strip(),
         agent_api_timeout_seconds=_env_float(
             "WATEREXPERT_AGENT_API_TIMEOUT_SECONDS", 30.0

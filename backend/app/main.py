@@ -1710,7 +1710,8 @@ def knowledge_graph_file(name: str) -> FileResponse:
 
 
 # ---------------------------------------------------------------------------
-# Externally deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md).
+# Deployed WaterExpert agent API (default: local copy at :8001 —
+# docs/internal/AGENT_LOCAL_RUN.md; INTEGRATION_GUIDE.md documents the contract).
 # The guide documents health/scenarios/strategy; ``explain`` and ``stage`` were
 # found on the deployment's live /openapi.json and added once verified.
 # ---------------------------------------------------------------------------
@@ -1723,7 +1724,8 @@ async def _agent_call(operation):
         return await operation()
     except AgentUnavailable as exc:
         hint = ""
-        if "trycloudflare.com" in external_agent.base_url:
+        host = external_agent.base_url
+        if "trycloudflare.com" in host:
             # Quick-tunnel hostnames are ephemeral: restarting cloudflared mints a
             # new one and the old URL stops routing. Make that obvious in the log
             # so "unreachable" reports are resolvable instead of mysterious.
@@ -1733,7 +1735,15 @@ async def _agent_call(operation):
                 "it responds (curl the /api/health URL) and point "
                 "WATEREXPERT_AGENT_API_URL at the current one if not."
             )
-        logger.error("External agent call failed (url=%s): %s%s", external_agent.base_url, exc, hint)
+        elif "127.0.0.1:8001" in host or "localhost:8001" in host:
+            # The default points at the local deployment (AGENT_LOCAL_RUN.md):
+            # the most likely cause is simply that it is not running.
+            hint = (
+                " The configured URL is the local agent deployment on :8001 — confirm "
+                "it is running (docs/internal/AGENT_LOCAL_RUN.md), or point "
+                "WATEREXPERT_AGENT_API_URL at a different address if intended."
+            )
+        logger.error("External agent call failed (url=%s): %s%s", host, exc, hint)
         raise error_response(ErrorCode.AGENT_UNAVAILABLE, str(exc), 502) from exc
 
 

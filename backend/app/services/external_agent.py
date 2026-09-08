@@ -3,8 +3,9 @@ from __future__ import annotations
 """Client for the externally deployed WaterExpert agent API.
 
 The self-developed model stack (MSCIM / CMFBE / KnowledgeBase / AquaTurbGPT /
-RL-TGRR / Safety) is hosted by the collaborator at ``/api`` and speaks the
-REST contract in ``docs/internal/INTEGRATION_GUIDE.md``:
+RL-TGRR / Safety) is deployed locally at ``/api`` (127.0.0.1:8001 by default —
+see ``docs/internal/AGENT_LOCAL_RUN.md``) and speaks the REST contract in
+``docs/internal/INTEGRATION_GUIDE.md``:
 
 - ``GET  /health``          — per-agent readiness
 - ``GET  /scenarios``       — supported governance scenarios
@@ -26,11 +27,11 @@ import httpx
 #: Base URL used when ``WATEREXPERT_AGENT_API_URL`` is not set. Kept here so the
 #: module has one default even outside the FastAPI settings object.
 #:
-#: The collaborator's server (public IP 219.228.144.101:8000) is firewalled, so
-#: this points at a Cloudflare quick-tunnel into it. A quick-tunnel URL changes
-#: on every ``cloudflared`` restart — flip the settings/env var to a permanent
-#: address once one exists.
-DEFAULT_AGENT_API_URL = "https://lewis-put-matrix-singing.trycloudflare.com/api"
+#: The collaborator's Water AI agent stack is now deployed locally from their
+#: source (docs/internal/AGENT_LOCAL_RUN.md) at 127.0.0.1:8001 — the same host as
+#: this backend, on a port that keeps clear of :8000. The env var overrides this
+#: if the deployment ever moves to a remote/permanent address.
+DEFAULT_AGENT_API_URL = "http://127.0.0.1:8001/api"
 
 
 class AgentUnavailable(Exception):

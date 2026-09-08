@@ -198,7 +198,7 @@ For collaborator-facing setup on the software branch, see `docs/handoffs/environ
 | `WATEREXPERT_REALTIME_APPCODE` / `ALIYUN_APPCODE` | realtime API AppCode (required) | — |
 | `WATEREXPERT_DEMO_USERNAME` / `WATEREXPERT_DEMO_PASSWORD` | demo login credentials | `2510709` / random (printed once at first seed) |
 | `WATEREXPERT_DEMO_DISPLAY_NAME` / `WATEREXPERT_DEMO_ROLE` | demo profile | `AI4S Demo User` / `reviewer` |
-| `WATEREXPERT_AGENT_API_URL` | base URL of the externally deployed WaterExpert agent API (see `docs/internal/INTEGRATION_GUIDE.md`). Default is a Cloudflare quick-tunnel into the collaborator's server; the public IP `219.228.144.101:8000` is firewalled. A quick-tunnel URL changes on every `cloudflared` restart — set this once a permanent address exists | `https://lewis-put-matrix-singing.trycloudflare.com/api` |
+| `WATEREXPERT_AGENT_API_URL` | base URL of the deployed WaterExpert agent API (see `docs/internal/AGENT_LOCAL_RUN.md` for the local copy, `INTEGRATION_GUIDE.md` for the contract). Default points at the collaborator's agent stack now running locally on this host at `:8001`; override when the deployment lives elsewhere | `http://127.0.0.1:8001/api` |
 | `WATEREXPERT_AGENT_API_TIMEOUT_SECONDS` | per-request timeout for calls to the deployed agent API | `30.0` |
 
 ## Software Launch
