@@ -34,17 +34,22 @@ import type {
 //: way the deployed system does: pick a governance scenario, hand it the
 //: current water state, and read back the RL-TGRR-style strategy job.
 
-//: The scenario list returns `{code: "S1", name: "External Input Type"}` while
-//: the strategy request wants a slug like `s1_external_input`. Derive the slug
-//: from the API's own label so a rename upstream does not break the mapping.
+//: /scenarios returns display info (`{code: "S1", name: "External Input Type"}`)
+//: but /strategy and /explain accept the enum *key* (`s1_external_input` …
+//: `s4_chronic_combo`). The display names do not slugify to those keys — they carry
+//: a "Type" suffix and S4's name is "Combination" where the enum says "combo" — so
+//: map by the stable scenario code instead of deriving from the label. Codes are
+//: uppercase ("S1".."S4"); normalize defensively.
+const AGENT_SCENARIO_SLUG_BY_CODE: Record<string, string> = {
+  S1: "s1_external_input",
+  S2: "s2_internal_release",
+  S3: "s3_algae_bloom",
+  S4: "s4_chronic_combo",
+};
+
 function strategyScenarioOf(scenario: AgentScenario): string {
-  const codeSlug = (scenario.code ?? "").toLowerCase();
-  const nameSlug = (scenario.name ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return nameSlug ? `${codeSlug}_${nameSlug}` : codeSlug;
+  const code = (scenario.code ?? "").toUpperCase();
+  return AGENT_SCENARIO_SLUG_BY_CODE[code] ?? code.toLowerCase();
 }
 
 //: Prefilled from the integration guide's worked example (Wusongkou).
