@@ -14,6 +14,7 @@
 | 运行端口 | `127.0.0.1:8001`（避开平台后端 `:8000`；平台与 agent 同机共存） |
 | Python | py3.12 venv：`.venv/`（uv 创建，API 运行时依赖已装） |
 | 平台默认指向 | `WATEREXPERT_AGENT_API_URL` 未设时 → `http://127.0.0.1:8001/api` |
+| 模型核心 | 已换为我方新版 MSCIM/CMFBE（代码+权重，见第 8 节；合作方原版备份于 `.swap_backup_20260908/`） |
 | 已接入接口 | `health / status / scenarios / strategy / strategy/{job_id} / explain / stage / jobs` |
 | 2026-09-08 验证 | 6 agent 全 ready；4 场景 strategy 均 completed（~3s/个）；explain 命中案例库 |
 
@@ -32,9 +33,15 @@
 | `案例库_data.zip` | `data/{case_library,…}` | `data/` | 相似案例库、全站点数据库、知识图谱、tech 知识库、raw |
 | `outputs.zip` | `outputs/` | `outputs/` | **合作方真实权重**与中间产物（models/intermediate/diagnosis/…） |
 
-真实权重 md5（溯源 / 对比用）：
+权重 md5。**当前激活的是我方新版模型核心（2026-09-08 换芯）**，合作方原版与换芯前代码备份在
+`.swap_backup_20260908/`：
 
 ```
+# 现激活（我方研究仓 8-19 版本，代码 + 权重同源）
+outputs/models/mscim.pt        = abbfd68c72420d70f054888d97541a4d
+outputs/models/cmfbe_stgcn.pt  = e1c7dab6ffb48e0386a11457a32637e9
+outputs/models/mscim_no_kg.pt  = 300e6c020dae04fbde8d7e3b6e3e34d1
+# 备份（合作方 5-23 精简版）
 outputs/models/mscim.pt        = 442ee7a491e12526de94e97a35af43a2
 outputs/models/cmfbe_stgcn.pt  = 6e553a9386e4b8e857770f112ca76d7f
 outputs/models/mscim_no_kg.pt  = a3ce7ac02b9d672e4b4640e7e5c56b7a
@@ -42,6 +49,7 @@ outputs/models/mscim_no_kg.pt  = a3ce7ac02b9d672e4b4640e7e5c56b7a
 
 > 若部署目录需在另一台机器重建：clone 上述 GitHub 仓库 → 同法解压三份 zip 到对应位置 →
 > 建 venv 装 `requirements-api.txt` 即可（`tigramite`/`vllm` 仅训练侧需要，API 启动不依赖）。
+> 重建后如需复现换芯，按第 8 节操作。
 
 ## 3. 启动 / 重启
 
@@ -99,3 +107,31 @@ curl -sS $BASE/status      # 含 data_loader（真实读取 2586 站点数据行
 - **仅本机可达**：`127.0.0.1:8001` 绑定 loopback；若平台后端将来迁到另一台机器，
   需把 agent 一并迁走并把 `WATEREXPERT_AGENT_API_URL` 指到其新地址。
 - 未做 systemd 常驻；机器重启后需按第 3 节手动拉起（可用 `start_water_api.sh` 思路包装）。
+
+## 8. 模型核心统一（换芯，2026-09-08）
+
+**背景**：合作方 agent 仓库是我们研究代码 `src/water_ai` 的衍生+精简版。逐项比对确认
+**我们的 MSCIM/CMFBE 更新更强**（我方 mscim 有 boundary_head/risk_head/时序池化，cmfbe 为
+自适应融合门控；参数量约大 20%），而合作方线上一直跑他们的旧精简模型。两版 checkpoint 键关系为
+**合作方 ⊆ 我方**、56 个 feature_columns 名称顺序逐一同 → 换芯在结构上可行。
+
+**已执行**（本地部署）：
+```bash
+cd /Users/mac/Project/agent-water-expert
+# 备份合作方原版
+mkdir -p .swap_backup_20260908/{models,weights}
+cp src/water_ai/models/{mscim,cmfbe_stgcn}.py .swap_backup_20260908/models/
+cp outputs/models/{mscim,cmfbe_stgcn,mscim_no_kg}.pt .swap_backup_20260908/weights/
+# 换入我方核心（代码必须与权重一起换；agent 侧 strict=True，只换权重会因多余 key 报错）
+cp /Users/mac/Project/WaterExpert/src/water_ai/models/{mscim,cmfbe_stgcn}.py src/water_ai/models/
+cp /Users/mac/Project/WaterExpert/outputs/models/{mscim,cmfbe_stgcn,mscim_no_kg}.pt outputs/models/
+# 重启并验证
+.venv/bin/python scripts/run_api_server.py --host 127.0.0.1 --port 8001   # 或重启既有进程
+```
+
+**验证结果**：health 6 agent ready；4 场景 strategy 均 ~3s completed、无 strict/load 报错；
+explain 案例命中不变。策略可见核心差异（如 s2/s3/s4 现产生曝气强度，此前旧模型几乎恒为 0）。
+
+**影响与回滚**：换芯后本地 agent 行为 ≠ 合作方自己服务器的行为（两套核心并存）。若需与合作方
+结果逐位对齐，可回滚 `.swap_backup_20260908/` 内的代码与权重后重启。长期建议把
+`src/water_ai/models`（及 data/physics）定为我方唯一权威源，agent 侧直接消费，不再维护第二份拷贝。
