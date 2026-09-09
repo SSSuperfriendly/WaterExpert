@@ -20,6 +20,16 @@ import {
   Github01Icon,
 } from "@hugeicons/core-free-icons";
 
+// OAuth session consumption must be idempotent across re-mounts of the login
+// page. The landing URL /login?access_token=... can mount the page more than
+// once during the initial client navigation; a per-mount ref lets a later
+// re-mount re-consume a leftover ?access_token entry and silently log the user
+// back in — which made "log out" appear broken after a GitHub sign-in. This
+// flag lives at module scope so it survives those re-mounts. A real GitHub
+// round-trip always reloads the page (→ GitHub → back), which resets it, so a
+// later sign-in in the same tab still works.
+let oauthSessionConsumed = false;
+
 export default function LoginPage() {
   const { t } = useT();
   const router = useRouter();
@@ -38,12 +48,11 @@ export default function LoginPage() {
   // GitHub OAuth lands back here via /ui/login?access_token=...&username=...
   // (the backend 302's after minting the session). Consume it once, store the
   // session, then drop the token from the URL before navigating home.
-  const consumedOAuth = React.useRef(false);
   React.useEffect(() => {
-    if (consumedOAuth.current) return;
+    if (oauthSessionConsumed) return;
     const params = new URLSearchParams(window.location.search);
     if (!params.has("access_token") && !params.has("error")) return;
-    consumedOAuth.current = true;
+    oauthSessionConsumed = true;
     const token = params.get("access_token");
     const error = params.get("error");
     window.history.replaceState({}, "", window.location.pathname);
@@ -55,7 +64,12 @@ export default function LoginPage() {
         role: params.get("role") ?? "reviewer",
         access_token: token,
       });
-      router.replace("/");
+      // Full-document redirect rather than router.replace("/"): hand-editing the
+      // URL with history.replaceState while next/router is mid-navigation left
+      // duplicate ?access_token history entries, and a later logout landed back
+      // on one of them and re-logged the user in (logout "failed" after GitHub
+      // sign-in). A hard replace gives one clean history entry for the app root.
+      window.location.replace("/ui/");
     } else {
       setError(
         error === "oauth_failed" ? t("auth.oauthFailed") : t("auth.loginFailed")
