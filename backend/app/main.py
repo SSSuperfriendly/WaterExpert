@@ -11,13 +11,22 @@ from pathlib import Path
 #: log with the exact URL and cause instead of only as a client-side 502.
 logger = logging.getLogger("waterexpert.agent")
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse, Response
-from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi_users import exceptions as user_exceptions
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.app.config import get_settings
 from backend.app.db import Base, engine
@@ -25,7 +34,6 @@ from backend.app.domain.codes import ErrorCode
 from backend.app.domain.roles import Permission
 from backend.app.schemas import (
     AgentExplainRequest,
-    AgentStateRequest,
     AgentStrategyRequest,
     CaseCreateRequest,
     CaseRunRequest,
@@ -52,7 +60,8 @@ from backend.app.schemas import (
     UserRead,
     UserUpdate,
 )
-from backend.app.services.artifact_repository import ArtifactReadError, ArtifactRepository
+from backend.app.services.artifact_io import ArtifactReadError
+from backend.app.services.artifact_repository import ArtifactRepository
 from backend.app.services.case_service import CaseNotFound, CaseService
 from backend.app.services.cross_modal_repository import CrossModalRepository
 from backend.app.services.data_explorer import DataExplorerService
@@ -66,7 +75,10 @@ from backend.app.services.realtime_validation import RealtimeValidationService
 from backend.app.services.report_builder import get_report_media_type, write_report
 from backend.app.services.report_service import ReportNotFound, ReportService
 from backend.app.services.runtime_jobs import JobParameterError, RuntimeJobService
-from backend.app.services.security import AuditLogger, PermissionDenied, require_permission
+from backend.app.services.security import (
+    AuditLogger,
+    require_permission,
+)
 from backend.app.services.state_store import SqliteStateStore
 from backend.app.services.task_progress import task_view
 from backend.app.services.upload_guard import UploadRejected
@@ -74,14 +86,12 @@ from backend.app.users import (
     SECRET,
     UserManager,
     authenticate_token,
-    auth_backend,
     demo_credentials,
     fastapi_users,
     get_jwt_strategy,
     get_user_manager,
     seed_demo_user,
 )
-
 
 settings = get_settings()
 repository = ArtifactRepository(settings)
@@ -596,20 +606,123 @@ app.include_router(
 )
 
 # GitHub OAuth (mounted only when credentials are configured).
+#
+# The stock fastapi-users ``get_oauth_router`` ends the /callback in a JSON
+# ``{access_token: ...}`` body — useless to a browser that just landed back from
+# GitHub. This router reuses the same state/CSRF handshake but, once the token is
+# minted, 302-redirects to the SPA login page with the token + profile in the
+# query string; the login page stores the session and lands the user logged in.
 github_client_id = os.environ.get("WATEREXPERT_GITHUB_CLIENT_ID")
 github_client_secret = os.environ.get("WATEREXPERT_GITHUB_CLIENT_SECRET")
 if github_client_id and github_client_secret:
+    import secrets
+    from urllib.parse import urlencode
+
+    import jwt as _pyjwt
+
     from httpx_oauth.clients.github import GitHubOAuth2
+    from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallback
+    from httpx_oauth.oauth2 import OAuth2Token
+    from fastapi_users.router.oauth import (
+        CSRF_TOKEN_COOKIE_NAME,
+        CSRF_TOKEN_KEY,
+        OAuth2AuthorizeResponse,
+        STATE_TOKEN_AUDIENCE,
+        generate_csrf_token,
+        generate_state_token,
+    )
+
+    _oauth_logger = logging.getLogger("waterexpert.oauth")
 
     github_client = GitHubOAuth2(github_client_id, github_client_secret)
-    app.include_router(
-        fastapi_users.get_oauth_router(
-            github_client,
-            auth_backend,
-            SECRET,
-            associate_by_email=True,
-            is_verified_by_default=True,
+    github_oauth_router = APIRouter()
+    _github_callback_name = f"oauth:{github_client.name}.jwt.callback"
+
+    @github_oauth_router.get(
+        "/authorize",
+        response_model=OAuth2AuthorizeResponse,
+        name=f"oauth:{github_client.name}.jwt.authorize",
+    )
+    async def github_authorize(
+        request: Request,
+        response: Response,
+        scopes: list[str] | None = Query(default=None),
+    ) -> OAuth2AuthorizeResponse:
+        """Return the GitHub authorization URL plus the CSRF cookie."""
+        authorize_redirect_url = str(request.url_for(_github_callback_name))
+        csrf_token = generate_csrf_token()
+        state = generate_state_token({CSRF_TOKEN_KEY: csrf_token}, SECRET)
+        authorization_url = await github_client.get_authorization_url(
+            authorize_redirect_url, state, scopes
+        )
+        response.set_cookie(
+            CSRF_TOKEN_COOKIE_NAME,
+            csrf_token,
+            max_age=3600,
+            path="/",
+            secure=request.url.scheme == "https",
+            httponly=True,
+            samesite="lax",
+        )
+        return OAuth2AuthorizeResponse(authorization_url=authorization_url)
+
+    @github_oauth_router.get("/callback", name=_github_callback_name)
+    async def github_callback(
+        request: Request,
+        access_token_state: tuple[OAuth2Token, str] = Depends(
+            OAuth2AuthorizeCallback(github_client, route_name=_github_callback_name)
         ),
+        user_manager: UserManager = Depends(get_user_manager),
+    ) -> RedirectResponse:
+        """Exchange the code for a session and send the browser to /ui logged in."""
+        oauth_token, state = access_token_state
+        login_params: dict[str, str] = {}
+        try:
+            state_data = _pyjwt.decode(
+                state, SECRET, algorithms=["HS256"], audience=STATE_TOKEN_AUDIENCE
+            )
+            cookie_csrf = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
+            state_csrf = state_data.get(CSRF_TOKEN_KEY)
+            if not cookie_csrf or not state_csrf or not secrets.compare_digest(
+                cookie_csrf, state_csrf
+            ):
+                raise ValueError("OAuth state/CSRF mismatch")
+            account_id, account_email = await github_client.get_id_email(
+                oauth_token["access_token"]
+            )
+            if account_email is None:
+                raise ValueError("GitHub account has no public email")
+            user = await user_manager.oauth_callback(
+                oauth_name="github",
+                access_token=oauth_token["access_token"],
+                account_id=account_id,
+                account_email=account_email,
+                expires_at=oauth_token.get("expires_at"),
+                refresh_token=oauth_token.get("refresh_token"),
+                request=request,
+                associate_by_email=True,
+                is_verified_by_default=True,
+            )
+            if not user.is_active:
+                raise ValueError("OAuth user is inactive")
+            session_token = await get_jwt_strategy().write_token(user)
+            login_params = {
+                "access_token": session_token,
+                "token_type": "bearer",
+                "username": user.username,
+                "display_name": user.display_name or user.username,
+                "role": user.role,
+            }
+        except Exception:
+            _oauth_logger.warning("GitHub OAuth callback failed", exc_info=True)
+        if not login_params:
+            return RedirectResponse("/ui/login?error=oauth_failed", status_code=302)
+        return RedirectResponse(
+            f"/ui/login?{urlencode(login_params)}", status_code=302
+        )
+
+    app.include_router(
+        github_oauth_router,
         prefix="/api/v1/auth/oauth/github",
         tags=["auth"],
     )

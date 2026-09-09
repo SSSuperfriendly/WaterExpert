@@ -89,6 +89,8 @@ const zhCN: MessageTree = {
     loginFailed: "登录失败",
     invalidCredentials: "用户名或密码错误，请重试。",
     networkError: "无法连接服务器，请确认后端服务已启动。",
+    githubSignIn: "使用 GitHub 登录",
+    oauthFailed: "GitHub 登录失败，请重试或改用其他方式。",
     backToLogin: "返回登录",
     sessionExpired: "登录已过期，请重新登录。",
     noAccount: "没有账户？",
@@ -676,6 +678,7 @@ const zhCN: MessageTree = {
     downloadRelations: "下载 relations.csv",
     downloadGraph: "下载 graph.json",
     noGraph: "请先构建知识图谱。",
+    graphLoadFailed: "图谱渲染组件加载失败。",
   },
   agent: {
     title: "WaterExpert 智能体",
@@ -1036,6 +1039,8 @@ const enUS: MessageTree = {
     loginFailed: "Sign-in failed",
     invalidCredentials: "Invalid username or password.",
     networkError: "Cannot reach the server. Confirm the backend is running.",
+    githubSignIn: "Sign in with GitHub",
+    oauthFailed: "GitHub sign-in failed. Please try again or use another method.",
     backToLogin: "Back to sign in",
     sessionExpired: "Session expired. Please sign in again.",
     noAccount: "Don't have an account?",
@@ -1621,6 +1626,7 @@ const enUS: MessageTree = {
     downloadRelations: "Download relations.csv",
     downloadGraph: "Download graph.json",
     noGraph: "Build the knowledge graph first.",
+    graphLoadFailed: "Failed to load the graph rendering library.",
   },
   agent: {
     title: "WaterExpert Agent",

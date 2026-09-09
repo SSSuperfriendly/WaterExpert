@@ -11,8 +11,14 @@ import { AuthShell } from "@/components/waterexpert/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Key01Icon, UserIcon, AlertCircleIcon } from "@hugeicons/core-free-icons";
+import {
+  Key01Icon,
+  UserIcon,
+  AlertCircleIcon,
+  Github01Icon,
+} from "@hugeicons/core-free-icons";
 
 export default function LoginPage() {
   const { t } = useT();
@@ -28,6 +34,44 @@ export default function LoginPage() {
   React.useEffect(() => {
     if (session) router.replace("/");
   }, [session, router]);
+
+  // GitHub OAuth lands back here via /ui/login?access_token=...&username=...
+  // (the backend 302's after minting the session). Consume it once, store the
+  // session, then drop the token from the URL before navigating home.
+  const consumedOAuth = React.useRef(false);
+  React.useEffect(() => {
+    if (consumedOAuth.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("access_token") && !params.has("error")) return;
+    consumedOAuth.current = true;
+    const token = params.get("access_token");
+    const error = params.get("error");
+    window.history.replaceState({}, "", window.location.pathname);
+    if (token) {
+      const username = params.get("username") ?? "";
+      setSession({
+        username,
+        display_name: params.get("display_name") ?? username,
+        role: params.get("role") ?? "reviewer",
+        access_token: token,
+      });
+      router.replace("/");
+    } else {
+      setError(
+        error === "oauth_failed" ? t("auth.oauthFailed") : t("auth.loginFailed")
+      );
+    }
+  }, [router, setSession, t]);
+
+  const handleGithub = async () => {
+    setError(null);
+    try {
+      const { authorization_url } = await endpoints.githubOAuthAuthorize();
+      window.location.href = authorization_url;
+    } catch {
+      setError(t("auth.oauthNotConfigured"));
+    }
+  };
 
   const doLogin = React.useCallback(
     async (user: string, pass: string) => {
@@ -128,6 +172,23 @@ export default function LoginPage() {
           disabled={busy || !username || !password}
         >
           {busy ? t("auth.loggingIn") : t("auth.login")}
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-muted-foreground text-xs">{t("auth.or")}</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 w-full"
+          onClick={handleGithub}
+          disabled={busy}
+        >
+          <HugeiconsIcon icon={Github01Icon} className="size-4" />
+          {t("auth.githubSignIn")}
         </Button>
 
         <p className="text-muted-foreground text-center text-sm">
