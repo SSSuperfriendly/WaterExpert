@@ -48,6 +48,7 @@ import type {
   ReportSummary,
   EventRecord,
   EventSummary,
+  UserProfile,
 } from "./contracts";
 
 /** Selectors shared by every result endpoint (review item 5). */
@@ -78,6 +79,33 @@ export const endpoints = {
       "/api/v1/auth/oauth/github/authorize"
     ),
   githubOAuthUrl: () => `${apiBaseUrl()}/api/v1/auth/oauth/github/authorize`,
+
+  // Personal centre — self-service account management. Every mutation that
+  // changes the sign-in identity re-verifies the current password on the
+  // backend; username/email/password changes therefore require it here too.
+  profile: () => apiClient.get<UserProfile>("/api/v1/users/me"),
+  updateProfile: (payload: { display_name?: string }) =>
+    apiClient.patch<UserProfile>("/api/v1/users/me/profile", payload),
+  updateUsername: (payload: { username: string; current_password: string }) =>
+    apiClient.patch<UserProfile>("/api/v1/users/me/username", payload),
+  updateEmail: (payload: { email: string; current_password: string }) =>
+    apiClient.patch<UserProfile>("/api/v1/users/me/email", payload),
+  changePassword: (payload: {
+    current_password: string;
+    new_password: string;
+  }) => apiClient.post<UserProfile>("/api/v1/users/me/password", payload),
+  // First-password flow for OAuth-only accounts: authorize redirects the holder
+  // to GitHub to re-confirm identity while signed in; the callback lands back on
+  // /profile?reauth_token=... which setPassword submits with the new password.
+  setPasswordAuthorize: () =>
+    apiClient.get<{ authorization_url: string }>(
+      "/api/v1/users/me/set-password/authorize"
+    ),
+  setPassword: (payload: {
+    new_password: string;
+    confirm_password: string;
+    reauth_token: string;
+  }) => apiClient.post<UserProfile>("/api/v1/users/me/set-password", payload),
 
   // Meta & overview
   meta: () => apiClient.get<Record<string, unknown>>("/api/v1/meta"),

@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+import time
 import uuid
 
 import jwt
@@ -48,6 +49,16 @@ _settings = get_settings()
 
 JWT_AUDIENCE = ["fastapi-users:auth"]
 JWT_LIFETIME_SECONDS = int(os.environ.get("WATEREXPERT_JWT_LIFETIME_SECONDS", "3600"))
+
+#: Capability tokens for the "set a first password on an OAuth-only account"
+#: flow. Unlike a session token these carry their own audience and a short
+#: lifetime, and are minted *only* by the GitHub OAuth callback after the signed-in
+#: account holder re-authorizes GitHub (see ``main.py``). A token is useless as a
+#: bearer (the auth guard's audience check rejects it) and must be paired with a
+#: live session for the same user, so it cannot on its own take over an account.
+REAUTH_AUDIENCE = "waterexpert:reauth"
+REAUTH_PURPOSE = "set_password"
+REAUTH_TTL_SECONDS = 300  # five minutes is enough to finish one password form
 
 DEMO_USERNAME = os.environ.get("WATEREXPERT_DEMO_USERNAME", "2510709")
 # Review item 7: the default password was a hardcoded constant ("AI4S666") that
@@ -84,6 +95,41 @@ SECRET = _load_jwt_secret()
 def get_jwt_strategy() -> JWTStrategy:
     """Build the JWT strategy used both for issuing and validating tokens."""
     return JWTStrategy(secret=SECRET, lifetime_seconds=JWT_LIFETIME_SECONDS)
+
+
+def issue_reauth_token(user_id: uuid.UUID) -> str:
+    """Mint the short-lived, purpose-bound capability for ``set-password``.
+
+    Called by the OAuth callback once it has confirmed the freshly authorized
+    GitHub account belongs to ``user_id``. The token records that this user just
+    re-proved their GitHub identity; the ``/me/set-password`` endpoint requires
+    it as proof before overwriting the (empty) password hash.
+    """
+    now = int(time.time())
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "aud": REAUTH_AUDIENCE,
+            "pur": REAUTH_PURPOSE,
+            "iat": now,
+            "exp": now + REAUTH_TTL_SECONDS,
+        },
+        SECRET,
+        algorithm="HS256",
+    )
+
+
+def decode_reauth_token(token: str) -> dict | None:
+    """Validate a re-auth capability token, returning its claims or ``None``."""
+    try:
+        return jwt.decode(
+            token,
+            SECRET,
+            algorithms=["HS256"],
+            audience=REAUTH_AUDIENCE,
+        )
+    except jwt.PyJWTError:
+        return None
 
 
 auth_backend = AuthenticationBackend(
@@ -128,6 +174,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             user = await self.get_by_username(identifier)
         if user is None:
             # Hash anyway to blunt user-enumeration timing attacks.
+            self.password_helper.hash(password)
+            return None
+        if not user.hashed_password:
+            # OAuth-only account: the password column is empty until the holder
+            # sets one (there is no password to verify). Burn a hash for timing
+            # parity with the unknown-identifier path, then fail.
             self.password_helper.hash(password)
             return None
         verified, updated_hash = self.password_helper.verify_and_update(
@@ -185,11 +237,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                     raise user_exceptions.UserAlreadyExists()
                 user = await self.user_db.add_oauth_account(user, oauth_account_dict)
             except user_exceptions.UserNotExists:
-                password = self.password_helper.generate()
                 username = await self._unique_oauth_username(account_email, account_id)
                 user_dict = {
                     "email": account_email,
-                    "hashed_password": self.password_helper.hash(password),
+                    # An OAuth-created account has no usable password. It used to
+                    # be seeded with a random generated hash so the column was
+                    # never empty — which made a real, user-chosen password
+                    # indistinguishable from that stub, and left no honest signal
+                    # for "this account can set a password". The column now stays
+                    # empty until the holder sets one (GitHub re-auth flow) or
+                    # completes an email reset; an empty hash IS the signal.
+                    "hashed_password": "",
                     "is_verified": is_verified_by_default,
                     "username": username,
                     "display_name": account_email.split("@", 1)[0],

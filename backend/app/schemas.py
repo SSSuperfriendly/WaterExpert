@@ -37,9 +37,75 @@ class UserCreate(fastapi_users_schemas.BaseUserCreate):
 
 
 class UserUpdate(fastapi_users_schemas.BaseUserUpdate):
+    # NOTE: this schema backs the *stock* fastapi-users users router only. That
+    # router is NOT mounted (see ``self_service`` in main.py): exposing
+    # ``role`` on a self-service PATCH would let any reviewer escalate to
+    # admin. Role is immutable through self-service; it is set at provision time
+    # (registration → reviewer, seed → env-configured) only.
     username: str | None = Field(default=None, min_length=1, max_length=64)
     display_name: str | None = Field(default=None, max_length=120)
     role: str | None = Field(default=None, max_length=32)
+
+
+# ---------------------------------------------------------------------------
+# Personal centre (self-service account management).
+# ---------------------------------------------------------------------------
+class ProfileRead(BaseModel):
+    """The authenticated user's own profile, as served to that user only."""
+
+    id: uuid.UUID
+    username: str
+    email: str
+    display_name: str
+    role: str
+    is_active: bool
+    is_verified: bool
+    is_superuser: bool
+    #: True when the account holds a usable (user-chosen) password. OAuth-only
+    #: accounts keep an empty hash until the holder sets one; the UI switches
+    #: between "设置密码" and the password-gated username/email/password edits on
+    #: this flag.
+    has_password: bool
+    #: Linked identity providers, e.g. ``["github"]`` when the account signs in
+    #: via GitHub OAuth (never the account ids themselves).
+    oauth_providers: list[str] = Field(default_factory=list)
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Update display-only fields. No password re-authentication is required
+    because nothing here changes the sign-in identity or privileges."""
+
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class UsernameUpdateRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    current_password: str = Field(min_length=1, max_length=128)
+
+
+class EmailUpdateRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    current_password: str = Field(min_length=1, max_length=128)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class SetPasswordRequest(BaseModel):
+    """Give an OAuth-only account (empty hash) its first usable password.
+
+    There is no current password to re-verify, so identity is proven instead by
+    a fresh GitHub re-auth: ``reauth_token`` is the short-lived, purpose-bound
+    capability the OAuth callback mints only after the signed-in account holder
+    re-authorizes GitHub (see ``users.issue_reauth_token``). It cannot be used
+    as a session token, and expires in five minutes.
+    """
+
+    new_password: str = Field(min_length=8, max_length=128)
+    confirm_password: str = Field(min_length=8, max_length=128)
+    reauth_token: str = Field(min_length=1, max_length=2048)
 
 
 DataType = Literal[

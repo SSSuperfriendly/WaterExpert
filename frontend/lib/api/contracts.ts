@@ -31,6 +31,24 @@ export interface CredentialHint {
   password: string;
 }
 
+/** The caller's own profile (personal centre, ``/api/v1/users/me``). */
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  display_name: string;
+  role: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_superuser: boolean;
+  /** True when the account holds a usable password. OAuth-only accounts keep it
+   * false until the holder sets a first password; the UI switches between the
+   * "设置密码" flow and the password-gated username/email/password edits on it. */
+  has_password: boolean;
+  /** Linked identity providers, e.g. ``["github"]``. */
+  oauth_providers: string[];
+}
+
 export interface StationProfile {
   station_code: string;
   station_name: string;

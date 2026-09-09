@@ -58,8 +58,8 @@ from backend.app.schemas import (
     ReportUpdateRequest,
     UserCreate,
     UserRead,
-    UserUpdate,
 )
+from backend.app.self_service import router as self_service_router
 from backend.app.services.artifact_io import ArtifactReadError
 from backend.app.services.artifact_repository import ArtifactRepository
 from backend.app.services.case_service import CaseNotFound, CaseService
@@ -90,6 +90,7 @@ from backend.app.users import (
     fastapi_users,
     get_jwt_strategy,
     get_user_manager,
+    issue_reauth_token,
     seed_demo_user,
 )
 
@@ -588,7 +589,7 @@ async def register(
     }
 
 
-# fastapi-users routers: password reset, email verification, user management.
+# fastapi-users routers: password reset and email verification.
 app.include_router(
     fastapi_users.get_reset_password_router(),
     prefix="/api/v1/auth",
@@ -599,11 +600,12 @@ app.include_router(
     prefix="/api/v1/auth",
     tags=["auth"],
 )
-app.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
-    prefix="/api/v1/users",
-    tags=["users"],
-)
+# Personal centre replaces the stock fastapi-users users router. The stock one
+# exposed a self-service PATCH that accepted ``role`` (any reviewer could hand
+# themselves ``admin``) and a DELETE /me; our router (see self_service.py) only
+# serves the caller their own profile and the narrow, password-re-authenticated
+# username/email/password/display_name mutations.
+app.include_router(self_service_router, prefix="/api/v1/users")
 
 # GitHub OAuth (mounted only when credentials are configured).
 #
@@ -666,6 +668,60 @@ if github_client_id and github_client_secret:
         )
         return OAuth2AuthorizeResponse(authorization_url=authorization_url)
 
+    # Re-auth for setting a first password on an OAuth-only account. Unlike the
+    # sign-in /authorize above this lives under /api/v1/users/me, so the global
+    # auth guard demands a live session first: the account holder must already
+    # be signed in before we take them out to GitHub to re-confirm identity. The
+    # state token additionally pins ``purpose=set_password`` and the caller's
+    # user id, so the /callback can fail closed if the GitHub account behind the
+    # returned code is not the one that started the flow.
+    reauth_router = APIRouter(tags=["users"])
+
+    @reauth_router.get(
+        "/set-password/authorize",
+        response_model=OAuth2AuthorizeResponse,
+        name="users:set-password.authorize",
+    )
+    async def set_password_authorize(
+        request: Request,
+        response: Response,
+    ) -> OAuth2AuthorizeResponse:
+        actor = getattr(request.state, "actor_user", None)
+        if actor is None:
+            raise error_response(ErrorCode.NOT_AUTHENTICATED, "Not authenticated.", 401)
+        if actor.hashed_password:
+            raise error_response(
+                ErrorCode.PASSWORD_ALREADY_SET,
+                "This account already has a password; change it instead.",
+                400,
+            )
+        authorize_redirect_url = str(request.url_for(_github_callback_name))
+        csrf_token = generate_csrf_token()
+        state = generate_state_token(
+            {
+                CSRF_TOKEN_KEY: csrf_token,
+                "purpose": "set_password",
+                "sub": str(actor.id),
+            },
+            SECRET,
+            lifetime_seconds=600,
+        )
+        authorization_url = await github_client.get_authorization_url(
+            authorize_redirect_url, state, scopes=None
+        )
+        response.set_cookie(
+            CSRF_TOKEN_COOKIE_NAME,
+            csrf_token,
+            max_age=600,
+            path="/",
+            secure=request.url.scheme == "https",
+            httponly=True,
+            samesite="lax",
+        )
+        return OAuth2AuthorizeResponse(authorization_url=authorization_url)
+
+    app.include_router(reauth_router, prefix="/api/v1/users/me")
+
     @github_oauth_router.get("/callback", name=_github_callback_name)
     async def github_callback(
         request: Request,
@@ -674,7 +730,21 @@ if github_client_id and github_client_secret:
         ),
         user_manager: UserManager = Depends(get_user_manager),
     ) -> RedirectResponse:
-        """Exchange the code for a session and send the browser to /ui logged in."""
+        """Exchange the code for a session and send the browser where it belongs.
+
+        One callback URL serves two purposes, distinguished by the signed state
+        token the /authorize route minted:
+
+        * default ("login")   — sign-in: resolve the GitHub identity to an
+          account (creating or email-linking one) and land the browser on /ui
+          logged in.
+        * "set_password"      — re-auth for setting a first password. The
+          account holder is already signed in; this round trip re-proves the
+          GitHub identity. Fail closed: if the GitHub account behind the code is
+          not the one that started the flow (no matching link, or a different
+          user), we mint nothing and send the browser back to the profile page
+          to say so. We never create or switch accounts here.
+        """
         oauth_token, state = access_token_state
         login_params: dict[str, str] = {}
         try:
@@ -690,6 +760,39 @@ if github_client_id and github_client_secret:
             account_id, account_email = await github_client.get_id_email(
                 oauth_token["access_token"]
             )
+
+            if state_data.get("purpose") == "set_password":
+                target_id = state_data.get("sub")
+                try:
+                    matched = await user_manager.get_by_oauth_account(
+                        "github", account_id
+                    )
+                except user_exceptions.UserNotExists:
+                    matched = None
+                if (
+                    matched is None
+                    or str(matched.id) != target_id
+                    or not matched.is_active
+                    or matched.hashed_password
+                ):
+                    _oauth_logger.warning(
+                        "Set-password re-auth refused: GitHub account %r does not "
+                        "match the session that started the flow",
+                        account_id,
+                    )
+                    return RedirectResponse(
+                        "/ui/profile?reauth=denied", status_code=302
+                    )
+                capability = issue_reauth_token(matched.id)
+                _oauth_logger.info(
+                    "Set-password re-auth confirmed for %s", matched.email
+                )
+                return RedirectResponse(
+                    f"/ui/profile?{urlencode({'reauth_token': capability})}",
+                    status_code=302,
+                )
+
+            login_params: dict[str, str] = {}
             if account_email is None:
                 raise ValueError("GitHub account has no public email")
             user = await user_manager.oauth_callback(

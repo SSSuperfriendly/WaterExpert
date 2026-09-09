@@ -178,6 +178,18 @@ class ErrorCode(_Code):
     PERMISSION_DENIED = "permission_denied"
     ALREADY_REGISTERED = "already_registered"
 
+    # account self-service (personal centre)
+    CURRENT_PASSWORD_INCORRECT = "current_password_incorrect"
+    USERNAME_TAKEN = "username_taken"
+    EMAIL_TAKEN = "email_taken"
+    #: An OAuth-only account (no usable password) tried a password-gated edit or
+    #: login; it must set a first password (GitHub re-auth) first.
+    PASSWORD_NOT_SET = "password_not_set"
+    #: set-password was attempted on an account that already has a password.
+    PASSWORD_ALREADY_SET = "password_already_set"
+    #: set-password was attempted without a valid fresh GitHub re-auth grant.
+    PASSWORD_REAUTH_REQUIRED = "password_reauth_required"
+
     # request shape
     VALIDATION_FAILED = "validation_failed"
     UNSUPPORTED_FORMAT = "unsupported_format"

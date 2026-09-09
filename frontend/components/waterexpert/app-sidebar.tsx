@@ -38,6 +38,7 @@ import {
   AiBrain01Icon,
   DocumentAttachmentIcon,
   Alert01Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 
 type NavItem = {
@@ -152,6 +153,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter className="gap-2 border-t p-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={isActive("/profile")}
+              tooltip={t("profile.title")}
+              render={<Link href="/profile" />}
+            >
+              <HugeiconsIcon icon={UserCircleIcon} className="size-4" />
+              <span className="flex-1">{t("profile.title")}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
         <Button
           variant="ghost"
           size="sm"
