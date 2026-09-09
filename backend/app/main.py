@@ -202,7 +202,18 @@ async def audit_refusals(request: Request, call_next):
     return response
 
 
-app.mount("/ui", StaticFiles(directory=settings.frontend_root, html=True), name="ui")
+# StaticFiles raises at mount time when the directory is absent, so only mount
+# /ui when the frontend has actually been built. CI runs the API test suite on a
+# source checkout with no frontend/out; production (release.sh) always ships it.
+if settings.frontend_root.is_dir():
+    app.mount(
+        "/ui", StaticFiles(directory=settings.frontend_root, html=True), name="ui"
+    )
+else:
+    logger.warning(
+        "frontend static export not found at %s; /ui will not be served",
+        settings.frontend_root,
+    )
 
 
 def _frontend_error_page(filename: str, status_code: int) -> FileResponse:

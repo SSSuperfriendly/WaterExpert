@@ -7,7 +7,7 @@ on:
 
 jobs:
   backend:
-    name: Backend tests
+    name: Backend + model tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,8 +25,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run test suite
-        run: python -m pytest -q
+      # frontend/out is a build product and is not committed, so the app's
+      # /ui static mount is skipped when it is absent (backend/app/main.py).
+      # e2e and frontend_static run in their own jobs where that applies.
+      - name: Run test suite (excluding e2e/frontend_static)
+        run: python -m pytest -q --ignore=tests/e2e --ignore=tests/frontend_static
 
   frontend:
     name: Frontend build
@@ -51,6 +54,14 @@ jobs:
       - name: Build static export
         working-directory: frontend
         run: npm run build
+
+      # Static-export route + UTF-8 encoding guards; runs where out/ is fresh.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Static export + encoding checks
+        run: python -m unittest tests.frontend_static.test_frontend_static -v
 
   e2e:
     name: End-to-end business chain
