@@ -28,8 +28,12 @@ jobs:
       # frontend/out is a build product and is not committed, so the app's
       # /ui static mount is skipped when it is absent (backend/app/main.py).
       # e2e and frontend_static run in their own jobs where that applies.
+      # agent/ has its own venv + requirements and is tested under that env;
+      # it is ignored here (see agent/AGENT_LOCAL_RUN.md).
       - name: Run test suite (excluding e2e/frontend_static)
-        run: python -m pytest -q --ignore=tests/e2e --ignore=tests/frontend_static
+        run: >-
+          python -m pytest -q
+          --ignore=tests/e2e --ignore=tests/frontend_static --ignore=agent
 
   frontend:
     name: Frontend build

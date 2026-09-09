@@ -49,7 +49,9 @@ echo ">> Releasing HEAD $HEAD_SHA ($(git rev-parse --abbrev-ref HEAD))"
 # ---- local checks ----------------------------------------------------------
 if [ "$RUN_CHECKS" = 1 ]; then
   echo ">> Running backend tests..."
-  (cd "$REPO_ROOT" && .ai4s/bin/python -m pytest -q) || { echo "!! tests failed"; exit 1; }
+  # agent/ has its own venv + requirements and is not importable under .ai4s;
+  # it is tested under the agent venv (see agent/AGENT_LOCAL_RUN.md).
+  (cd "$REPO_ROOT" && .ai4s/bin/python -m pytest -q --ignore=agent) || { echo "!! tests failed"; exit 1; }
   echo ">> Building frontend..."
   (cd "$REPO_ROOT/frontend" && npm run build) || { echo "!! frontend build failed"; exit 1; }
 else
