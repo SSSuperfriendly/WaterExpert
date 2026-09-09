@@ -203,6 +203,17 @@ For collaborator-facing setup on the software branch, see `docs/handoffs/environ
 
 ## Software Launch
 
+### Production deployment (Aliyun ECS)
+
+The live deployment is a systemd + Python-venv stack on an Aliyun ECS
+(Singapore); the full runbook — topology, release/rollback commands, backup,
+accounts, logs — is in [`docs/ops/PRODUCTION.md`](docs/ops/PRODUCTION.md). The
+semi-automatic release entry is [`scripts/deploy/release.sh`](scripts/deploy/release.sh)
+(maintainer machine, rsync of the built `frontend/out` + tracked code, then
+restart + smoke); one-time provisioning is
+[`scripts/deploy/bootstrap_server.sh`](scripts/deploy/bootstrap_server.sh).
+Production secrets live only in the server-side `.env` (root-owned, 600).
+
 ### Build the frontend
 
 The UI is a Next.js app that must be built to a static export before the backend can serve it. From the `frontend/` directory:
