@@ -27,8 +27,8 @@ echo ">> Operator account:  $OPERATOR_USER"
 echo ">> Operator password: $OPERATOR_PASS   <-- printed once; store it safely"
 echo ">> Public IP (nginx/CORS): $PUBLIC_IP"
 
-export OPERATOR_USER OPERATOR_PASS JWT_SECRET PUBLIC_IP WITH_DEPS
-ssh -o BatchMode=yes "$HOST" 'bash -s' <<'REMOTE'
+ssh -o BatchMode=yes "$HOST" \
+  "OPERATOR_USER='$OPERATOR_USER' OPERATOR_PASS='$OPERATOR_PASS' JWT_SECRET='$JWT_SECRET' PUBLIC_IP='$PUBLIC_IP' WITH_DEPS='$WITH_DEPS' bash -s" <<'REMOTE'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
