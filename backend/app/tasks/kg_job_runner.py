@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,7 +55,7 @@ def read_status(status_file: Path) -> dict[str, Any]:
         return {}
     try:
         return json.loads(status_file.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception:  # noqa: BLE001 — a corrupt/partial status file is treated as "no status yet"
         return {}
 
 
@@ -86,7 +85,7 @@ def parse_args() -> KgJobRunnerArgs:
         raise ValueError(f"Invalid --selected-files JSON: {exc}") from exc
 
     if not isinstance(selected_files, list):
-        raise ValueError("--selected-files must decode to a JSON array.")
+        raise TypeError("--selected-files must decode to a JSON array.")
 
     return KgJobRunnerArgs(
         kg_dir=Path(parsed.kg_dir).resolve(),
@@ -168,7 +167,7 @@ def main() -> int:
             },
         )
         return 0
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — the job boundary always writes a FAILED status instead of crashing the runner
         started_at = read_status(args.status_file).get("started_at")
         write_status(
             args.status_file,

@@ -1,0 +1,20 @@
+# Ruff lint policy for backend/app, src/water_ai, scripts/.
+#
+# This repo previously ran ruff with no config at all, so every finding came
+# from linter defaults. The only thing this file changes is treating FastAPI's
+# dependency-injection defaults as the immutable calls they are: FastAPI
+# resolves each `Depends`/`Query`/`File`/... default once when the route
+# function is defined, not per request, so B008 does not apply.
+# `select` stays at ruff's defaults so no new rule set silently appears.
+[lint.flake8-bugbear]
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Query",
+  "fastapi.File",
+  "fastapi.Form",
+  "fastapi.Body",
+  "fastapi.Header",
+  "fastapi.Cookie",
+  "fastapi.Path",
+  "fastapi.Security",
+]

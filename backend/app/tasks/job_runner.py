@@ -84,7 +84,7 @@ def read_status(status_file: Path) -> dict[str, Any]:
         return {}
     try:
         return json.loads(status_file.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception:  # noqa: BLE001 — a corrupt/partial status file is treated as "no status yet"
         return {}
 
 
@@ -254,7 +254,7 @@ def main() -> int:
         verify_required_outputs(args.artifact_root)
         complete_status(args)
         return 0
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — the job boundary always writes a FAILED status instead of crashing the runner
         fail_status(args, exc)
         return 1
 

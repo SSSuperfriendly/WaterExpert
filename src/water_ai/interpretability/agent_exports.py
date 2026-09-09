@@ -7,7 +7,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-
 FEATURE_AGENT_LABELS = {
     "precipitation_3d": "3-day cumulative precipitation",
     "precipitation_7d": "7-day cumulative precipitation",

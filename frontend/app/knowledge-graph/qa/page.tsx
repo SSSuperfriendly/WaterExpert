@@ -127,24 +127,26 @@ export default function WaterExpertAgentPage() {
   const setField = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const pollJob = React.useCallback(
-    async (jobId: string) => {
-      setPolling(true);
+  // Poll the deployed stack while a strategy job is still queued/running. An
+  // interval keyed on the job object — rather than a timeout that re-schedules
+  // itself through the callback it closes over — keeps one poll chain at a
+  // time, stops on a terminal status or an error, and clears on unmount.
+  React.useEffect(() => {
+    if (!job || !polling) return;
+    const id = window.setInterval(async () => {
       try {
-        const result = await endpoints.agent.strategyJob(jobId);
+        const result = await endpoints.agent.strategyJob(job.job_id);
         setJob(result);
         if (result.status === "completed" || result.status === "failed") {
           setPolling(false);
-          return;
         }
-        window.setTimeout(() => pollJob(jobId), 1500);
       } catch (err) {
         setError(describeApiError(t, err));
         setPolling(false);
       }
-    },
-    [t]
-  );
+    }, 1500);
+    return () => window.clearInterval(id);
+  }, [polling, job, t]);
 
   //: Once a job completes, ask the deployed stack to explain the same input —
   //: the narrative diagnosis + matched cases are the page's actual "answer".
@@ -216,11 +218,9 @@ export default function WaterExpertAgentPage() {
         backend: "api",
       });
       setJob({ ...created, status: created.status });
-      if (created.status === "completed") {
-        setPolling(false);
-      } else {
-        pollJob(created.job_id);
-      }
+      // Kick the poll loop off from the submit handler; the interval effect
+      // above drives it until the job reaches a terminal status.
+      setPolling(created.status !== "completed");
     } catch (err) {
       setError(describeApiError(t, err));
     } finally {

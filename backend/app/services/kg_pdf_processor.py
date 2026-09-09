@@ -17,7 +17,6 @@ import re
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import List, Tuple
 
 import fitz
 
@@ -44,7 +43,7 @@ class ExtractionResult:
     body: str
     output_txt: str = ""
     output_json: str = ""
-    notes: List[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
 
 def clean_line(text: str) -> str:
@@ -82,7 +81,7 @@ def is_page_number(text: str) -> bool:
         r"^\d+\s*/\s*\d+$",
     ]
 
-    return any(re.match(p, text, re.I) for p in patterns)
+    return any(re.match(p, text, re.IGNORECASE) for p in patterns)
 
 
 def looks_like_caption(text: str) -> bool:
@@ -93,17 +92,17 @@ def looks_like_caption(text: str) -> bool:
         r"^(figure|fig\.?|table)\s*\d+",
     ]
 
-    return any(re.match(p, text, re.I) for p in patterns)
+    return any(re.match(p, text, re.IGNORECASE) for p in patterns)
 
 
 def looks_like_reference_start(text: str) -> bool:
     text = clean_inline(text)
-    return bool(re.match(r"^(参考文献|参考资料|references|bibliography)$", text, re.I))
+    return bool(re.match(r"^(参考文献|参考资料|references|bibliography)$", text, re.IGNORECASE))
 
 
 def looks_like_ack_start(text: str) -> bool:
     text = clean_inline(text)
-    return bool(re.match(r"^(致谢|acknowledg?ments?|附录|appendix)$", text, re.I))
+    return bool(re.match(r"^(致谢|acknowledg?ments?|附录|appendix)$", text, re.IGNORECASE))
 
 
 def looks_like_affiliation_or_contact(text: str) -> bool:
@@ -119,15 +118,15 @@ def looks_like_affiliation_or_contact(text: str) -> bool:
         r"received[:：]|accepted[:：]|published[:：]",
     ]
 
-    return any(re.search(p, text, re.I) for p in patterns)
+    return any(re.search(p, text, re.IGNORECASE) for p in patterns)
 
 
-def extract_page_blocks(page, page_num: int) -> List[TextBlock]:
+def extract_page_blocks(page, page_num: int) -> list[TextBlock]:
     page_dict = page.get_text("dict")
     page_width = page.rect.width
     page_height = page.rect.height
 
-    blocks: List[TextBlock] = []
+    blocks: list[TextBlock] = []
 
     for block in page_dict.get("blocks", []):
         if "lines" not in block:
@@ -174,7 +173,7 @@ def extract_page_blocks(page, page_num: int) -> List[TextBlock]:
     return blocks
 
 
-def sort_blocks_reading_order(blocks: List[TextBlock]) -> List[TextBlock]:
+def sort_blocks_reading_order(blocks: list[TextBlock]) -> list[TextBlock]:
     if not blocks:
         return blocks
 
@@ -199,11 +198,11 @@ def sort_blocks_reading_order(blocks: List[TextBlock]) -> List[TextBlock]:
     return sorted(blocks, key=lambda b: (round(b.y0, 1), b.x0))
 
 
-def extract_pdf_blocks(pdf_path: str | Path) -> Tuple[List[List[TextBlock]], List[str]]:
+def extract_pdf_blocks(pdf_path: str | Path) -> tuple[list[list[TextBlock]], list[str]]:
     doc = fitz.open(pdf_path)
 
-    pages: List[List[TextBlock]] = []
-    notes: List[str] = []
+    pages: list[list[TextBlock]] = []
+    notes: list[str] = []
     total_chars = 0
 
     for page_num, page in enumerate(doc):
@@ -222,11 +221,11 @@ def extract_pdf_blocks(pdf_path: str | Path) -> Tuple[List[List[TextBlock]], Lis
 
 
 def detect_repeated_headers_footers(
-    pages: List[List[TextBlock]],
+    pages: list[list[TextBlock]],
     top_ratio: float = 0.15,
     bottom_ratio: float = 0.12,
     min_repeat_ratio: float = 0.45,
-) -> Tuple[set, set]:
+) -> tuple[set, set]:
     top_counter = Counter()
     bottom_counter = Counter()
     total_pages = len(pages)
@@ -258,15 +257,15 @@ def detect_repeated_headers_footers(
 
 
 def filter_blocks(
-    pages: List[List[TextBlock]],
+    pages: list[list[TextBlock]],
     keep_captions: bool = False
-) -> List[List[TextBlock]]:
+) -> list[list[TextBlock]]:
     repeated_top, repeated_bottom = detect_repeated_headers_footers(pages)
 
-    filtered_pages: List[List[TextBlock]] = []
+    filtered_pages: list[list[TextBlock]] = []
 
     for page_blocks in pages:
-        page_result: List[TextBlock] = []
+        page_result: list[TextBlock] = []
 
         for block in page_blocks:
             text = clean_inline(block.text)
@@ -304,19 +303,16 @@ def looks_like_title_candidate(text: str) -> bool:
     if len(text) < 8 or len(text) > 220:
         return False
 
-    if re.search(r"\b(abstract|keywords?)\b", text, re.I):
+    if re.search(r"\b(abstract|keywords?)\b", text, re.IGNORECASE):
         return False
 
     if looks_like_affiliation_or_contact(text):
         return False
 
-    if is_page_number(text):
-        return False
-
-    return True
+    return not is_page_number(text)
 
 
-def extract_title(first_page_blocks: List[TextBlock]) -> str:
+def extract_title(first_page_blocks: list[TextBlock]) -> str:
     if not first_page_blocks:
         return ""
 
@@ -325,7 +321,7 @@ def extract_title(first_page_blocks: List[TextBlock]) -> str:
     for block in first_page_blocks:
         text = clean_inline(block.text)
 
-        if re.match(r"^(摘要|abstract)\b", text, re.I):
+        if re.match(r"^(摘要|abstract)\b", text, re.IGNORECASE):
             abstract_y = block.y0
             break
 
@@ -365,7 +361,7 @@ def extract_title(first_page_blocks: List[TextBlock]) -> str:
     return clean_inline(best.text)
 
 
-def pages_to_lines(pages: List[List[TextBlock]]) -> List[str]:
+def pages_to_lines(pages: list[list[TextBlock]]) -> list[str]:
     lines = []
 
     for page_blocks in pages:
@@ -378,7 +374,7 @@ def pages_to_lines(pages: List[List[TextBlock]]) -> List[str]:
     return lines
 
 
-def join_body_lines(lines: List[str]) -> str:
+def join_body_lines(lines: list[str]) -> str:
     if not lines:
         return ""
 
@@ -401,7 +397,7 @@ def join_body_lines(lines: List[str]) -> str:
         elif re.match(
             r"^(\d+(\.\d+)*\s*|[一二三四五六七八九十]+[、.]|引言|结论|讨论|结果|方法|材料与方法|研究区概况|研究方法)",
             line,
-            re.I,
+            re.IGNORECASE,
         ):
             merged.append("\n" + line)
         else:
@@ -429,7 +425,7 @@ def find_section_positions(full_text: str):
     ]
 
     for pattern in abstract_patterns:
-        match = re.search(pattern, full_text, re.I | re.S)
+        match = re.search(pattern, full_text, re.IGNORECASE | re.DOTALL)
 
         if match:
             result["abstract_match"] = match
@@ -440,7 +436,7 @@ def find_section_positions(full_text: str):
     ]
 
     for pattern in keyword_patterns:
-        match = re.search(pattern, full_text, re.I | re.S)
+        match = re.search(pattern, full_text, re.IGNORECASE | re.DOTALL)
 
         if match:
             result["keywords_match"] = match
@@ -454,7 +450,7 @@ def find_section_positions(full_text: str):
         match = re.search(
             r"\n\s*(引言|INTRODUCTION|[1１]\s*[、.\s]|一[、.\s])",
             full_text,
-            re.I,
+            re.IGNORECASE,
         )
 
         if match:
@@ -471,7 +467,7 @@ def find_section_positions(full_text: str):
         match = re.search(
             pattern,
             full_text[result["body_start"] :],
-            re.I | re.M,
+            re.IGNORECASE | re.MULTILINE,
         )
 
         if match:
@@ -481,7 +477,7 @@ def find_section_positions(full_text: str):
     return result
 
 
-def extract_sections_from_lines(lines: List[str]) -> Tuple[str, str, str]:
+def extract_sections_from_lines(lines: list[str]) -> tuple[str, str, str]:
     full_text = "\n".join(lines)
     pos = find_section_positions(full_text)
 
@@ -600,7 +596,7 @@ def write_outputs(
     return result
 
 
-def write_log(results: List[ExtractionResult], log_path: str | Path) -> None:
+def write_log(results: list[ExtractionResult], log_path: str | Path) -> None:
     log_path = Path(log_path)
 
     with log_path.open("w", encoding="utf-8-sig", newline="") as file:

@@ -113,13 +113,13 @@ def estimated_remaining_seconds(record: dict[str, Any], *, now: datetime | None 
 #: Signatures matched against a failed job's message and log tail, most specific
 #: first. Each maps to the category that tells a user what to do next.
 _FAILURE_SIGNATURES: tuple[tuple[re.Pattern[str], FailureCategory], ...] = (
-    (re.compile(r"run scope|runscopeerror|no rows|empty dataset", re.I), FailureCategory.DATA_MISSING),
-    (re.compile(r"config file (not found|must decode)|yaml|invalid config", re.I), FailureCategory.CONFIG_INVALID),
-    (re.compile(r"quality|not modelable|rejected dataset", re.I), FailureCategory.DATA_QUALITY_REJECTED),
-    (re.compile(r"artifact chain is incomplete|artifacts were missing", re.I), FailureCategory.ARTIFACT_INCOMPLETE),
-    (re.compile(r"modulenotfound|importerror|no module named|command not found", re.I), FailureCategory.DEPENDENCY_MISSING),
-    (re.compile(r"filenotfound|no such file or directory", re.I), FailureCategory.DATA_MISSING),
-    (re.compile(r"cuda out of memory|killed|memoryerror|segmentation fault", re.I), FailureCategory.PROCESS_CRASHED),
+    (re.compile(r"run scope|runscopeerror|no rows|empty dataset", re.IGNORECASE), FailureCategory.DATA_MISSING),
+    (re.compile(r"config file (not found|must decode)|yaml|invalid config", re.IGNORECASE), FailureCategory.CONFIG_INVALID),
+    (re.compile(r"quality|not modelable|rejected dataset", re.IGNORECASE), FailureCategory.DATA_QUALITY_REJECTED),
+    (re.compile(r"artifact chain is incomplete|artifacts were missing", re.IGNORECASE), FailureCategory.ARTIFACT_INCOMPLETE),
+    (re.compile(r"modulenotfound|importerror|no module named|command not found", re.IGNORECASE), FailureCategory.DEPENDENCY_MISSING),
+    (re.compile(r"filenotfound|no such file or directory", re.IGNORECASE), FailureCategory.DATA_MISSING),
+    (re.compile(r"cuda out of memory|killed|memoryerror|segmentation fault", re.IGNORECASE), FailureCategory.PROCESS_CRASHED),
 )
 
 

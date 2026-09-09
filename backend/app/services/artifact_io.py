@@ -11,9 +11,10 @@ consistent ``ArtifactReadError`` for malformed artifacts while letting
 
 import csv
 import json
+from collections.abc import Iterator
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import pandas as pd
 

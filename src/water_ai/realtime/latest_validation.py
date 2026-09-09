@@ -7,7 +7,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -256,8 +256,8 @@ def _load_model_checkpoints(
         "max_sequence_length": int(meta["history_days"]),
     }
 
-    from water_ai.models.mscim import MSCIMPrototype
     from water_ai.models.cmfbe_stgcn import CMFBE_STGCNPrototype
+    from water_ai.models.mscim import MSCIMPrototype
 
     models: dict[str, torch.nn.Module] = {
         "mscim": MSCIMPrototype(**model_kwargs),
@@ -527,7 +527,7 @@ def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[
     stations = _fetch_station_catalog(appcode)
     latest_rows, total_latest_station_count = _fetch_latest_snapshot(appcode, config.as_of_time)
     station_lookup = _station_lookup(stations)
-    live_row, station_meta, distance_km = _find_live_station_row(
+    live_row, _station_meta, distance_km = _find_live_station_row(
         latest_rows,
         station_lookup,
         config.section_name,
@@ -600,7 +600,7 @@ def generate_latest_realtime_validation(config: LatestValidationConfig) -> dict[
 
     result = {
         "status": "ok",
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "methodology": "realtime snapshot + historical analog context + true next-day validation when target observation exists",
         "snapshot_station_count": int(total_latest_station_count),
         "target_section": config.section_name,

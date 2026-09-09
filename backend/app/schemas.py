@@ -21,23 +21,6 @@ class RegisterRequest(BaseModel):
     confirm_password: str = Field(min_length=8, max_length=128)
 
 
-class ForgotPasswordRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-
-
-class ResetPasswordRequest(BaseModel):
-    token: str = Field(min_length=1)
-    password: str = Field(min_length=8, max_length=128)
-
-
-class RequestVerifyRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-
-
-class VerifyRequest(BaseModel):
-    token: str = Field(min_length=1)
-
-
 # ---------------------------------------------------------------------------
 # fastapi-users schemas (read / create / update) with the domain fields.
 # ---------------------------------------------------------------------------
@@ -81,10 +64,6 @@ class DatasetImportRequest(BaseModel):
     station_code: str | None = Field(default="2586", max_length=64)
     dataset_id: str | None = Field(default=None, max_length=64)
     title: str | None = Field(default=None, max_length=200)
-
-
-class DatasetArchiveRequest(BaseModel):
-    reason: str | None = Field(default=None, max_length=500)
 
 
 class PredictionJobCreateRequest(BaseModel):

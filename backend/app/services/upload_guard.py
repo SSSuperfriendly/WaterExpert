@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import shutil
 import zipfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO, Iterable
+from typing import BinaryIO
 
 from backend.app.domain.codes import ErrorCode
 

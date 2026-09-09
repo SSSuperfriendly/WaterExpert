@@ -4,8 +4,7 @@ from typing import Any
 
 import numpy as np
 import torch
-import torch.nn as nn
-
+from torch import nn
 
 TRANSFORMER_PATCH_GRID = 4
 TRANSFORMER_TOKEN_DIM = 9

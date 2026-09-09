@@ -22,7 +22,6 @@ if str(SRC_ROOT) not in sys.path:
 
 from water_ai.vision import extract_visual_transformer_features
 
-
 DEFAULT_FIELD_MONITORING_PATH = PROJECT_ROOT / "data" / "raw" / "zhangjiabang_field_monitoring.xlsx"
 DEFAULT_UAV_ROOT = PROJECT_ROOT / "data" / "raw" / "zhangjiabang_uav"
 DEFAULT_PROXY_PATH = (
@@ -351,7 +350,7 @@ def _sample_frame_indices(frame_count: int, sample_count: int) -> list[int]:
         return []
     if frame_count <= sample_count:
         return list(range(frame_count))
-    return sorted({int(round(idx)) for idx in np.linspace(0, frame_count - 1, sample_count + 2)[1:-1]})
+    return sorted({round(idx) for idx in np.linspace(0, frame_count - 1, sample_count + 2)[1:-1]})
 
 
 def _process_video_asset(path: Path, frames_dir: Path, max_size: int, sample_count: int) -> dict[str, Any]:
@@ -444,7 +443,9 @@ def build_uav_asset_index(
             "file_name": path.name,
             "source_path": _relative(path),
             "file_size_bytes": path.stat().st_size,
-            "file_modified_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(),
+            "file_modified_at": datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+            .astimezone()
+            .isoformat(),
         }
         if media_type == "image":
             media_features = _process_image_asset(path, preview_dir, thumbnail_max_size)
@@ -482,7 +483,7 @@ def aggregate_visual_features(assets: pd.DataFrame) -> pd.DataFrame:
                 if "sample_site_role" in group and not group["sample_site_role"].dropna().empty
                 else "unknown"
             ),
-            "uav_asset_count": int(len(group)),
+            "uav_asset_count": len(group),
             "uav_image_count": int((group["media_type"] == "image").sum()),
             "uav_video_count": int((group["media_type"] == "video").sum()),
             "uav_total_size_bytes": int(group["file_size_bytes"].sum()),
@@ -624,7 +625,7 @@ def _historical_proxy_context(proxy: pd.DataFrame, sample_dates: pd.Series) -> p
             "historical_proxy_match_scope": "same_month_part"
             if not candidates.empty
             else "unmatched",
-            "historical_proxy_rows": int(len(candidates)),
+            "historical_proxy_rows": len(candidates),
         }
         for field in numeric_fields:
             values = pd.to_numeric(candidates[field], errors="coerce").dropna()
@@ -737,14 +738,14 @@ def write_outputs(
             "proxy_weather": "joined_when_dates_overlap",
         },
         "counts": {
-            "field_monitoring_rows": int(len(field_summary)),
-            "field_monitoring_zhangjiabang_rows": int(len(_target_field_only(field_summary))),
-            "field_replicate_rows": int(len(field_replicates)),
-            "uav_assets": int(len(asset_index)),
+            "field_monitoring_rows": len(field_summary),
+            "field_monitoring_zhangjiabang_rows": len(_target_field_only(field_summary)),
+            "field_replicate_rows": len(field_replicates),
+            "uav_assets": len(asset_index),
             "uav_images": int((asset_index["media_type"] == "image").sum()) if not asset_index.empty else 0,
             "uav_videos": int((asset_index["media_type"] == "video").sum()) if not asset_index.empty else 0,
             "uav_dates": int(asset_index["sample_date"].nunique()) if not asset_index.empty else 0,
-            "cross_modal_rows": int(len(cross_modal)),
+            "cross_modal_rows": len(cross_modal),
             "supervised_cross_modal_rows": ready_count,
             "strong_same_day_cross_modal_rows": strong_count,
         },

@@ -22,6 +22,7 @@ import os
 import secrets
 import uuid
 
+import jwt
 from fastapi import Depends
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users import exceptions as user_exceptions
@@ -35,7 +36,6 @@ from fastapi_users.jwt import decode_jwt
 from fastapi_users.password import PasswordHelper
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-import jwt
 
 from backend.app.config import get_settings
 from backend.app.db import async_session_maker, get_async_session

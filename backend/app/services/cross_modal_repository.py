@@ -8,7 +8,6 @@ import pandas as pd
 from backend.app.config import Settings
 from backend.app.services.artifact_io import read_csv, read_json
 
-
 CROSS_MODAL_ROOT = Path("data") / "processed" / "zhangjiabang_cross_modal"
 SUMMARY_FILE = CROSS_MODAL_ROOT / "zhangjiabang_cross_modal_summary.json"
 ASSET_INDEX_FILE = CROSS_MODAL_ROOT / "uav_asset_index.csv"
@@ -30,7 +29,7 @@ class CrossModalRepository:
     def _media_url(self, relative_path: str | float | None) -> str:
         if not relative_path or pd.isna(relative_path):
             return ""
-        return f"/api/v1/cross-modal/media?path={str(relative_path)}"
+        return f"/api/v1/cross-modal/media?path={relative_path!s}"
 
     def summary(self) -> dict[str, Any]:
         summary = self._read_json(SUMMARY_FILE)

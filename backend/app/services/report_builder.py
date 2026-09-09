@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from html import escape
 from io import BytesIO
 from pathlib import Path
@@ -15,11 +15,17 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.pdfmetrics import registerFont
-from reportlab.platypus import LongTable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    LongTable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from backend.app.schemas import ReportExportFormat
 from backend.app.services.artifact_repository import ArtifactRepository
-
 
 REPORT_MEDIA_TYPES: dict[ReportExportFormat, str] = {
     "html": "text/html; charset=utf-8",
@@ -38,6 +44,16 @@ REPORT_FILE_SUFFIXES: dict[ReportExportFormat, str] = {
 REPORT_FILENAME_PREFIX = "waterexpert-software-report"
 REPORT_TIMESTAMP_FORMAT = "%Y%m%d-%H%M%S-%f"
 REPORT_ID_LENGTH = 8
+
+
+def _local_now() -> datetime:
+    """Timezone-aware local wall-clock time.
+
+    Reads UTC then converts to the local zone, so the emitted timestamp carries
+    an explicit offset (``+08:00`` / ``Z``) while never shifting the displayed
+    clock that a naive ``datetime.now()`` used to produce.
+    """
+    return datetime.now(timezone.utc).astimezone()
 REPORT_TITLE = "WaterExpert 水环境智能诊断报告"
 REPORT_INTRO = (
     "本报告汇总当前 WaterExpert 软件的分析结果，"
@@ -467,7 +483,7 @@ def _collect_report_payload(repository: ArtifactRepository) -> dict[str, Any]:
     sobol = _dict_value(sensitivity.get("sobol"))
 
     return {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": _local_now().isoformat(timespec="seconds"),
         "dashboard": {
             **dashboard,
             "data_scope": DATA_SCOPE_LABELS.get(
@@ -966,7 +982,7 @@ def write_report(
     export_format: ReportExportFormat = "html",
 ) -> Path:
     report_root.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)
+    timestamp = _local_now().strftime(REPORT_TIMESTAMP_FORMAT)
     unique_id = uuid4().hex[:REPORT_ID_LENGTH]
     suffix = REPORT_FILE_SUFFIXES[export_format]
     path = report_root / f"{REPORT_FILENAME_PREFIX}-{timestamp}-{unique_id}{suffix}"

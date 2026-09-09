@@ -50,6 +50,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = React.useState(false);
 
   React.useEffect(() => {
+    // localStorage is client-only, so the persisted locale can only be read
+    // after first client paint; flipping `hydrated` then is the canonical
+    // two-phase render that avoids an SSR hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage read is client-only; hydrate once after first paint
     setLocaleState(readStoredLocale());
     setHydrated(true);
   }, []);

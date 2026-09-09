@@ -62,7 +62,7 @@ def to_repo_relative(path_value: str | Path) -> str:
     path = Path(path_value)
     try:
         return str(path.resolve().relative_to(PROJECT_ROOT)).replace("/", "\\")
-    except Exception:
+    except Exception:  # noqa: BLE001 — a path outside the repo is kept absolute
         return str(path)
 
 
@@ -89,7 +89,7 @@ def _dataset_service() -> Any:
 
         settings = get_settings()
         _RESOLVED_SERVICE = DatasetService(settings, SqliteStateStore(settings.state_root))
-    except Exception:
+    except Exception:  # noqa: BLE001 — the backend service is optional; fall back to committed files when it cannot be built
         _RESOLVED_SERVICE_FAILED = True
         _RESOLVED_SERVICE = None
     return _RESOLVED_SERVICE
@@ -115,7 +115,7 @@ def resolve_registered_source(
         version = service.get_current_version(dataset_id)
         raw_path = service.resolve_reading_path(dataset_id, raw=True)
         return str(raw_path), version.get("version_id")
-    except Exception:
+    except Exception:  # noqa: BLE001 — a lookup failure degrades to the committed-repo fallback path
         return str(fallback), None
 
 
@@ -290,7 +290,7 @@ def apply_run_scope(
         "station_code": run_scope.get("station_code"),
         "requested_start_date": None if start_raw in (None, "") else str(start_raw),
         "requested_end_date": None if end_raw in (None, "") else str(end_raw),
-        "rows_before_scope": int(len(dataset_df)),
+        "rows_before_scope": len(dataset_df),
         "available_start_date": dataset_summary["date_range"]["start"],
         "available_end_date": dataset_summary["date_range"]["end"],
     }
@@ -299,7 +299,7 @@ def apply_run_scope(
         report.update(
             {
                 "applied": False,
-                "rows_after_scope": int(len(dataset_df)),
+                "rows_after_scope": len(dataset_df),
                 "effective_start_date": report["available_start_date"],
                 "effective_end_date": report["available_end_date"],
             }
@@ -328,7 +328,7 @@ def apply_run_scope(
     log_turbidity = np.log1p(scoped["turbidity"].clip(lower=0.0))
     scoped_summary = {
         **dataset_summary,
-        "rows_after_merge": int(len(scoped)),
+        "rows_after_merge": len(scoped),
         "date_range": {
             "start": str(scoped["date"].min().date()),
             "end": str(scoped["date"].max().date()),
@@ -341,7 +341,7 @@ def apply_run_scope(
     report.update(
         {
             "applied": True,
-            "rows_after_scope": int(len(scoped)),
+            "rows_after_scope": len(scoped),
             "effective_start_date": scoped_summary["date_range"]["start"],
             "effective_end_date": scoped_summary["date_range"]["end"],
         }
@@ -897,7 +897,7 @@ def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: P
             label_summary = {
                 "status": "loaded" if not labeled.empty else "no_supervised_boundary_labels",
                 "source_path": str(merged_labels_path),
-                "labeled_days": int(len(labeled)),
+                "labeled_days": len(labeled),
                 "positive_days": int(labeled["boundary_label"].fillna(0.0).sum())
                 if "boundary_label" in labeled.columns
                 else 0,
@@ -921,13 +921,13 @@ def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: P
                 split_df["actual_boundary_label"],
                 split_df["predicted_boundary_probability"],
             )
-            summary["models"][model_name][split_name]["labeled_samples"] = int(len(split_df))
+            summary["models"][model_name][split_name]["labeled_samples"] = len(split_df)
     for split_name, split_df in available.groupby("split"):
         summary["overall"][split_name] = binary_classification_metrics(
             split_df["actual_boundary_label"],
             split_df["predicted_boundary_probability"],
         )
-        summary["overall"][split_name]["labeled_samples"] = int(len(split_df))
+        summary["overall"][split_name]["labeled_samples"] = len(split_df)
     save_json(summary, boundary_dir / "boundary_detection_summary.json")
     if merged_labels_path.exists():
         merged_labels = pd.read_csv(merged_labels_path)
@@ -937,7 +937,7 @@ def export_boundary_detection_artifacts(predictions: pd.DataFrame, output_dir: P
         label_summary = {
             "status": "loaded",
             "source_path": str(merged_labels_path),
-            "labeled_days": int(len(labeled)),
+            "labeled_days": len(labeled),
             "positive_days": int(labeled["boundary_label"].fillna(0.0).sum())
             if "boundary_label" in labeled.columns
             else 0,

@@ -12,15 +12,20 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/waterexpert/u
 import { DataTable, type ColumnDef } from "@/components/waterexpert/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Shared empty-array fallback so the row arrays below are referentially stable
+// across renders while the payload is still loading (a fresh `[]` literal each
+// render would churn the counterfactual-columns useMemo below).
+const EMPTY_ROWS: Record<string, unknown>[] = [];
+
 export default function SensitivityPage() {
   const { t } = useT();
   const scope = useArtifactScope();
   const { data, loading, error, reload } = useApi(() => endpoints.sensitivity(scope), [scope]);
 
   const sobol = data?.sobol ?? {};
-  const topFactors = (sobol.top_factors ?? []) as Record<string, unknown>[];
-  const counterfactual = (data?.counterfactual ?? []) as Record<string, unknown>[];
-  const joint = (data?.joint_counterfactual ?? []) as Record<string, unknown>[];
+  const topFactors = (sobol.top_factors ?? EMPTY_ROWS) as Record<string, unknown>[];
+  const counterfactual = (data?.counterfactual ?? EMPTY_ROWS) as Record<string, unknown>[];
+  const joint = (data?.joint_counterfactual ?? EMPTY_ROWS) as Record<string, unknown>[];
 
   const factorColumns: ColumnDef[] = [
     {
@@ -58,7 +63,7 @@ export default function SensitivityPage() {
         return typeof v === "number" ? formatNumber(v, 3) : String(v ?? "—");
       },
     }));
-  }, [counterfactual]);
+  }, [counterfactual, t]);
 
   return (
     <AppShell title={t("nav.sensitivity")}>

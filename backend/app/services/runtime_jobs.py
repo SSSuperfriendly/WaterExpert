@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import ctypes
 import json
+import logging
 import shutil
 import subprocess
 import sys
@@ -18,12 +19,14 @@ import pandas as pd
 import yaml
 
 from backend.app.config import Settings
-from backend.app.domain.codes import ErrorCode, JobStatus, TERMINAL_JOB_STATUSES
+from backend.app.domain.codes import TERMINAL_JOB_STATUSES, ErrorCode, JobStatus
 from backend.app.domain.models import MODEL_KEYS, is_known_model, models_for_request
 from backend.app.schemas import PredictionJobCreateRequest
 from backend.app.services.artifact_repository import ArtifactRepository
 from backend.app.services.state_store import JOBS_TABLE, SqliteStateStore
 from backend.app.services.task_progress import task_view
+
+logger = logging.getLogger(__name__)
 
 JOB_ID_LENGTH = 12
 LOG_PREVIEW_LINE_COUNT = 20
@@ -79,7 +82,7 @@ class JobRuntimePaths:
     stderr_log: Path
 
     @classmethod
-    def build(cls, job_runs_root: Path, job_id: str) -> "JobRuntimePaths":
+    def build(cls, job_runs_root: Path, job_id: str) -> JobRuntimePaths:
         run_root = job_runs_root / job_id
         return cls(
             run_root=run_root,
@@ -545,7 +548,7 @@ class RuntimeJobService:
                 continue
             try:
                 refreshed.append(self.refresh_job(job_id))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — one bad job must not break the queue listing; show a failed-refresh row instead
                 refreshed.append(self._failed_refresh_view(job, exc))
         return sorted(
             [task_view(job) for job in refreshed],
@@ -832,11 +835,11 @@ class RuntimeJobService:
         try:
             process.terminate()
             process.wait(timeout=5)
-        except Exception:
+        except Exception:  # noqa: BLE001 — graceful terminate is best-effort; fall through to a hard kill
             try:
                 process.kill()
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 — last-ditch kill is best-effort; the orphan will be reaped on the next sweep
+                logger.warning("could not kill job process pid=%s", process.pid)
 
     def _materialize_job_config(
         self,
@@ -871,7 +874,8 @@ class RuntimeJobService:
         if loaded is None:
             return {}
         if not isinstance(loaded, dict):
-            raise ValueError(f"Config file must decode to a mapping: {config_path}")
+            # ValueError is mapped to HTTP 400 by the API boundary for a bad config payload.
+            raise ValueError(f"Config file must decode to a mapping: {config_path}")  # noqa: TRY004 — ValueError is the boundary contract mapped to HTTP 400
         return loaded
 
     def _resolved_hydrodynamics_config(
@@ -1075,7 +1079,7 @@ class RuntimeJobService:
             repository = self._repository_from_record(record)
             repository.assert_source_ready()
             return repository.artifact_manifest()
-        except Exception:
+        except Exception:  # noqa: BLE001 — best-effort manifest lookup; absence is reported as a plain null
             return None
 
     def _is_detached_running(self, record: dict[str, Any]) -> bool:

@@ -95,6 +95,7 @@ export function JobRunnerPanel({
   }, [t]);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time job list load; state only after the fetch settles
     loadJobs();
   }, [loadJobs]);
 

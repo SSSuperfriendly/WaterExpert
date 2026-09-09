@@ -43,7 +43,7 @@ class SensitivityArtifacts:
     agent_summary_path: Path
 
     @classmethod
-    def from_output_root(cls, output_root: Path) -> "SensitivityArtifacts":
+    def from_output_root(cls, output_root: Path) -> SensitivityArtifacts:
         resolved_root = output_root.resolve()
         sensitivity_dir = resolved_root / "sensitivity"
         counterfactual_dir = resolved_root / "counterfactual"
@@ -430,7 +430,7 @@ def build_agent_summary(
         "scope": "wusongkou_daily_prototype",
         "test_window_start": str(test_frame["target_date"].min().date()),
         "test_window_end": str(test_frame["target_date"].max().date()),
-        "days_analyzed": int(len(test_frame)),
+        "days_analyzed": len(test_frame),
         "response_semantics": (
             "Negative deltas indicate lower surrogate turbidity pressure relative to the "
             "baseline test window."

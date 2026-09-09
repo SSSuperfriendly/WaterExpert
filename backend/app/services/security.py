@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Depends, Request
+from fastapi import Request
 
 from backend.app.domain.codes import ErrorCode
 from backend.app.domain.roles import Permission, parse_role, role_has_permission
@@ -82,31 +82,6 @@ class AuditLogger:
         if action:
             filters["action"] = action
         return self.store.list(AUDIT_EVENTS_TABLE, filters=filters or None, limit=limit)
-
-    def recent_refusals(self, *, actor: str, within_seconds: int = 60) -> int:
-        """Count of 401/403/404 responses this actor drew recently.
-
-        Used to flag an access that keeps failing — a credential brute-force or a
-        probing session (review item 7).
-        """
-        cutoff = datetime.now(timezone.utc).timestamp() - within_seconds
-        total = 0
-        for event in self.store.list(AUDIT_EVENTS_TABLE, filters={"actor": actor}):
-            created = event.get("created_at")
-            if not created:
-                continue
-            try:
-                stamp = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
-            except ValueError:
-                continue
-            if stamp.tzinfo is None:
-                stamp = stamp.replace(tzinfo=timezone.utc)
-            if stamp.timestamp() < cutoff:
-                continue
-            if event.get("outcome") in {"denied", "not_found", "unauthorized"}:
-                total += 1
-        return total
-
 
 def _audit_id() -> str:
     import uuid

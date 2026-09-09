@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
-import { useAppStore } from "@/lib/stores/app-store";
 import { endpoints, REPORT_FORMATS } from "@/lib/api/endpoints";
 import { downloadAuthenticated } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";

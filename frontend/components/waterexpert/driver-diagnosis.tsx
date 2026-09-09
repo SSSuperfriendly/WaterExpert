@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
-import { translateFactor, translateDomain } from "@/lib/domain";
+import { translateDomain } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
 import type { DiagnosticsPayload } from "@/lib/api/contracts";
 

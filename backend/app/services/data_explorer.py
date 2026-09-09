@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from statistics import fmean, median, pstdev
-from typing import Any, Iterable
+from typing import Any
 
 from backend.app.config import Settings
 from backend.app.services.artifact_io import iter_csv_rows
 from backend.app.services.dataset_service import DatasetNotFound, DatasetService
-
 
 CATALOG_RELATIVE_PATH = Path("data") / "full_station_database" / "station_catalog.csv"
 DATABASE_RELATIVE_PATH = (

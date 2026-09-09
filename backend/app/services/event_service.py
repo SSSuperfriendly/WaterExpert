@@ -260,7 +260,7 @@ class EventService:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            urllib.request.urlopen(request, timeout=3)  # noqa: S310 — config-supplied URL
+            urllib.request.urlopen(request, timeout=3)  # SSRF review: URL is operator-config-supplied
         except Exception as exc:  # noqa: BLE001 — notifications must never break the request
             logger.warning("event webhook failed: %s", exc)
 

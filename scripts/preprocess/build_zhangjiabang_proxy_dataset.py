@@ -9,7 +9,6 @@ from typing import Any
 
 import pandas as pd
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WATER_QUALITY_PATH = (
     PROJECT_ROOT
@@ -266,7 +265,7 @@ def build_proxy_dataset(
             "river": str(_first_value(water_rows, "river")),
             "longitude": water_lon,
             "latitude": water_lat,
-            "rows": int(len(water_rows)),
+            "rows": len(water_rows),
             "date_range": _date_range(water_rows),
             "source_path": water_quality_path.relative_to(PROJECT_ROOT).as_posix(),
         },
@@ -278,12 +277,12 @@ def build_proxy_dataset(
             "province": str(_first_value(weather_rows, "weather_province")),
             "longitude": weather_lon,
             "latitude": weather_lat,
-            "rows": int(len(weather_rows)),
+            "rows": len(weather_rows),
             "date_range": _date_range(weather_rows),
             "source_path": weather_path.relative_to(PROJECT_ROOT).as_posix(),
         },
         "overlap": {
-            "rows": int(len(merged)),
+            "rows": len(merged),
             "date_range": _date_range(merged),
             "coverage_against_water_quality_rows": len(merged) / len(water_rows),
             "coverage_against_weather_rows": len(merged) / len(weather_rows),

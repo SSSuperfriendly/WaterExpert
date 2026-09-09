@@ -11,7 +11,6 @@ Exit code is 0 when the repository is clean, 1 when violations are found.
 """
 
 import argparse
-import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

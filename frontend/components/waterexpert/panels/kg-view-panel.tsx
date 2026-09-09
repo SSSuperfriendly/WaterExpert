@@ -47,102 +47,121 @@ function getVis(): VisNetworkLib | undefined {
   return (window as unknown as { vis?: VisNetworkLib }).vis;
 }
 
+// Lazily inject the self-hosted vis-network stylesheet + script once, shared
+// across every instance of this panel. Resolves when the library is on the
+// window; the promise is cleared on failure so a later mount can retry.
+let visInjectPromise: Promise<void> | null = null;
+
+function ensureVisLoaded(): Promise<void> {
+  if (getVis()) return Promise.resolve();
+  if (!visInjectPromise) {
+    visInjectPromise = new Promise<void>((resolve, reject) => {
+      if (!document.querySelector(`link[href="${VIS_CSS}"]`)) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = VIS_CSS;
+        document.head.appendChild(link);
+      }
+      const script = document.createElement("script");
+      script.src = VIS_SCRIPT;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`failed to load ${VIS_SCRIPT}`));
+      document.head.appendChild(script);
+    });
+    visInjectPromise.catch(() => {
+      visInjectPromise = null;
+    });
+  }
+  return visInjectPromise;
+}
+
 export function KgViewPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.knowledgeGraph.graph());
 
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const networkRef = React.useRef<VisNetworkInstance | null>(null);
-  const [visReady, setVisReady] = React.useState(false);
+  const [visError, setVisError] = React.useState(false);
 
-  // Inject the self-hosted vis-network script + stylesheet once.
+  // Build the network once the payload and the lazily injected vis-network
+  // library are both available. The build runs after the inject promise
+  // resolves; state is only written from the rejection path.
   React.useEffect(() => {
-    let script: HTMLScriptElement | null = null;
-
-    if (!document.querySelector(`link[href="${VIS_CSS}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = VIS_CSS;
-      document.head.appendChild(link);
-    }
-
-    if (getVis()) {
-      setVisReady(true);
-      return;
-    }
-
-    script = document.createElement("script");
-    script.src = VIS_SCRIPT;
-    script.async = true;
-    script.onload = () => setVisReady(true);
-    script.onerror = () => setVisReady(false);
-    document.head.appendChild(script);
-  }, []);
-
-  // Build the network once both the library and the graph payload are ready.
-  React.useEffect(() => {
-    const vis = getVis();
     const container = containerRef.current;
-    if (!visReady || !vis || !container || !data || data.nodes.length === 0) return;
+    if (!container || !data || data.nodes.length === 0) return;
+    let disposed = false;
 
-    const degree = new Map<string, number>();
-    data.nodes.forEach((n) => degree.set(n.id, 0));
-    data.edges.forEach((e) => {
-      degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
-      degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
-    });
+    const build = () => {
+      const vis = getVis();
+      if (disposed || !vis || !containerRef.current) return;
 
-    const nodes = data.nodes.map((n) => ({
-      id: n.id,
-      label: n.label ?? n.id,
-      color: TYPE_COLORS[n.type ?? ""] ?? DEFAULT_COLOR,
-      value: 1 + (degree.get(n.id) ?? 0) * 2,
-    }));
-    const edges = data.edges.map((e) => ({
-      from: e.source,
-      to: e.target,
-      label: e.relation,
-      title: e.evidence,
-    }));
+      const degree = new Map<string, number>();
+      data.nodes.forEach((n) => degree.set(n.id, 0));
+      data.edges.forEach((e) => {
+        degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
+        degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
+      });
 
-    const network = new vis.Network(
-      container,
-      { nodes, edges },
-      {
-        autoResize: true,
-        nodes: {
-          shape: "dot",
-          font: { size: 14, face: "sans-serif", color: "#334155" },
-        },
-        edges: {
-          arrows: { to: { enabled: true, scaleFactor: 0.6 } },
-          color: { color: "#cbd5e1", highlight: "#0ea5e9" },
-          font: { size: 10, color: "#64748b", align: "middle" },
-          smooth: { type: "continuous" },
-        },
-        physics: {
-          stabilization: { iterations: 200 },
-          barnesHut: {
-            gravitationalConstant: -8000,
-            springLength: 140,
-            springConstant: 0.04,
-            damping: 0.09,
+      const nodes = data.nodes.map((n) => ({
+        id: n.id,
+        label: n.label ?? n.id,
+        color: TYPE_COLORS[n.type ?? ""] ?? DEFAULT_COLOR,
+        value: 1 + (degree.get(n.id) ?? 0) * 2,
+      }));
+      const edges = data.edges.map((e) => ({
+        from: e.source,
+        to: e.target,
+        label: e.relation,
+        title: e.evidence,
+      }));
+
+      const network = new vis.Network(
+        container,
+        { nodes, edges },
+        {
+          autoResize: true,
+          nodes: {
+            shape: "dot",
+            font: { size: 14, face: "sans-serif", color: "#334155" },
           },
-        },
-        interaction: { hover: true, tooltipDelay: 120 },
-      }
-    );
+          edges: {
+            arrows: { to: { enabled: true, scaleFactor: 0.6 } },
+            color: { color: "#cbd5e1", highlight: "#0ea5e9" },
+            font: { size: 10, color: "#64748b", align: "middle" },
+            smooth: { type: "continuous" },
+          },
+          physics: {
+            stabilization: { iterations: 200 },
+            barnesHut: {
+              gravitationalConstant: -8000,
+              springLength: 140,
+              springConstant: 0.04,
+              damping: 0.09,
+            },
+          },
+          interaction: { hover: true, tooltipDelay: 120 },
+        }
+      );
 
-    networkRef.current = network;
-    network.once("stabilizationIterationsDone", () => {
-      network.fit({ animation: { duration: 300, easingFunction: "easeInOutQuad" } });
-    });
+      networkRef.current = network;
+      network.once("stabilizationIterationsDone", () => {
+        network.fit({ animation: { duration: 300, easingFunction: "easeInOutQuad" } });
+      });
+    };
+
+    ensureVisLoaded()
+      .then(build)
+      .catch(() => {
+        if (!disposed) setVisError(true);
+      });
 
     return () => {
+      disposed = true;
       networkRef.current?.destroy();
       networkRef.current = null;
     };
-  }, [visReady, data]);
+  }, [data]);
 
   const downloads = [
     { name: "entities.csv", labelKey: "kg.downloadEntities" },
@@ -174,6 +193,8 @@ export function KgViewPanel() {
             <CardContent>
               {data.nodes.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{t("kg.noGraph")}</p>
+              ) : visError ? (
+                <p className="text-muted-foreground text-sm">{t("kg.graphLoadFailed")}</p>
               ) : (
                 <div
                   ref={containerRef}

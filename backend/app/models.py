@@ -8,12 +8,12 @@ WaterExpert workbench needs: a unique ``username`` (login identifier), a human
 
 from __future__ import annotations
 
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from fastapi_users_db_sqlalchemy import (
     SQLAlchemyBaseOAuthAccountTableUUID,
     SQLAlchemyBaseUserTableUUID,
 )
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db import Base
 
@@ -35,7 +35,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
         String(ROLE_MAX), nullable=False, default="reviewer"
     )
 
-    oauth_accounts: Mapped[list["OAuthAccount"]] = relationship(
+    oauth_accounts: Mapped[list[OAuthAccount]] = relationship(
         "OAuthAccount",
         back_populates="user",
         lazy="selectin",
@@ -46,6 +46,6 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 class OAuthAccount(SQLAlchemyBaseOAuthAccountTableUUID, Base):
     __tablename__ = "oauth_account"
 
-    user: Mapped["User"] = relationship(
+    user: Mapped[User] = relationship(
         "User", back_populates="oauth_accounts"
     )

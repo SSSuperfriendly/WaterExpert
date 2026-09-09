@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import os
 import random
+from collections.abc import Mapping
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 import numpy as np
 import torch

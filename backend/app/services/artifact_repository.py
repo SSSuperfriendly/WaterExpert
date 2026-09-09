@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 from backend.app.config import Settings
-from backend.app.services.artifact_io import ArtifactReadError, read_csv, read_json
+from backend.app.services.artifact_io import read_csv, read_json
 
 DEFAULT_STATION_CODE = "2586"
 PRODUCT_MODE = "integrated-runtime"
@@ -109,7 +109,7 @@ class ArtifactRepository:
         self,
         outputs_root: Path | None = None,
         config_path: Path | None = None,
-    ) -> "ArtifactRepository":
+    ) -> ArtifactRepository:
         return ArtifactRepository(
             settings=self.settings,
             outputs_root=outputs_root or self.outputs_root,

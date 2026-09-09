@@ -19,6 +19,7 @@ immediately after checkout.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -158,18 +159,21 @@ JSON 格式如下：
 """
 
 
+logger = logging.getLogger(__name__)
+
+
 def parse_json(text: str) -> dict:
     try:
         return json.loads(text)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001 — LLM output may be prose-wrapped, not pure JSON; fall through to regex
+        logger.debug("LLM returned non-JSON text; falling back to regex extract: %s", exc)
 
     match = re.search(r"\{[\s\S]*\}", text)
 
     if match:
         try:
             return json.loads(match.group())
-        except Exception:
+        except Exception:  # noqa: BLE001 — LLM JSON still not valid after regex; degrade to empty triples
             return {"triples": []}
 
     return {"triples": []}
@@ -493,7 +497,7 @@ def answer_question(question: str, relations_path: str | Path | None) -> str:
             system_prompt=system_prompt,
             temperature=0.2,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — a failing model call still returns a grounded graph-retrieval answer
         return (
             "大模型调用失败，以下为知识图谱检索结果：\n\n"
             + fallback_answer(question, matched)
@@ -689,7 +693,7 @@ class KnowledgeGraphService:
                     "body_len": len(result.body),
                     "notes": result.notes,
                 })
-            except Exception as exc:  # pragma: no cover - depends on PDF content
+            except Exception as exc:  # pragma: no cover - depends on PDF content  # noqa: BLE001 — one bad PDF must not abort the batch; recorded as an error row
                 errors.append({"name": name, "error": str(exc)})
 
         if results:

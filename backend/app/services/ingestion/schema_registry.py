@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Literal, Mapping
+from typing import Literal
 
 FieldKind = Literal["numeric", "categorical", "datetime"]
 Aggregation = Literal["mean", "sum", "max", "min", "first", "last"]

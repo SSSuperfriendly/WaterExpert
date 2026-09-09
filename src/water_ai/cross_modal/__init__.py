@@ -3,8 +3,8 @@
 from water_ai.cross_modal.evaluation import (
     DEFAULT_OUTPUT_DIR,
     TARGETS,
-    evaluate_cross_modal_models,
     evaluate_and_write,
+    evaluate_cross_modal_models,
     write_evaluation_outputs,
 )
 

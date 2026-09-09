@@ -56,7 +56,7 @@ class TimeSeriesWindowDataset(Dataset):
         dates = pd.to_datetime(df["date"]).reset_index(drop=True)
 
         total_needed = history_days + horizon_days
-        for start in range(0, len(df) - total_needed + 1):
+        for start in range(len(df) - total_needed + 1):
             end = start + history_days
             target_index = end + horizon_days - 1
             if dates.iloc[target_index] - dates.iloc[start] != pd.Timedelta(days=total_needed - 1):
@@ -228,12 +228,12 @@ def prepare_dataloaders(
         feature_columns=feature_columns,
         feature_index={feature: idx for idx, feature in enumerate(feature_columns)},
         split_summary={
-            "train_rows": int(len(train_df)),
-            "val_rows": int(len(val_df)),
-            "test_rows": int(len(test_df)),
-            "train_windows": int(len(train_dataset)),
-            "val_windows": int(len(val_dataset)),
-            "test_windows": int(len(test_dataset)),
+            "train_rows": len(train_df),
+            "val_rows": len(val_df),
+            "test_rows": len(test_df),
+            "train_windows": len(train_dataset),
+            "val_windows": len(val_dataset),
+            "test_windows": len(test_dataset),
             "train_start": str(train_df["date"].min().date()),
             "train_end": str(train_df["date"].max().date()),
             "val_start": str(val_df["date"].min().date()),

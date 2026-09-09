@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNTIME_ROOT = PROJECT_ROOT
 VAR_ROOT_NAME = "var"
@@ -132,20 +131,12 @@ class Settings:
         return self.var_root / "datasets"
 
     @property
-    def cases_root(self) -> Path:
-        return self.var_root / "cases"
-
-    @property
     def job_logs_root(self) -> Path:
         return self.state_root / "job_logs"
 
     @property
     def job_runs_root(self) -> Path:
         return self.state_root / "job_runs"
-
-    @property
-    def state_db_path(self) -> Path:
-        return self.state_root / "app_state.sqlite3"
 
     @property
     def var_root(self) -> Path:

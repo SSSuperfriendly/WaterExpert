@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 SCHEMA_META_TABLE = "schema_meta"
 IMPORTS_TABLE = "data_imports"
@@ -309,7 +310,9 @@ class SqliteStateStore:
         except (TypeError, JSONDecodeError) as exc:
             raise ValueError(f"Corrupt state payload for {key}={key_value}: {exc}") from exc
         if not isinstance(payload, dict):
-            raise ValueError(f"Unexpected state payload type for {key}={key_value}.")
+            # ValueError is the documented contract for "stored payload cannot be
+            # decoded" (see the update() docstring); the API boundary maps it to 400.
+            raise ValueError(f"Unexpected state payload type for {key}={key_value}.")  # noqa: TRY004 — callers contract on ValueError for any undecodable payload
         return payload
 
     def _decode_payload_row(self, row: sqlite3.Row, primary_key: str) -> dict[str, Any]:
@@ -319,7 +322,7 @@ class SqliteStateStore:
                 key=primary_key,
                 key_value=row[primary_key],
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — a corrupt row surfaces as a corrupt-record view, not a crash
             return self._corrupt_record_view(
                 primary_key=primary_key,
                 primary_value=row[primary_key],
@@ -483,14 +486,6 @@ class SqliteStateStore:
                 f"DELETE FROM {table} WHERE {spec.primary_key} = ?", (key,)
             )
             return cursor.rowcount > 0
-
-    # -- imports (kept for the existing data-import surface) -----------------
-
-    def list_imports(self) -> list[dict[str, Any]]:
-        return self.list(IMPORTS_TABLE)
-
-    def append_import(self, record: dict[str, Any]) -> dict[str, Any]:
-        return self.insert(IMPORTS_TABLE, record)
 
     # -- prediction jobs -----------------------------------------------------
 

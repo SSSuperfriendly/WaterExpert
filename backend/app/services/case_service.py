@@ -263,9 +263,12 @@ class CaseService:
 
         snapshot_path = case.get("config_snapshot_path")
         recorded_hash = case.get("config_hash")
-        if snapshot_path and recorded_hash:
-            if config_hash(Path(str(snapshot_path))) != recorded_hash:
-                return True, "config_changed"
+        if (
+            snapshot_path
+            and recorded_hash
+            and config_hash(Path(str(snapshot_path))) != recorded_hash
+        ):
+            return True, "config_changed"
 
         return False, None
 

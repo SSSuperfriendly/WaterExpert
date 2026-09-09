@@ -72,8 +72,8 @@ BOUNDARY_NOTE = [
 ]
 
 UAV_INCOMPLETE_NOTE = [
-    "原始 UAV 媒体目录 data/raw/zhangjiabang_uav/ 缺失，仅有衍生特征，"
-    "来源不完整、不可完全重建。",
+    ("原始 UAV 媒体目录 data/raw/zhangjiabang_uav/ 缺失，仅有衍生特征，"
+     "来源不完整、不可完全重建。"),
 ]
 
 KG_NOTE = [
@@ -296,16 +296,16 @@ def main() -> None:
             skipped.append(dataset_id)
             continue
 
-        kwargs: dict[str, Any] = dict(
-            source_path=source,
-            data_type=str(entry["data_type"]),
-            station_code=entry.get("station_code"),
-            owner=OWNER,
-            dataset_id=dataset_id,
-            title=entry.get("title"),
-            notes=entry.get("notes"),
-            proxy=entry.get("proxy"),
-        )
+        kwargs: dict[str, Any] = {
+            "source_path": source,
+            "data_type": str(entry["data_type"]),
+            "station_code": entry.get("station_code"),
+            "owner": OWNER,
+            "dataset_id": dataset_id,
+            "title": entry.get("title"),
+            "notes": entry.get("notes"),
+            "proxy": entry.get("proxy"),
+        }
         if entry.get("mode") == "fact":
             record = service.ingest_source_path(**kwargs)
         else:

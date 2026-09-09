@@ -56,10 +56,10 @@ export function PredictionPanel() {
   const availableSplits = data?.available_splits ?? [];
   const comparison = (data?.model_comparison ?? []) as Record<string, unknown>[];
 
-  // Default the model selector to the payload's selected model on first load.
-  React.useEffect(() => {
-    if (!model && data?.selected_model) setModel(String(data.selected_model));
-  }, [data, model]);
+  // Before the user picks a model the request omits `model` so the server
+  // applies its default. Surface that same default in the selector rather than
+  // copying it into state, which would only trigger a redundant second fetch.
+  const effectiveModel = model || (data ? String(data?.selected_model ?? "") : "");
 
   const chartSeries = React.useMemo(() => {
     if (metricView === "turbidity") {
@@ -97,7 +97,7 @@ export function PredictionPanel() {
             {availableModels.length > 0 && (
               <div className="space-y-1.5">
                 <Label>{t("prediction.modelName")}</Label>
-                <Select value={model} onValueChange={(v) => setModel(v as string)}>
+                <Select value={effectiveModel} onValueChange={(v) => setModel(v as string)}>
                   <SelectTrigger className="w-56">
                     <SelectValue />
                   </SelectTrigger>

@@ -26,6 +26,8 @@ node_modules/
 *.rar
 *.7z
 *.lance
+# Local-only preservation archive (extracted irreplaceable zip contents, 2026-09-09)
+archive/
 data/raw/zhangjiabang_uav/
 实地监测数据.xlsx
 key notes-*.docx

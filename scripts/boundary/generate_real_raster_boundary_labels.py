@@ -13,7 +13,6 @@ import pandas as pd
 import rasterio
 from rasterio.windows import from_bounds
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
@@ -21,7 +20,6 @@ if str(SRC_ROOT) not in sys.path:
 
 from water_ai.data.multimodal_builder import build_multimodal_dataset
 from water_ai.utils.io import ensure_dir, load_yaml, save_json
-
 
 GWP_URL_TEMPLATE = (
     "https://download.geoservice.dlr.de/GWP/files/daily/"
@@ -85,16 +83,15 @@ def _fetch_gwp_mask(
         month=timestamp.month,
         day=timestamp.day,
     )
-    with rasterio.Env(CPL_CURL_VERIFY_SSL="NO", GDAL_HTTP_UNSAFESSL="YES"):
-        with rasterio.open(url) as src:
-            window = from_bounds(
-                center_lon - half_size_deg,
-                center_lat - half_size_deg,
-                center_lon + half_size_deg,
-                center_lat + half_size_deg,
-                src.transform,
-            )
-            array = src.read(1, window=window, boundless=True)
+    with rasterio.Env(CPL_CURL_VERIFY_SSL="NO", GDAL_HTTP_UNSAFESSL="YES"), rasterio.open(url) as src:
+        window = from_bounds(
+            center_lon - half_size_deg,
+            center_lat - half_size_deg,
+            center_lon + half_size_deg,
+            center_lat + half_size_deg,
+            src.transform,
+        )
+        array = src.read(1, window=window, boundless=True)
     valid_mask = array != 255
     if valid_mask.sum() == 0:
         raise RuntimeError(f"No valid GWP pixels found for {timestamp.date()}.")
@@ -225,7 +222,7 @@ def main() -> None:
                         "mask": mask,
                     }
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — one failing date is recorded and skipped; it must not abort the export
                 failures.append(
                     {
                         "date": timestamp.strftime("%Y-%m-%d"),
@@ -342,8 +339,8 @@ def main() -> None:
             "center_lat": center_lat,
             "half_size_deg": half_size_deg,
         },
-        "sampled_days": int(len(sampled_df)),
-        "dataset_days": int(len(full_label_df)),
+        "sampled_days": len(sampled_df),
+        "dataset_days": len(full_label_df),
         "positive_labeled_days": int(sampled_df["boundary_label"].sum()),
         "label_threshold": threshold,
         "boundary_label_quantile": label_quantile,
@@ -361,7 +358,7 @@ def main() -> None:
             "max": float(sampled_df["water_fraction"].max()),
         },
         "failed_days": failures,
-        "swim_we_highres_items": int(len(swim_catalog)),
+        "swim_we_highres_items": len(swim_catalog),
     }
     save_json(summary, boundary_output_dir / "boundary_label_generation_summary.json")
     sampled_df.to_csv(

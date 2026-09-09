@@ -27,6 +27,10 @@ export function AppShell({
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
+    // Hydration fence: the auth session lives in sessionStorage, so it can only
+    // be read after first client paint. Mounting the real shell (vs. the
+    // skeleton) on that paint is the canonical two-phase client-only gate.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only session gate; skeleton until after first client paint
     setMounted(true);
   }, []);
 

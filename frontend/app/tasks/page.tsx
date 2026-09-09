@@ -49,19 +49,16 @@ export default function TasksPage() {
   const { t } = useT();
   const queue = useApi<JobQueueSnapshot>(() => endpoints.jobQueue());
   const jobs = useApi<PredictionJob[]>(() => endpoints.jobs());
-  const [selected, setSelected] = React.useState<PredictionJob | null>(null);
-
-  // Keep the selected job's fresh copy in sync with the list.
-  React.useEffect(() => {
-    if (!selected) return;
-    const fresh = jobs.data?.find((j) => j.job_id === selected.job_id);
-    if (fresh) setSelected(fresh);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobs.data]);
+  // Selection is stored as the job id; the selected job object is derived from
+  // the freshest list each render, so the details column always tracks the
+  // latest status/progress without a setState-in-effect sync loop.
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const selected =
+    (selectedId && jobs.data?.find((j) => j.job_id === selectedId)) || null;
 
   const selectedArtifacts = useApi<JobArtifact[]>(
-    () => (selected ? endpoints.jobArtifacts(selected.job_id) : Promise.resolve([])),
-    [selected?.job_id]
+    () => (selectedId ? endpoints.jobArtifacts(selectedId) : Promise.resolve([])),
+    [selectedId]
   );
 
   const act = async (fn: () => Promise<PredictionJob>) => {
@@ -146,7 +143,7 @@ export default function TasksPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setSelected(job)}
+                              onClick={() => setSelectedId(job.job_id)}
                             >
                               {t("common.details")}
                             </Button>

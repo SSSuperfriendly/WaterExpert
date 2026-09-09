@@ -201,8 +201,8 @@ def _load_water_daily_from_path(
         "station_name": station_row.get("station_name"),
         "longitude": float(station_row.get("longitude")),
         "latitude": float(station_row.get("latitude")),
-        "raw_rows": int(len(water_df)),
-        "daily_rows": int(len(water_daily)),
+        "raw_rows": len(water_df),
+        "daily_rows": len(water_daily),
         "start_date": str(water_daily["date"].min().date()),
         "end_date": str(water_daily["date"].max().date()),
     }
@@ -328,8 +328,8 @@ def _merge_optional_hydrodynamics(
     hydro_meta = {
         **hydro_meta,
         "merge_summary": {
-            "rows_before_hydrodynamics_merge": int(len(base_df)),
-            "rows_after_hydrodynamics_merge": int(len(merged_df)),
+            "rows_before_hydrodynamics_merge": len(base_df),
+            "rows_after_hydrodynamics_merge": len(merged_df),
             "natural_overlap_days": int(natural_overlap_days),
             "matched_overlap_days": int(matched_days),
             "coverage_ratio": float(round(matched_days / max(1, natural_overlap_days), 4)),
@@ -368,8 +368,8 @@ def _merge_optional_ndti(
     ndti_meta = {
         **ndti_meta,
         "merge_summary": {
-            "rows_before_ndti_merge": int(len(base_df)),
-            "rows_after_ndti_merge": int(len(merged_df)),
+            "rows_before_ndti_merge": len(base_df),
+            "rows_after_ndti_merge": len(merged_df),
             "matched_days": matched_days,
             "coverage_ratio": float(round(matched_days / max(1, len(base_df)), 4)),
             "available_years": available_years,
@@ -749,7 +749,7 @@ def build_multimodal_dataset(
         "boundary_labels": boundary_meta,
         "water_station": station_meta,
         "selected_weather_station": weather_meta,
-        "rows_after_merge": int(len(merged_df)),
+        "rows_after_merge": len(merged_df),
         "date_range": {
             "start": str(merged_df["date"].min().date()),
             "end": str(merged_df["date"].max().date()),

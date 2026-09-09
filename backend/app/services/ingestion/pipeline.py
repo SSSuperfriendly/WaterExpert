@@ -27,7 +27,6 @@ from backend.app.services.ingestion.quality import (
 )
 from backend.app.services.ingestion.schema_registry import (
     DatasetSpec,
-    FieldSpec,
     extract_unit,
     get_spec,
     normalize_column,
@@ -132,7 +131,7 @@ def _looks_like_unit_token(value: str) -> bool:
     text = str(value or "").strip()
     if not text:
         return False
-    if text.startswith("(") or text.startswith("（"):
+    if text.startswith(("(", "（")):
         return True
     return normalize_unit(text) in {
         "mg/l",
@@ -237,8 +236,8 @@ def _stage_validated(
         stage=IngestionStage.VALIDATED,
         ok=not errors,
         metrics={
-            "source_rows": int(len(frame)),
-            "source_columns": int(len(frame.columns)),
+            "source_rows": len(frame),
+            "source_columns": len(frame.columns),
             "resolvable_fields": sorted(resolvable),
             "missing_required_fields": missing_required,
             "unit_hints": unit_hints,
@@ -346,7 +345,7 @@ def _stage_cleaned(
         empty_rows = int((~populated).sum())
         cleaned = cleaned[populated].copy()
 
-    total_rows = int(len(cleaned))
+    total_rows = len(cleaned)
 
     for item in spec.all_fields:
         if item.kind == "datetime":
@@ -427,7 +426,7 @@ def _stage_cleaned(
             ok=True,
             metrics={
                 "rows_in": before + empty_rows,
-                "rows_out": int(len(cleaned)),
+                "rows_out": len(cleaned),
                 "empty_rows_dropped": empty_rows,
                 "duplicate_rows_dropped": duplicates,
                 "out_of_range_nulled": out_of_range_total,
@@ -480,7 +479,7 @@ def _stage_aligned(
         for item in spec.all_fields
         if item.canonical in aligned.columns and item.canonical not in group_keys
     }
-    rows_before = int(len(aligned))
+    rows_before = len(aligned)
     if aggregation:
         collapsed = aligned.groupby(group_keys, as_index=False, dropna=False).agg(aggregation)
     else:
@@ -509,8 +508,8 @@ def _stage_aligned(
             metrics={
                 "granularity": spec.granularity,
                 "rows_in": rows_before,
-                "rows_out": int(len(collapsed)),
-                "collapsed_rows": rows_before - int(len(collapsed)),
+                "rows_out": len(collapsed),
+                "collapsed_rows": rows_before - len(collapsed),
                 "unparseable_dates": unparseable_dates,
                 "coverage_start": coverage_start.date().isoformat() if present_days else None,
                 "coverage_end": coverage_end.date().isoformat() if present_days else None,
@@ -533,7 +532,7 @@ def _modelable_rows(frame: pd.DataFrame, spec: DatasetSpec) -> int:
         if item.kind != "datetime" and item.canonical in frame.columns
     ]
     if not required:
-        return int(len(frame))
+        return len(frame)
     return int(frame[required].notna().all(axis=1).sum())
 
 
@@ -572,7 +571,7 @@ def run_ingestion(source_path: Path, data_type: str) -> IngestionResult:
         )
 
     raw, unit_hints = _split_units_row(raw)
-    quality.source_rows = int(len(raw))
+    quality.source_rows = len(raw)
     stages.append(
         StageReport(
             stage=IngestionStage.UPLOADED,
@@ -581,7 +580,7 @@ def run_ingestion(source_path: Path, data_type: str) -> IngestionResult:
                 "filename": source_path.name,
                 "size_bytes": source_path.stat().st_size if source_path.exists() else 0,
                 "rows": quality.source_rows,
-                "columns": int(len(raw.columns)),
+                "columns": len(raw.columns),
                 "units_row_detected": bool(unit_hints),
             },
         )
@@ -609,7 +608,7 @@ def run_ingestion(source_path: Path, data_type: str) -> IngestionResult:
     stages.append(mapped)
     quality.unit_conversions = conversions
     quality.unmapped_columns = list(mapped.metrics.get("unmapped_columns", []))
-    quality.mapped_rows = int(len(mapped_frame))
+    quality.mapped_rows = len(mapped_frame)
     if not mapped.ok:
         return finish(IngestionStage.REJECTED, False)
 
@@ -622,7 +621,7 @@ def run_ingestion(source_path: Path, data_type: str) -> IngestionResult:
 
     aligned_frame, aligned = _stage_aligned(cleaned_frame, spec)
     stages.append(aligned)
-    quality.aligned_rows = int(len(aligned_frame))
+    quality.aligned_rows = len(aligned_frame)
     quality.time_coverage_start = aligned.metrics.get("coverage_start")
     quality.time_coverage_end = aligned.metrics.get("coverage_end")
     quality.time_expected_days = int(aligned.metrics.get("expected_days", 0))

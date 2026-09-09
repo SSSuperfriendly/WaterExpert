@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
-import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,7 +34,7 @@ class ThresholdArtifacts:
     plot_path: Path
 
     @classmethod
-    def from_output_root(cls, output_root: Path) -> "ThresholdArtifacts":
+    def from_output_root(cls, output_root: Path) -> ThresholdArtifacts:
         resolved_root = output_root.resolve()
         threshold_dir = resolved_root / "thresholds"
         plot_dir = resolved_root / "plots"
@@ -189,7 +189,7 @@ def estimate_piecewise_threshold(
 ) -> dict[str, float | int | str]:
     subset = data[[feature, response]].replace([np.inf, -np.inf], np.nan).dropna()
     subset = subset.sort_values(feature)
-    sample_count = int(len(subset))
+    sample_count = len(subset)
     if sample_count < min_side * 2 or subset[feature].nunique() < 4:
         return {"n": sample_count, "status": "insufficient"}
 

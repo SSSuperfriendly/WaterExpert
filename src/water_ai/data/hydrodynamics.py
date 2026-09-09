@@ -212,8 +212,8 @@ def build_hydrodynamics_summary(
         "source_xls": _portable_path(xls_path),
         "preprocessed_long_path": _portable_path(long_path),
         "preprocessed_wide_path": _portable_path(wide_path),
-        "long_rows": int(len(long_df)),
-        "wide_rows": int(len(wide_df)),
+        "long_rows": len(long_df),
+        "wide_rows": len(wide_df),
         "date_range": {
             "start": str(wide_df["date"].min().date()),
             "end": str(wide_df["date"].max().date()),
@@ -302,7 +302,7 @@ def load_or_build_hydrodynamics_daily(
         else:
             summary = {
                 "preprocessed_wide_path": _portable_path(candidate),
-                "wide_rows": int(len(hydro_df)),
+                "wide_rows": len(hydro_df),
                 "date_range": {
                     "start": str(hydro_df["date"].min().date()),
                     "end": str(hydro_df["date"].max().date()),

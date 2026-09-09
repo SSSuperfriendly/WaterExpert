@@ -112,7 +112,6 @@ export function BoundarySummaryView({ data }: { data: BoundarySummary }) {
 }
 
 function BoundaryPreviewTable({ rows }: { rows: Record<string, unknown>[] }) {
-  const { t } = useT();
   const sample = rows[0] ?? {};
   const keys = Object.keys(sample).slice(0, 8);
 

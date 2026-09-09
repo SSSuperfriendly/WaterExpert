@@ -115,7 +115,10 @@ class ModelService:
         if not published:
             return None
         # One published model per key; newest wins as a tie-break.
-        return sorted(published, key=lambda m: str(m.get("published_at") or ""), reverse=True)[0]
+        return max(
+            published,
+            key=lambda m: str(m.get("published_at") or ""),
+        )
 
     # -- lifecycle -----------------------------------------------------------
 

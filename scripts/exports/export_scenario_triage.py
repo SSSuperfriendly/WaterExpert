@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
@@ -29,7 +28,7 @@ class TriageArtifacts:
     agent_context_path: Path
 
     @classmethod
-    def from_output_root(cls, output_root: Path) -> "TriageArtifacts":
+    def from_output_root(cls, output_root: Path) -> TriageArtifacts:
         resolved_root = output_root.resolve()
         return cls(
             output_root=resolved_root,

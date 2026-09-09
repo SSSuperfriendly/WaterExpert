@@ -641,7 +641,7 @@ class DatasetService:
                 records = payload.get("records", payload) if isinstance(payload, dict) else payload
                 if isinstance(records, list):
                     return pd.DataFrame(records).astype(str)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best-effort preview of an arbitrary user file; any parse failure means "no preview"
             return None
         return None
 
@@ -660,7 +660,7 @@ class DatasetService:
                 "field_dictionary": [],
             }
 
-        rows = int(len(frame))
+        rows = len(frame)
         columns = [str(column) for column in frame.columns]
         blank = frame.replace({"": None, "nan": None})
         missing_rates = {
