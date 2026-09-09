@@ -530,6 +530,10 @@ async def register(
     payload: RegisterRequest,
     user_manager: UserManager = Depends(get_user_manager),
 ) -> dict:
+    if not settings.enable_registration:
+        raise HTTPException(
+            status_code=403, detail="Registration is disabled by the administrator."
+        )
     if payload.password != payload.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match.")
     username = payload.username.strip()

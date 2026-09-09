@@ -73,6 +73,11 @@ class Settings:
     cors_allow_credentials: bool = True
     #: When false, ``/api/v1/auth/hint`` returns nothing instead of demo creds.
     expose_demo_hint: bool = False
+    #: When false, ``/api/v1/auth/register`` (open self-signup) is disabled.
+    #: Defaults True so local dev and tests behave as before; production sets it
+    #: to 0 and provisions accounts via the seeded operator
+    #: (``WATEREXPERT_DEMO_USERNAME/ROLE``) or direct ``auth.sqlite3`` edits.
+    enable_registration: bool = True
     max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES
     max_compression_ratio: float = DEFAULT_MAX_COMPRESSION_RATIO
 
@@ -171,6 +176,7 @@ def get_settings() -> Settings:
         ),
         cors_allow_credentials=_env_bool("WATEREXPERT_CORS_ALLOW_CREDENTIALS", True),
         expose_demo_hint=_env_bool("WATEREXPERT_ENABLE_DEMO_HINT", False),
+        enable_registration=_env_bool("WATEREXPERT_ENABLE_REGISTRATION", True),
         max_upload_bytes=_env_int("WATEREXPERT_MAX_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_BYTES),
         max_compression_ratio=_env_float(
             "WATEREXPERT_MAX_COMPRESSION_RATIO", DEFAULT_MAX_COMPRESSION_RATIO
