@@ -1,0 +1,24 @@
+# Linux runtime dependencies for the co-deployed Water AI agent API
+# (server side, /srv/waterexpert-agent/venv).
+#
+# This is a *trimmed* set derived from the agent's actual runtime import path
+# (verified 2026-09-09): fastapi/uvicorn/pydantic/python-dotenv/torch/numpy/pandas
+# plus the small libs the six agents import at module load. Deliberately NOT
+# installed (training-only, and heavy/C++ on a 2-vCPU box): tigramite, pyarrow,
+# vllm, stable-baselines3, transformers/sentence-transformers, opencv, rasterio.
+# Pins mirror the agent repo's requirements.txt so behaviour matches local.
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv
+python-multipart
+httpx
+PyYAML
+
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.7.1
+matplotlib==3.10.0
+torch==2.5.1
