@@ -75,8 +75,10 @@ git checkout <旧tag 或旧 sha>        # 例如 prod-20260909；git stash 会�
 - 首启播种的生产账号即 **admin**（角色 admin），由 `/srv/waterexpert/app/.env`
   的 `WATEREXPERT_DEMO_USERNAME/PASSWORD/ROLE` 决定（root:root 600）。改密码 = 编辑该 .env 后
   `sudo systemctl restart waterexpert-platform`（seed 会 upsert）。
-- 开放注册已关闭：`WATEREXPERT_ENABLE_REGISTRATION=0`，注册接口返回 403。
-- 加人：临时设 `=1` 重启注册后再关，或直接改 `var/state/auth.sqlite3` 的 users 表（角色列）。
+- 当前上线阶段**开放注册**：`WATEREXPERT_ENABLE_REGISTRATION=1`，`/api/v1/auth/register`
+  自助注册成功，默认角色 `reviewer`（已端到端验证：注册→发 token→`/users/me` 200）。
+- 要收紧（对外正式发布前）：改 .env 为 `=0` 后 `systemctl restart waterexpert-platform`，
+  注册接口即回 403；加人/授权可直接改 `var/state/auth.sqlite3` 的 `user` 表（角色列）。
 
 ## 六、日志
 
