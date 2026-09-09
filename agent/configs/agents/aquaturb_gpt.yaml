@@ -1,0 +1,9 @@
+deepseek:
+  backend: api
+  api:
+    endpoint: https://api.openai.com/v1/chat/completions
+    api_key: YOUR_API_KEY
+    model: gpt-4o
+  local:
+    model_path: local_deepseek_model
+cache_path: outputs/agents/aquaturb_gpt_traces/cache.json

@@ -1,0 +1,7 @@
+policy_path: outputs/policy/checkpoints/latest.zip
+device: auto
+enable_plan_guidance: true
+plan_guidance_weight: 0.35
+non_recommended_policy_scale: 0.6
+gamma: 0.99
+safe_lambda: 0.1

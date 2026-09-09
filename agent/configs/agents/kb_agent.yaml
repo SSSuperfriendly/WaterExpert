@@ -1,0 +1,2 @@
+seed_data_path: data/tech_knowledge_base/tech_quadruples.jsonl
+top_k: 5

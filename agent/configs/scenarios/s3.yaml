@@ -1,0 +1,5 @@
+name: algae_bloom
+trigger:
+  chlorophyll: high
+action_space:
+  aeration: 0.4

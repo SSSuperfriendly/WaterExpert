@@ -1,0 +1,7 @@
+agents:
+  mscim: configs/agents/mscim_agent.yaml
+  cmfbe: configs/agents/cmfbe_agent.yaml
+  kb: configs/agents/kb_agent.yaml
+  aquaturb: configs/agents/aquaturb_gpt.yaml
+  rl: configs/agents/rl_tgrr.yaml
+  safety: configs/agents/safety.yaml

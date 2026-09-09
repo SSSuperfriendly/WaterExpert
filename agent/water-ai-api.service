@@ -1,0 +1,16 @@
+[Unit]
+Description=Water AI API Service
+After=network.target
+
+[Service]
+Type=simple
+User=xchen2
+WorkingDirectory=/home/xchen2/WaterExpert-main
+Environment="PYTHONPATH=/home/xchen2/WaterExpert-main/src"
+Environment="DEEPSEEK_API_KEY=your-api-key-here"
+ExecStart=/usr/bin/python3 /home/xchen2/WaterExpert-main/scripts/run_api_server.py --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

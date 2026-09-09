@@ -1,0 +1,2 @@
+checkpoint_path: outputs/models/cmfbe_stgcn.pt
+threshold_summary_path: outputs/thresholds/cmfbe_threshold_summary.csv

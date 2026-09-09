@@ -1,0 +1,4 @@
+backend: local
+model_path: local_deepseek_model
+max_tokens: 512
+cache_path: outputs/agents/aquaturb_gpt_traces/cache.json

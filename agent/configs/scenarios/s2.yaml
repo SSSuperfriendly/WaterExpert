@@ -1,0 +1,5 @@
+name: internal_release
+trigger:
+  sediment_release: high
+action_space:
+  release_rate: 0.3

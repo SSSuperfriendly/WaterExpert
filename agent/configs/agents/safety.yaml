@@ -1,0 +1,5 @@
+constraints:
+  max_release: 15.0
+  max_aeration: 100.0
+  max_chemical: 500.0
+  min_flow: 0.0

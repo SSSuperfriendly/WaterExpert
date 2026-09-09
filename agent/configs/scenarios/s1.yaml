@@ -1,0 +1,5 @@
+name: external_input
+trigger:
+  rainfall: high
+action_space:
+  release_rate: 0.5

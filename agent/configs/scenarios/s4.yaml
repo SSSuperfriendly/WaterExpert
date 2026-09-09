@@ -1,0 +1,6 @@
+name: chronic_combo
+trigger:
+  baseline_turbidity: elevated
+action_space:
+  release_rate: 0.2
+  aeration: 0.2

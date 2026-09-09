@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+
+# Local-only raw archives and heavy generated artifacts
+*.zip
+*.rar
+*.7z
+*.lance
+rag_project/
+AIforScience/
+outputs_h3/
+outputs_h7/
+outputs_ndti_baseline/
+
+# Keep committed model outputs intentionally, but ignore ad-hoc rerun folders.
+outputs_tmp/
+scratch/
+
+# Runtime-heavy data/outputs: present on disk (shipped by deploy rsync), not in git.
+# A fresh clone needs these copied from the Mac deploy dir (or the ECS /srv/waterexpert-agent).
+data/
+outputs/
+.swap_backup*/

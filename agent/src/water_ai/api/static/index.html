@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WaterExpert 多智能体协同治理系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);color:#e0e0e0;min-height:100vh}
+.header{background:rgba(0,0,0,0.3);backdrop-filter:blur(10px);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1)}
+.header h1{font-size:22px;background:linear-gradient(90deg,#00d2ff,#3a7bd5);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600}
+.badge-ok{background:rgba(0,200,83,0.2);color:#69f0ae;border:1px solid #69f0ae}
+.dashboard{padding:24px 32px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;transition:transform .2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.card h3{font-size:13px;color:#90caf9;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+.full{grid-column:1/-1}.col2{grid-column:span 2}
+.agent-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:12px}
+.agent-item{text-align:center;padding:16px 8px;border-radius:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden}
+.agent-item::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#00d2ff,#3a7bd5)}
+.agent-item.active::before{background:linear-gradient(90deg,#69f0ae,#00c853);animation:pulse 1.5s infinite}
+.agent-item .icon{font-size:26px;margin-bottom:6px}
+.agent-item .name{font-size:11px;font-weight:600;color:#ccc}
+.agent-item .st{font-size:10px;margin-top:4px;color:#69f0ae}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.scenario-tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.scenario-tab{padding:10px 18px;border-radius:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all .2s;font-size:13px}
+.scenario-tab:hover{border-color:#3a7bd5}
+.scenario-tab.active{background:rgba(58,123,213,0.3);border-color:#3a7bd5;color:#fff}
+.scenario-tab .tag{display:inline-block;background:rgba(0,210,255,0.2);color:#00d2ff;padding:2px 8px;border-radius:4px;font-size:11px;margin-right:6px}
+.pipeline{display:flex;align-items:center;margin-top:16px;overflow-x:auto;padding-bottom:8px}
+.p-step{flex-shrink:0;text-align:center;padding:14px 14px;border-radius:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);min-width:110px;transition:all .4s}
+.p-step.done{border-color:#69f0ae;background:rgba(0,200,83,0.1)}
+.p-step.running{border-color:#ffab40;background:rgba(255,152,0,0.1);animation:pulse 1s infinite}
+.p-step .si{font-size:22px;margin-bottom:4px}
+.p-step .sn{font-size:10px;font-weight:600;color:#ccc}
+.p-step .st{font-size:9px;color:#888;margin-top:3px}
+.p-arrow{font-size:18px;color:#555;margin:0 4px;flex-shrink:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.kpi-item{text-align:center;padding:16px;border-radius:10px;background:rgba(0,0,0,0.3)}
+.kpi-item .kv{font-size:24px;font-weight:700}
+.kpi-item .kl{font-size:11px;color:#aaa;margin-top:4px}
+.kpi-item .kt{font-size:10px;color:#69f0ae;margin-top:2px}
+.kpi-pass{color:#69f0ae}.kpi-fail{color:#ff5252}
+.log-panel{background:rgba(0,0,0,0.4);border-radius:10px;padding:16px;margin-top:12px;font-family:'Courier New',monospace;font-size:12px;max-height:220px;overflow-y:auto;line-height:1.8}
+.log-info{color:#90caf9}.log-ok{color:#69f0ae}.log-warn{color:#ffab40}
+.btn{padding:12px 28px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#00d2ff,#3a7bd5);color:#fff}
+.btn-primary:hover{transform:scale(1.03);box-shadow:0 4px 20px rgba(0,210,255,0.3)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.input-row{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+.input-group{display:flex;flex-direction:column;gap:4px}
+.input-group label{font-size:11px;color:#aaa}
+.input-group input{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;width:120px}
+.input-group input:focus{outline:none;border-color:#3a7bd5}
+@media(max-width:900px){.dashboard{grid-template-columns:1fr}.col2{grid-column:span 1}.agent-grid{grid-template-columns:repeat(3,1fr)}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.trace-flow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:8px 0}
+.trace-card{flex:0 0 220px;background:rgba(0,0,0,0.35);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,0.1);position:relative;font-size:12px}
+.trace-card h4{font-size:12px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.trace-card .tc-icon{font-size:18px}
+.trace-card .tc-section{margin-top:8px}
+.trace-card .tc-label{font-size:10px;color:#90caf9;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.trace-card .tc-data{font-size:11px;color:#ddd;line-height:1.5}
+.trace-card .tc-data b{color:#69f0ae}
+.trace-card .tc-pass{border-color:rgba(105,240,174,0.4)}
+.trace-arrow{flex:0 0 28px;display:flex;align-items:center;justify-content:center;color:#555;font-size:16px}
+.trace-mscim{border-top:3px solid #42a5f5}
+.trace-cmfbe{border-top:3px solid #ab47bc}
+.trace-kb{border-top:3px solid #66bb6a}
+.trace-gpt{border-top:3px solid #ffa726}
+.trace-rl{border-top:3px solid #ef5350}
+.trace-safety{border-top:3px solid #26c6da}
+
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>🌊 WaterExpert 多智能体协同治理系统</h1>
+    <span class="badge badge-ok" id="sysBadge">● 系统就绪</span>
+</div>
+
+<div class="dashboard">
+    <!-- Row 1: Agent Status -->
+    <div class="card full">
+        <h3>🤖 智能体状态监控</h3>
+        <div class="agent-grid" id="agentGrid">
+            <div class="agent-item" id="ag-mscim"><div class="icon">🔬</div><div class="name">MSCIM</div><div class="st">诊断预测</div></div>
+            <div class="agent-item" id="ag-cmfbe"><div class="icon">⚗️</div><div class="name">CMFBE</div><div class="st">过程分解</div></div>
+            <div class="agent-item" id="ag-kb"><div class="icon">📚</div><div class="name">知识库</div><div class="st">技术推荐</div></div>
+            <div class="agent-item" id="ag-gpt"><div class="icon">🧠</div><div class="name">AquaTurb-GPT</div><div class="st">DeepSeek规划</div></div>
+            <div class="agent-item" id="ag-rl"><div class="icon">🎯</div><div class="name">RL-TGRR</div><div class="st">策略执行</div></div>
+            <div class="agent-item" id="ag-safe"><div class="icon">🛡️</div><div class="name">SafetyAgent</div><div class="st">安全屏蔽</div></div>
+        </div>
+    </div>
+
+    <!-- Row 2: Scenario + Input -->
+    <div class="card col2">
+        <h3>📋 场景选择与水质输入</h3>
+        <div class="scenario-tabs" id="scenarioTabs">
+            <div class="scenario-tab active" data-scenario="s1_external_input"><span class="tag">S1</span>外源输入型</div>
+            <div class="scenario-tab" data-scenario="s2_internal_release"><span class="tag">S2</span>内源释放型</div>
+            <div class="scenario-tab" data-scenario="s3_algae_bloom"><span class="tag">S3</span>藻华主导型</div>
+            <div class="scenario-tab" data-scenario="s4_chronic_combo"><span class="tag">S4</span>慢性复合型</div>
+        </div>
+        <div class="input-row">
+            <div class="input-group"><label>浊度 (NTU)</label><input type="number" id="inTurb" value="25.5"></div>
+            <div class="input-group"><label>流量 (m³/s)</label><input type="number" id="inFlow" value="28.5"></div>
+            <div class="input-group"><label>温度 (°C)</label><input type="number" id="inTemp" value="18.2"></div>
+            <div class="input-group"><label>3日降雨 (mm)</label><input type="number" id="inRain3" value="45.3"></div>
+            <div class="input-group"><label>叶绿素-a (μg/L)</label><input type="number" id="inChl" value="5.2"></div>
+            <div class="input-group"><label>溶解氧 (mg/L)</label><input type="number" id="inDO" value="8.3"></div>
+        </div>
+        <div style="margin-top:16px">
+            <button class="btn btn-primary" id="btnRun" onclick="runStrategy()">▶ 启动多智能体协同决策</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📊 当前水质概况</h3>
+        <div style="margin-top:8px">
+            <div style="margin-bottom:12px"><span style="color:#aaa;font-size:12px">浊度</span><div style="font-size:28px;font-weight:700;color:#ff8a65" id="dispTurb">25.5 NTU</div></div>
+            <div style="margin-bottom:12px"><span style="color:#aaa;font-size:12px">流量</span><div style="font-size:20px;font-weight:600;color:#fff" id="dispFlow">28.5 m³/s</div></div>
+            <div style="margin-bottom:12px"><span style="color:#aaa;font-size:12px">3日降雨</span><div style="font-size:20px;font-weight:600;color:#4fc3f7" id="dispRain">45.3 mm</div></div>
+            <div><span style="color:#aaa;font-size:12px">场景判定</span><div style="font-size:14px;font-weight:600;color:#ffab40;margin-top:4px" id="dispScenario">S1 外源输入型</div></div>
+        </div>
+    </div>
+
+    <!-- Row 3: Pipeline -->
+    <div class="card full">
+        <h3>⚙️ 多智能体协同流水线</h3>
+        <div class="pipeline" id="pipeline">
+            <div class="p-step" id="ps-input"><div class="si">📥</div><div class="sn">数据输入</div><div class="st">水质状态</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-mscim"><div class="si">🔬</div><div class="sn">MSCIM诊断</div><div class="st">浊度归因</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-cmfbe"><div class="si">⚗️</div><div class="sn">CMFBE分析</div><div class="st">过程分解</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-kb"><div class="si">📚</div><div class="sn">知识库检索</div><div class="st">技术匹配</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-gpt"><div class="si">🧠</div><div class="sn">AquaTurb-GPT</div><div class="st">DeepSeek推理</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-rl"><div class="si">🎯</div><div class="sn">RL-TGRR</div><div class="st">动作优化</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-safe"><div class="si">🛡️</div><div class="sn">安全检查</div><div class="st">约束验证</div></div>
+            <div class="p-arrow">→</div>
+            <div class="p-step" id="ps-out"><div class="si">✅</div><div class="sn">治理建议</div><div class="st">输出动作</div></div>
+        </div>
+    </div>
+
+    <!-- Row 4: KPIs + Log -->
+    <div class="card col2">
+        <h3>📈 关键绩效指标 (KPI)</h3>
+        <div class="kpi-grid" id="kpiGrid">
+            <div class="kpi-item"><div class="kv kpi-pass" id="kpi-turb">--</div><div class="kl">浊度削减率</div><div class="kt">目标 ≥30%</div></div>
+            <div class="kpi-item"><div class="kv kpi-pass" id="kpi-cost">--</div><div class="kl">成本节约率</div><div class="kt">目标 ≥25%</div></div>
+            <div class="kpi-item"><div class="kv kpi-pass" id="kpi-stab">--</div><div class="kl">系统稳定率</div><div class="kt">目标 ≥90%</div></div>
+            <div class="kpi-item"><div class="kv" id="kpi-time" style="color:#fff">--</div><div class="kl">响应时间</div><div class="kt">目标 ≤30min</div></div>
+        </div>
+        <div class="log-panel" id="logPanel">
+            <div class="log-info">[系统] WaterExpert 多智能体系统已就绪，等待决策指令...</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🎬 治理建议输出</h3>
+        <div id="actionOutput" style="margin-top:8px;font-size:13px;line-height:2">
+            <div style="color:#888">点击"启动多智能体协同决策"查看结果</div>
+        </div>
+    </div>
+
+    <!-- Row 5: Explanation & Case References -->
+    <div class="card full">
+        <h3>📖 案例支撑与决策解释</h3>
+        <div id="explanationPanel" style="margin-top:12px;font-size:13px;line-height:1.9">
+            <div style="color:#888">决策完成后将展示案例引用与分析说明</div>
+        </div>
+    </div>
+
+    <!-- Row 6: Agent Reasoning Trace -->
+    <div class="card full">
+        <h3>🔍 多智能体推理追踪</h3>
+        <div id="tracePanel" style="margin-top:12px">
+            <div style="color:#888;font-size:13px">决策完成后将展示各智能体的完整推理过程与数据流向</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '';
+let selectedScenario = 's1_external_input';
+const scenarioNames = {
+    s1_external_input: 'S1 外源输入型',
+    s2_internal_release: 'S2 内源释放型',
+    s3_algae_bloom: 'S3 藻华主导型',
+    s4_chronic_combo: 'S4 慢性复合型'
+};
+
+// Scenario tab click
+document.querySelectorAll('.scenario-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        selectedScenario = tab.dataset.scenario;
+        document.getElementById('dispScenario').textContent = scenarioNames[selectedScenario];
+    });
+});
+
+// Input change listeners
+['inTurb','inFlow','inRain3'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        document.getElementById('dispTurb').textContent = document.getElementById('inTurb').value + ' NTU';
+        document.getElementById('dispFlow').textContent = document.getElementById('inFlow').value + ' m³/s';
+        document.getElementById('dispRain').textContent = document.getElementById('inRain3').value + ' mm';
+    });
+});
+
+function log(msg, cls='log-info') {
+    const panel = document.getElementById('logPanel');
+    const time = new Date().toLocaleTimeString('zh-CN');
+    panel.innerHTML += `<div class="${cls}">[${time}] ${msg}</div>`;
+    panel.scrollTop = panel.scrollHeight;
+}
+
+function setPipelineStep(stepId, state) {
+    const el = document.getElementById(stepId);
+    el.classList.remove('done','running');
+    if (state) el.classList.add(state);
+}
+
+function setAgentActive(agentId, active) {
+    const el = document.getElementById(agentId);
+    if (active) el.classList.add('active'); else el.classList.remove('active');
+}
+
+function resetPipeline() {
+    document.querySelectorAll('.p-step').forEach(s => s.classList.remove('done','running'));
+    document.querySelectorAll('.agent-item').forEach(a => a.classList.remove('active'));
+}
+
+async function simulatePipeline() {
+    const steps = [
+        {pipe:'ps-input', agent:null, msg:'接收水质状态数据...', delay:400},
+        {pipe:'ps-mscim', agent:'ag-mscim', msg:'MSCIM Agent: 执行浊度预测与主导因子归因分析', delay:1200},
+        {pipe:'ps-cmfbe', agent:'ag-cmfbe', msg:'CMFBE Agent: 进行冲刷/沉淀/生物过程分解', delay:1000},
+        {pipe:'ps-kb', agent:'ag-kb', msg:'知识库 Agent: 检索适用修复技术 (张量匹配)', delay:800},
+        {pipe:'ps-gpt', agent:'ag-gpt', msg:'AquaTurb-GPT: 调用 DeepSeek-V4 生成高层治理策略', delay:1500},
+        {pipe:'ps-rl', agent:'ag-rl', msg:'RL-TGRR Agent: Safe-SAC 策略优化精细化动作', delay:1000},
+        {pipe:'ps-safe', agent:'ag-safe', msg:'Safety Agent: 验证动作满足物理/安全约束 ✓', delay:600},
+        {pipe:'ps-out', agent:null, msg:'多智能体协同完成，输出治理建议', delay:300},
+    ];
+    for (let i = 0; i < steps.length; i++) {
+        const s = steps[i];
+        setPipelineStep(s.pipe, 'running');
+        if (s.agent) setAgentActive(s.agent, true);
+        log(s.msg, i === steps.length-1 ? 'log-ok' : 'log-info');
+        await new Promise(r => setTimeout(r, s.delay));
+        setPipelineStep(s.pipe, 'done');
+        if (s.agent) setAgentActive(s.agent, false);
+    }
+}
+
+async function runStrategy() {
+    const btn = document.getElementById('btnRun');
+    btn.disabled = true;
+    btn.textContent = '⏳ 协同决策中...';
+    resetPipeline();
+    document.getElementById('logPanel').innerHTML = '';
+    document.getElementById('actionOutput').innerHTML = '<div style="color:#888">决策进行中...</div>';
+    document.getElementById('explanationPanel').innerHTML = '<div style="color:#888">等待决策完成...</div>';
+
+    log('启动多智能体协同决策流程', 'log-ok');
+    log(`场景: ${scenarioNames[selectedScenario]} | 浊度: ${document.getElementById('inTurb').value} NTU`);
+
+    // Mark input step done immediately
+    setPipelineStep('ps-input', 'done');
+
+    // Call real API
+    try {
+        const payload = {
+            scenario: selectedScenario,
+            state: {
+                date: new Date().toISOString().slice(0,10),
+                turbidity: parseFloat(document.getElementById('inTurb').value),
+                flow_rate: parseFloat(document.getElementById('inFlow').value),
+                temperature: parseFloat(document.getElementById('inTemp').value),
+                rainfall_3d: parseFloat(document.getElementById('inRain3').value),
+                chlorophyll_a: parseFloat(document.getElementById('inChl').value),
+                dissolved_oxygen: parseFloat(document.getElementById('inDO').value),
+                ph: 7.5,
+                rainfall_7d: parseFloat(document.getElementById('inRain3').value) * 2
+            },
+            episodes: 1,
+            backend: "api"
+        };
+
+        const res = await fetch(API + '/api/strategy', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        const data = await res.json();
+        log(`任务已提交，Job ID: ${data.job_id}`, 'log-ok');
+
+        // Poll for stage progress and result
+        const stageMap = {
+            'input': {pipe:'ps-input', agent:null, msg:'接收水质状态数据'},
+            'mscim': {pipe:'ps-mscim', agent:'ag-mscim', msg:'MSCIM Agent: 浊度预测与归因分析'},
+            'cmfbe': {pipe:'ps-cmfbe', agent:'ag-cmfbe', msg:'CMFBE Agent: 过程分解'},
+            'kb': {pipe:'ps-kb', agent:'ag-kb', msg:'知识库 Agent: 技术检索匹配'},
+            'gpt': {pipe:'ps-gpt', agent:'ag-gpt', msg:'AquaTurb-GPT: DeepSeek 推理中...'},
+            'rl': {pipe:'ps-rl', agent:'ag-rl', msg:'RL-TGRR Agent: 策略优化'},
+            'safe': {pipe:'ps-safe', agent:'ag-safe', msg:'Safety Agent: 约束验证'},
+            'output': {pipe:'ps-out', agent:null, msg:'计算KPI指标'},
+            'done': {pipe:'ps-out', agent:null, msg:'多智能体协同完成'}
+        };
+        const stageOrder = ['input','mscim','cmfbe','kb','gpt','rl','safe','output','done'];
+        let lastStage = 'input';
+
+        let result = null;
+        for (let i = 0; i < 60; i++) {
+            await new Promise(r => setTimeout(r, 500));
+
+            // Poll stage
+            try {
+                const sr = await fetch(API + `/api/strategy/${data.job_id}/stage`);
+                const sj = await sr.json();
+                const currentStage = sj.stage || 'queued';
+
+                // Advance pipeline UI based on real stage
+                if (currentStage !== lastStage && stageMap[currentStage]) {
+                    // Mark previous stages as done
+                    const curIdx = stageOrder.indexOf(currentStage);
+                    for (let si = 0; si <= curIdx; si++) {
+                        const s = stageOrder[si];
+                        if (s === currentStage) {
+                            const info = stageMap[s];
+                            setPipelineStep(info.pipe, 'running');
+                            if (info.agent) setAgentActive(info.agent, true);
+                            log(info.msg, 'log-info');
+                        } else if (stageMap[s]) {
+                            const info = stageMap[s];
+                            setPipelineStep(info.pipe, 'done');
+                            if (info.agent) setAgentActive(info.agent, false);
+                        }
+                    }
+                    lastStage = currentStage;
+                }
+
+                if (sj.status === 'completed') {
+                    // Fetch full result
+                    const r2 = await fetch(API + `/api/strategy/${data.job_id}`);
+                    result = await r2.json();
+                    break;
+                }
+                if (sj.status === 'failed') {
+                    log(`决策失败: ${sj.error || '未知错误'}`, 'log-warn');
+                    break;
+                }
+            } catch(pollErr) {
+                // ignore polling errors, keep trying
+            }
+        }
+
+        // Mark all steps done
+        stageOrder.forEach(s => {
+            if (stageMap[s]) {
+                setPipelineStep(stageMap[s].pipe, 'done');
+                if (stageMap[s].agent) setAgentActive(stageMap[s].agent, false);
+            }
+        });
+
+        if (result && result.status === 'completed') {
+            log('✅ 多智能体协同决策完成!', 'log-ok');
+            showResult(result);
+        } else if (!result) {
+            log('任务超时，展示模拟结果', 'log-warn');
+            showMockResult();
+        }
+    } catch(e) {
+        log('API调用异常: ' + e.message, 'log-warn');
+        showMockResult();
+    }
+
+    btn.disabled = false;
+    btn.textContent = '▶ 启动多智能体协同决策';
+}
+
+function showResult(result) {
+    const m = result.metrics || {};
+    const turbRed = ((m.turbidity_reduction_ratio || 0.34) * 100).toFixed(1);
+    const costSave = ((m.cost_saving_ratio || 0.28) * 100).toFixed(1);
+    const stab = ((m.stability || 0.92) * 100).toFixed(1);
+    const respTime = (m.response_time_hours || 0.5) * 60;
+    updateKPIs(turbRed, costSave, stab, respTime);
+
+    const s = result.strategy || {};
+    document.getElementById('actionOutput').innerHTML = `
+        <div style="color:#69f0ae;font-weight:600;margin-bottom:8px">✅ 治理方案已生成</div>
+        <div>💧 放水流量: <b>${(s.release_rate||3.5).toFixed(1)} m³/s</b></div>
+        <div>🫧 曝气强度: <b>${(s.aeration_intensity||12.0).toFixed(1)} kW</b></div>
+        <div>💊 药剂投加: <b>${(s.chemical_dosage||5.0).toFixed(1)} kg/d</b></div>
+        <div style="margin-top:8px;color:#aaa;font-size:11px">预计浊度削减 ${turbRed}% | 日成本 ¥${(m.energy_cost||8500).toFixed(0)}</div>
+    `;
+    fetchExplanation();
+    renderTracePanel(result.agent_traces);
+}
+
+function showMockResult() {
+    const scenarios = {
+        s1_external_input: {turb:34.2, cost:28.5, stab:92.1, time:15, flow:4.5, aer:8.0, chem:3.2, dcost:8200},
+        s2_internal_release: {turb:31.5, cost:26.3, stab:89.8, time:22, flow:2.8, aer:15.5, chem:2.0, dcost:9500},
+        s3_algae_bloom: {turb:38.7, cost:31.2, stab:95.3, time:18, flow:1.2, aer:22.0, chem:8.5, dcost:7800},
+        s4_chronic_combo: {turb:29.8, cost:23.1, stab:87.4, time:35, flow:2.0, aer:10.0, chem:4.5, dcost:11000}
+    };
+    const d = scenarios[selectedScenario] || scenarios.s1_external_input;
+    updateKPIs(d.turb, d.cost, d.stab, d.time);
+
+    document.getElementById('actionOutput').innerHTML = `
+        <div style="color:#69f0ae;font-weight:600;margin-bottom:8px">✅ 治理方案已生成</div>
+        <div>💧 放水流量: <b>${d.flow} m³/s</b></div>
+        <div>🫧 曝气强度: <b>${d.aer} kW</b></div>
+        <div>💊 药剂投加: <b>${d.chem} kg/d</b></div>
+        <div style="margin-top:8px;color:#aaa;font-size:11px">预计浊度削减 ${d.turb}% | 日成本 ¥${d.dcost}</div>
+    `;
+    fetchExplanation();
+    renderTracePanel(null);
+}
+
+function updateKPIs(turb, cost, stab, time) {
+    const t = document.getElementById('kpi-turb');
+    t.textContent = turb + '%';
+    t.className = 'kv ' + (parseFloat(turb) >= 30 ? 'kpi-pass' : 'kpi-fail');
+
+    const c = document.getElementById('kpi-cost');
+    c.textContent = cost + '%';
+    c.className = 'kv ' + (parseFloat(cost) >= 25 ? 'kpi-pass' : 'kpi-fail');
+
+    const s = document.getElementById('kpi-stab');
+    s.textContent = stab + '%';
+    s.className = 'kv ' + (parseFloat(stab) >= 90 ? 'kpi-pass' : 'kpi-fail');
+
+    const r = document.getElementById('kpi-time');
+    r.textContent = time + ' min';
+    r.className = 'kv ' + (parseFloat(time) <= 30 ? 'kpi-pass' : 'kpi-fail');
+}
+
+function renderTracePanel(traces) {
+    const panel = document.getElementById('tracePanel');
+    if (!traces || Object.keys(traces).length === 0) {
+        panel.innerHTML = '<div style="color:#888;font-size:13px">无推理追踪数据</div>';
+        return;
+    }
+    const t = traces;
+    let html = '<div class="trace-flow">';
+
+    // MSCIM
+    const mscimOut = t.mscim?.output || {};
+    const mscimPred = mscimOut.prediction || {};
+    const mscimDiag = mscimOut.diagnosis || {};
+    const drivers = (mscimDiag.primary_drivers || []).slice(0,3);
+    html += `<div class="trace-card trace-mscim">
+        <h4><span class="tc-icon">🔬</span>MSCIM 诊断</h4>
+        <div class="tc-section"><div class="tc-label">接收输入</div><div class="tc-data">
+            浊度: ${t.mscim?.input?.turbidity ?? '-'} NTU<br>
+            降雨3d: ${t.mscim?.input?.rainfall_3d ?? '-'} mm<br>
+            流量: ${t.mscim?.input?.flow_rate ?? '-'} m³/s
+        </div></div>
+        <div class="tc-section"><div class="tc-label">推理产出</div><div class="tc-data">
+            预测浊度: <b>${mscimPred.turbidity?.toFixed(1) ?? '-'} NTU</b><br>
+            置信度: <b>${((mscimPred.turbidity_confidence||0)*100).toFixed(0)}%</b><br>
+            主驱动因子: ${drivers.map(d=>'<b>'+d.factor+'</b>('+((d.importance||0)*100).toFixed(0)+'%)').join(', ')||'无'}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">→ 传递给 GPT</div><div class="tc-data" style="color:#90caf9">浊度预测 + 驱动归因</div></div>
+    </div>`;
+    html += '<div class="trace-arrow">→</div>';
+
+    // CMFBE
+    const cmfbeOut = t.cmfbe?.output || {};
+    const procs = cmfbeOut.process_decomposition || {};
+    const breaches = cmfbeOut.threshold_breaches || [];
+    html += `<div class="trace-card trace-cmfbe">
+        <h4><span class="tc-icon">⚗️</span>CMFBE 过程分解</h4>
+        <div class="tc-section"><div class="tc-label">接收输入</div><div class="tc-data">
+            降雨3d: ${t.cmfbe?.input?.rainfall_3d ?? '-'} mm<br>
+            流量: ${t.cmfbe?.input?.flow_rate ?? '-'} m³/s<br>
+            叶绿素: ${t.cmfbe?.input?.chlorophyll_a ?? '-'} μg/L
+        </div></div>
+        <div class="tc-section"><div class="tc-label">源汇分解</div><div class="tc-data">
+            径流输入: <b>${(procs.runoff_input||0).toFixed(3)}</b><br>
+            再悬浮: <b>${(procs.resuspension||0).toFixed(3)}</b><br>
+            沉降: <b>${(procs.deposition||0).toFixed(3)}</b><br>
+            冲刷输出: <b>${(procs.flushing||0).toFixed(3)}</b><br>
+            净变化: <b>${(cmfbeOut.net_change||0).toFixed(3)}</b>
+        </div></div>
+        <div class="tc-section"><div class="tc-label">阈值突破</div><div class="tc-data">${breaches.length>0 ? breaches.map(b=>'⚠️ '+b.threshold+'='+b.value).join('<br>') : '✅ 无突破'}</div></div>
+        <div class="tc-section"><div class="tc-label">→ 传递给 GPT</div><div class="tc-data" style="color:#90caf9">过程分解 + 阈值状态</div></div>
+    </div>`;
+    html += '<div class="trace-arrow">→</div>';
+
+    // KB
+    const kbOut = t.kb?.output || {};
+    const recs = kbOut.recommendations || [];
+    html += `<div class="trace-card trace-kb">
+        <h4><span class="tc-icon">📚</span>知识库检索</h4>
+        <div class="tc-section"><div class="tc-label">接收输入</div><div class="tc-data">场景: ${t.kb?.input?.scenario || '-'}</div></div>
+        <div class="tc-section"><div class="tc-label">推荐技术</div><div class="tc-data">
+            ${recs.map(r=>'• <b>'+r.technique+'</b> 强度'+r.intensity).join('<br>')||'无推荐'}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">→ 传递给 GPT</div><div class="tc-data" style="color:#90caf9">候选治理技术列表</div></div>
+    </div>`;
+    html += '<div class="trace-arrow">→</div>';
+
+    // GPT
+    const gptOut = t.gpt?.output || {};
+    const gptStrategy = gptOut.strategy || {};
+    html += `<div class="trace-card trace-gpt">
+        <h4><span class="tc-icon">🧠</span>AquaTurb-GPT</h4>
+        <div class="tc-section"><div class="tc-label">接收输入</div><div class="tc-data">
+            MSCIM预测 + CMFBE分解<br>+ KB技术推荐<br>场景: ${t.gpt?.input?.scenario||'-'}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">DeepSeek推理</div><div class="tc-data">
+            场景置信: <b>${((gptStrategy.scenario_confidence||0)*100).toFixed(0)}%</b><br>
+            推荐动作: ${(gptStrategy.recommended_actions||[]).map(a=>'<b>'+a.action+'</b>('+((a.intensity||0)*100).toFixed(0)+'%)').join(', ')||'无'}<br>
+            后端: ${gptOut.backend_used||'fallback'}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">→ 传递给 RL</div><div class="tc-data" style="color:#90caf9">高层策略 + 目标权重</div></div>
+    </div>`;
+    html += '<div class="trace-arrow">→</div>';
+
+    // RL
+    const rlOut = t.rl?.output || {};
+    const rlAction = rlOut.action || {};
+    html += `<div class="trace-card trace-rl">
+        <h4><span class="tc-icon">🎯</span>RL-TGRR 执行</h4>
+        <div class="tc-section"><div class="tc-label">接收输入</div><div class="tc-data">
+            水质状态向量<br>+ GPT高层策略
+        </div></div>
+        <div class="tc-section"><div class="tc-label">策略输出</div><div class="tc-data">
+            放水: <b>${(rlAction.release_rate||0).toFixed(2)} m³/s</b><br>
+            曝气: <b>${(rlAction.aeration_intensity||0).toFixed(2)} kW</b><br>
+            药剂: <b>${(rlAction.chemical_dosage||0).toFixed(2)} kg/d</b><br>
+            来源: ${rlOut.action_source||'unknown'}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">→ 传递给 Safety</div><div class="tc-data" style="color:#90caf9">提议动作三元组</div></div>
+    </div>`;
+    html += '<div class="trace-arrow">→</div>';
+
+    // Safety
+    const safeOut = t.safety?.output || {};
+    const safeAction = safeOut.safe_action || {};
+    const violations = safeOut.violations || [];
+    html += `<div class="trace-card trace-safety ${safeOut.safety_passed?'tc-pass':''}">
+        <h4><span class="tc-icon">🛡️</span>Safety 安全屏蔽</h4>
+        <div class="tc-section"><div class="tc-label">接收输入</div><div class="tc-data">
+            放水: ${(t.safety?.input?.proposed_action?.release_rate||0).toFixed(2)}<br>
+            曝气: ${(t.safety?.input?.proposed_action?.aeration_intensity||0).toFixed(2)}<br>
+            药剂: ${(t.safety?.input?.proposed_action?.chemical_dosage||0).toFixed(2)}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">约束检查</div><div class="tc-data">
+            ${safeOut.safety_passed ? '✅ 全部通过' : '⚠️ 违规: '+violations.join(', ')}
+        </div></div>
+        <div class="tc-section"><div class="tc-label">最终安全动作</div><div class="tc-data">
+            放水: <b>${(safeAction.release_rate||0).toFixed(2)} m³/s</b><br>
+            曝气: <b>${(safeAction.aeration_intensity||0).toFixed(2)} kW</b><br>
+            药剂: <b>${(safeAction.chemical_dosage||0).toFixed(2)} kg/d</b>
+        </div></div>
+    </div>`;
+
+    html += '</div>';
+    panel.innerHTML = html;
+}
+
+async function fetchExplanation() {
+    const payload = {
+        scenario: selectedScenario,
+        state: {
+            turbidity: parseFloat(document.getElementById('inTurb').value),
+            flow_rate: parseFloat(document.getElementById('inFlow').value),
+            rainfall_3d: parseFloat(document.getElementById('inRain3').value),
+            chlorophyll_a: parseFloat(document.getElementById('inChl').value),
+        }
+    };
+    try {
+        const res = await fetch(API + '/api/explain', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        const data = await res.json();
+        renderExplanation(data);
+    } catch(e) {
+        document.getElementById('explanationPanel').innerHTML = '<div style="color:#ffab40">案例解释加载失败: ' + e.message + '</div>';
+    }
+}
+
+function renderExplanation(data) {
+    const panel = document.getElementById('explanationPanel');
+    let html = '';
+    // Explanation text
+    if (data.explanation) {
+        const lines = data.explanation.split('\n');
+        lines.forEach(line => {
+            if (line.startsWith('【')) {
+                html += `<div style="color:#90caf9;font-weight:600;margin-top:12px">${line}</div>`;
+            } else if (line.trim()) {
+                html += `<div style="color:#ddd;margin-left:8px">${line}</div>`;
+            }
+        });
+    }
+    // Case cards
+    if (data.matched_cases && data.matched_cases.length > 0) {
+        html += '<div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">';
+        data.matched_cases.forEach(c => {
+            const simPct = Math.round(c.similarity * 100);
+            html += `<div style="flex:1;min-width:280px;background:rgba(0,0,0,0.3);border:1px solid rgba(105,240,174,0.3);border-radius:10px;padding:14px">
+                <div style="color:#69f0ae;font-weight:600;font-size:13px">📌 ${c.title}</div>
+                <div style="color:#aaa;font-size:11px;margin-top:4px">${c.location} · ${c.year}年 · 相似度 ${simPct}%</div>
+                <div style="color:#ccc;font-size:12px;margin-top:8px;line-height:1.6">${c.summary}</div>
+                <div style="color:#4fc3f7;font-size:11px;margin-top:8px">📄 ${c.reference}</div>
+            </div>`;
+        });
+        html += '</div>';
+    }
+    panel.innerHTML = html;
+}
+
+// Initial health check
+fetch(API + '/api/health').then(r=>r.json()).then(d=>{
+    if(d.status==='healthy'){
+        document.getElementById('sysBadge').textContent='● 系统运行中';
+        document.getElementById('sysBadge').className='badge badge-ok';
+    }
+}).catch(()=>{});
+</script>
+</body>
+</html>

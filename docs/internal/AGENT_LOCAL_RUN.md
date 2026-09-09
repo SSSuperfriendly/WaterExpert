@@ -4,13 +4,20 @@
 > `cloudflared` 重启而失效）现已**完整部署到本机**，平台默认直连本地 `127.0.0.1:8001`，
 > 不再依赖外部隧道。本文档说明部署目录、启动/重启、验证与升级方式。
 
+> **2026-09-09 整合**：agent 已并入平台仓库为子目录 `agent/`
+> （即 `/Users/mac/Project/WaterExpert/agent`），原独立目录
+> `/Users/mac/Project/agent-water-expert` 已合并后删除——**整个项目只有
+> `/Users/mac/Project/WaterExpert/` 一个路径**。源码随仓库跟踪；`agent/data`、
+> `agent/outputs`、`agent/.venv`、`agent/.env`、`agent/.swap_backup_*/` 为本地产物
+> （gitignored，随发布 rsync 上服务器）。
+
 ---
 
 ## 1. 状态与拓扑
 
 | 项 | 值 |
 | --- | --- |
-| 部署目录 | `/Users/mac/Project/agent-water-expert`（合作方 GitHub 快照 clone + 其实际运行文件覆盖） |
+| 部署目录 | `/Users/mac/Project/WaterExpert/agent`（仓库子目录；2026-09-09 由原独立目录 `/Users/mac/Project/agent-water-expert` 整体并入） |
 | 运行端口 | `127.0.0.1:8001`（避开平台后端 `:8000`；平台与 agent 同机共存） |
 | Python | py3.12 venv：`.venv/`（uv 创建，API 运行时依赖已装） |
 | 平台默认指向 | `WATEREXPERT_AGENT_API_URL` 未设时 → `http://127.0.0.1:8001/api` |
@@ -23,15 +30,21 @@
 
 ## 2. 目录是如何组装的（复现/审计用）
 
-部署树 = **GitHub 快照 `git@github.com:vvvlun/agent-water-expert.git`**（2026-09-02，
-含 src/water_ai、configs、scripts、docs 等）+ 覆盖合作方**实际运行目录**的三份 zip
-（原文件在 `/Users/mac/Project/WaterExpert/`，与源码快照的差异正对应此前启动缺失项）：
+部署树来历 = **GitHub 快照 `git@github.com:vvvlun/agent-water-expert.git`**（2026-09-02，
+含 src/water_ai、configs、scripts、docs 等）+ 覆盖合作方**实际运行目录**的三份内容
+（与源码快照的差异正对应此前启动缺失项）。该组装树已于 2026-09-09 并入本仓库
+`agent/` 子目录（源码进 git；`data/`、`outputs/`、`.venv`、`.env`、`.swap_backup_*/`
+gitignored 但保留在磁盘）。
 
-| zip | 顶层 | 落到部署目录的何处 | 提供内容 |
-| --- | --- | --- | --- |
-| `src_data.zip` | `data/*.py` | `src/water_ai/data/` | `loader.py` 等数据加载源码包（此前缺失 → 启动崩溃根因） |
-| `案例库_data.zip` | `data/{case_library,…}` | `data/` | 相似案例库、全站点数据库、知识图谱、tech 知识库、raw |
-| `outputs.zip` | `outputs/` | `outputs/` | **合作方真实权重**与中间产物（models/intermediate/diagnosis/…） |
+> 三份 zip（`src_data.zip` / `案例库_data.zip` / `outputs.zip`，原在仓库根下）已于
+> 2026-09-09 就地解压归档到 `WaterExpert/archive/2026-09-09-backup/` 后删除（见该目录
+> README：74 个文件、1:1 校验）。重建部署树时从归档目录取对应内容即可：
+
+| 归档子目录 | 落到部署目录的何处 | 提供内容 |
+| --- | --- | --- |
+| `from-src_data/` | `src/water_ai/data/` | `loader.py` 等数据加载源码包（此前缺失 → 启动崩溃根因） |
+| `from-case_library_data/` | `data/` | 相似案例库、全站点数据库（补充清单）、知识图谱、tech 知识库 |
+| `from-outputs.zip/` | `outputs/` | RL 策略 checkpoints/回放缓冲、pareto 结果、场景 s1–s4 数据与报告、api_jobs 审计留档 |
 
 权重 md5。**当前激活的是我方新版模型核心（2026-09-08 换芯）**，合作方原版与换芯前代码备份在
 `.swap_backup_20260908/`：
@@ -54,7 +67,7 @@ outputs/models/mscim_no_kg.pt  = a3ce7ac02b9d672e4b4640e7e5c56b7a
 ## 3. 启动 / 重启
 
 ```bash
-cd /Users/mac/Project/agent-water-expert
+cd /Users/mac/Project/WaterExpert/agent
 
 # 前台运行（联调看日志）
 .venv/bin/python scripts/run_api_server.py --host 127.0.0.1 --port 8001
@@ -75,7 +88,7 @@ AquaTurbGPT 规划 / 知识库问答默认走 DeepSeek（`os.getenv("DEEPSEEK_AP
 **不设 key 时服务可正常起**，但 LLM 环节降级为 mock/规则兜底；设了才达到合作方线上质量。
 
 ```bash
-cd /Users/mac/Project/agent-water-expert
+cd /Users/mac/Project/WaterExpert/agent
 echo 'DEEPSEEK_API_KEY=sk-...' >> .env        # 该仓库 .env 已被 .gitignore 忽略
 # 重启服务使 .env 生效（run 脚本是否自动载入 .env 以源码为准；否则 export 后重启）
 ```
@@ -97,9 +110,10 @@ curl -sS $BASE/status      # 含 data_loader（真实读取 2586 站点数据行
 
 ## 6. 合作方代码更新时
 
-本地部署不是 fork：若合作方推送了新代码，重新 pull 后对照上面第 2 节确认 `data/`、
-`outputs/` 是否仍由 zip/线上提供，重启验证即可。平台只依赖 HTTP 契约
-（INTEGRATION_GUIDE.md），agent 内部实现变更不要求平台改动。
+`agent/` 已并入本仓库（不再是合作方仓库的本地 clone，无独立 .git）。若合作方日后推送新版本：
+diff 其新快照与 `agent/src`，把需要的改动合入 `agent/`（agent 的 `src/water_ai/{models,physics}`
+本质源自我方研究仓，见第 8 节）；`data/`、`outputs/` 的差异仍以本地/线上实际运行内容为准。
+平台只依赖 HTTP 契约（INTEGRATION_GUIDE.md），agent 内部实现变更不要求平台改动。
 
 ## 7. 已知边界
 
@@ -117,14 +131,14 @@ curl -sS $BASE/status      # 含 data_loader（真实读取 2586 站点数据行
 
 **已执行**（本地部署）：
 ```bash
-cd /Users/mac/Project/agent-water-expert
+cd /Users/mac/Project/WaterExpert/agent
 # 备份合作方原版
 mkdir -p .swap_backup_20260908/{models,weights}
 cp src/water_ai/models/{mscim,cmfbe_stgcn}.py .swap_backup_20260908/models/
 cp outputs/models/{mscim,cmfbe_stgcn,mscim_no_kg}.pt .swap_backup_20260908/weights/
 # 换入我方核心（代码必须与权重一起换；agent 侧 strict=True，只换权重会因多余 key 报错）
-cp /Users/mac/Project/WaterExpert/src/water_ai/models/{mscim,cmfbe_stgcn}.py src/water_ai/models/
-cp /Users/mac/Project/WaterExpert/outputs/models/{mscim,cmfbe_stgcn,mscim_no_kg}.pt outputs/models/
+cp ../src/water_ai/models/{mscim,cmfbe_stgcn}.py src/water_ai/models/
+cp ../outputs/models/{mscim,cmfbe_stgcn,mscim_no_kg}.pt outputs/models/   # 已并入同仓库,直接同级取
 # 重启并验证
 .venv/bin/python scripts/run_api_server.py --host 127.0.0.1 --port 8001   # 或重启既有进程
 ```
