@@ -32,9 +32,11 @@ export function ReportExportMenu({ jobId }: { jobId?: string | null }) {
       setBusyFormat(format);
       setDoneFormat(null);
       try {
-        const result = await endpoints.exportReport(format, {
-          job_id: jobId ?? undefined,
-        });
+        // With no active job the endpoint can't scope to a run, so fall back to
+        // the shared research artifacts (scope=integrated) — the button keeps
+        // generating a report instead of failing with 409 case_required.
+        const scope = jobId ? { job_id: jobId } : { scope: "integrated" };
+        const result = await endpoints.exportReport(format, scope);
         await downloadAuthenticated(result.download_url, result.filename);
         setDoneFormat(format);
       } catch (err) {

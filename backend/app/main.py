@@ -1587,7 +1587,7 @@ def export_report(
     format: ReportExportFormat = Query(default="html"),
     actor: str = Depends(current_actor),
     _: None = Depends(require_permission(Permission.REPORT_EXPORT)),
-) -> dict[str, str]:
+) -> dict:
     """Render a report from one scoped set of artifacts.
 
     The scope is resolved *once*, before rendering, so every section of the

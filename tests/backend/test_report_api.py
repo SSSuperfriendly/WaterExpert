@@ -6,8 +6,11 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
+from fastapi.testclient import TestClient
+
 from backend.app import main as main_module
 
+from tests.backend._helpers import admin_auth_guard
 from tests.backend.test_report_builder import FakeRepository
 
 
@@ -36,6 +39,37 @@ class ReportApiTest(unittest.TestCase):
                 content = Path(response.path).read_text(encoding="utf-8")
                 self.assertIn("# WaterExpert 水环境智能诊断报告", content)
                 self.assertIn("外源输入", content)
+
+    def test_export_route_accepts_integrated_scope_and_keeps_provenance(self) -> None:
+        """HTTP-level guard: the export response is valid FastAPI output.
+
+        Regression: the route was annotated ``-> dict[str, str]`` while its body
+        carries a nested ``provenance`` dict, so every successful export died in
+        response validation (500) before reaching the client.
+        """
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            test_settings = replace(main_module.settings, report_root=Path(tmp_dir))
+            provenance = {"scope": "integrated", "is_integrated_default": True}
+            main_module.app.dependency_overrides[main_module.auth_guard] = admin_auth_guard
+            main_module.app.dependency_overrides[main_module.current_actor] = lambda: "tester"
+            try:
+                with patch.object(main_module, "settings", test_settings), patch.object(
+                    main_module,
+                    "resolve_artifacts",
+                    return_value=(FakeRepository(), provenance),
+                ):
+                    client = TestClient(main_module.app)
+                    response = client.post(
+                        "/api/v1/report/export",
+                        params={"format": "md", "scope": "integrated"},
+                    )
+                    self.assertEqual(response.status_code, 200, response.text)
+                    body = response.json()
+                    self.assertEqual(body["format"], "md")
+                    self.assertTrue(body["filename"].endswith(".md"))
+                    self.assertEqual(body["provenance"], provenance)
+            finally:
+                main_module.app.dependency_overrides.clear()
 
 
 if __name__ == "__main__":
