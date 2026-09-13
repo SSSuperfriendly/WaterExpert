@@ -1021,19 +1021,15 @@ class KnowledgeGraphService:
         paths = result.get("paths") or []
         seeds = result.get("seed_entities") or []
         labels = {entry.get("source_id"): entry.get("label", "") for entry in result.get("sources") or []}
-        # ``matched_relations`` keeps the legacy shape, which has no source id —
-        # the field lives on the citation instead. Reading it from there rather
-        # than widening the legacy dict keeps that contract exactly as it was.
-        origin_of = {
-            (entry.get("source"), entry.get("relation"), entry.get("target")): entry.get("source_id", "")
-            for entry in result.get("citations") or []
-            if entry.get("kind") == "relation"
-        }
 
         def relation_payload(relation: dict[str, Any]) -> dict[str, Any]:
-            source_id = origin_of.get(
-                (relation.get("source"), relation.get("relation"), relation.get("target")), ""
-            )
+            # ``Relation.as_dict`` carries its own ``source_id``. This used to be
+            # recovered by matching each relation against the citations on
+            # (source, relation, target) — which keyed on the *triple*, so two
+            # parallel edges between the same pair under the same label resolved
+            # to one entry, and the second relation was attributed to whichever
+            # graph the first came from.
+            source_id = str(relation.get("source_id") or "")
             return {
                 "source": str(relation.get("source", "")),
                 "relation": str(relation.get("relation") or ""),
@@ -1054,9 +1050,7 @@ class KnowledgeGraphService:
             ``platform`` where its sibling named 基线图谱 would make the reader
             look the code up.
             """
-            source_id = origin_of.get(
-                (relation.get("source"), relation.get("relation"), relation.get("target")), ""
-            )
+            source_id = str(relation.get("source_id") or "")
             return {
                 "technique": str(relation.get("target", "")),
                 "relation": str(relation.get("relation") or ""),
