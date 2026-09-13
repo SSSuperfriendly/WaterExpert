@@ -24,7 +24,8 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { translateColumn } from "@/lib/domain";
-import { formatNumber, formatPercent } from "@/lib/format";
+import { thresholdVerdict } from "@/lib/agent/thresholds";
+import { formatDelta, formatNumber, formatPercent } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type {
@@ -53,6 +54,39 @@ function InferenceBadge({ source }: { source: string | undefined }) {
   }
   // An agent the platform predates, or one that returned a source this page
   // does not know: show what it said rather than guessing which badge fits.
+  return (
+    <Badge variant="outline" className="text-xs">
+      {source || "—"}
+    </Badge>
+  );
+}
+
+/**
+ * Which thresholds the screening used — or that it did not happen.
+ *
+ * The levels come from the platform's threshold graph, and there is deliberately
+ * no local fallback: this agent used to screen against four numbers written into
+ * its own source, one of which had drifted from the graph by 27%. So a run that
+ * was sent no graph is a run that screened nothing, and it is labelled that way
+ * rather than left to read as a clean bill of health.
+ */
+function ThresholdSourceBadge({ source }: { source: string | undefined }) {
+  const { t } = useT();
+  if (source === "knowledge_graph") {
+    return (
+      <Badge variant="secondary" className="text-xs">
+        {t("agent.thresholdSourceGraph")}
+      </Badge>
+    );
+  }
+  if (source === "unavailable") {
+    return (
+      <Badge variant="outline" className="text-xs">
+        {t("common.noData")}
+      </Badge>
+    );
+  }
+  // A source this page does not know: show it rather than pick a badge for it.
   return (
     <Badge variant="outline" className="text-xs">
       {source || "—"}
@@ -193,6 +227,8 @@ export function CmfbeDiagnosis({ trace }: { trace: AgentCmfbeTrace }) {
   const processes = Object.entries(trace.process_decomposition ?? {});
   const predictions = trace.predictions ?? {};
   const physics = trace.physics ?? {};
+  const breaches = trace.threshold_breaches ?? [];
+  const verdict = thresholdVerdict(trace.threshold_source, breaches.length);
   // A process value is a signed contribution: above zero it adds turbidity,
   // below zero it removes it. The bar length is the magnitude, the side is the
   // sign, so the two are not confused for one another.
@@ -252,16 +288,52 @@ export function CmfbeDiagnosis({ trace }: { trace: AgentCmfbeTrace }) {
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-muted-foreground text-xs">{t("agent.thresholdTitle")}</p>
-        {(trace.threshold_breaches ?? []).length === 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground text-xs">{t("agent.thresholdTitle")}</span>
+          <span className="text-muted-foreground text-xs">{t("agent.thresholdSource")}:</span>
+          <ThresholdSourceBadge source={trace.threshold_source} />
+        </div>
+        {verdict === "unavailable" ? (
+          // An empty breach list means two different things, and only one of
+          // them is reassuring. Without this branch the page shows "no
+          // thresholds breached" for a run that had no thresholds to breach.
+          // The decision itself is `thresholdVerdict`, which is tested.
+          <p className="text-muted-foreground text-xs">{t("agent.thresholdUnavailable")}</p>
+        ) : verdict === "clear" ? (
           <p className="text-muted-foreground text-xs">{t("agent.thresholdClear")}</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {(trace.threshold_breaches ?? []).map((breach, index) => (
-              <Badge key={breach.factor ?? index} variant="destructive" className="text-xs font-normal">
-                {translateColumn(t, breach.factor)} {formatNumber(breach.value, 2)} /{" "}
-                {formatNumber(breach.threshold, 2)}
-              </Badge>
+          <div className="space-y-2">
+            {breaches.map((breach, index) => (
+              <div key={breach.factor ?? index} className="space-y-1 rounded-md border p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="destructive" className="text-xs font-normal">
+                    {translateColumn(t, breach.factor)} {formatNumber(breach.value, 2)}{" "}
+                    {breach.unit ?? ""} / {formatNumber(breach.threshold, 2)}
+                  </Badge>
+                </div>
+                {/* Why this level and not another. A threshold with no stated
+                    derivation is a number a reader has to take on trust.
+
+                    The graph's own ``interpretation`` sentence is deliberately
+                    not shown: it is English prose, and this panel's rule is the
+                    model's vocabulary resolved through ``translateColumn`` or
+                    left as a raw identifier — never a sentence in the wrong
+                    language. The two fit statistics are the checkable half, and
+                    the payload keeps the sentence for the planner, which reads
+                    it in the language it was written in. */}
+                {(breach.r2_gain !== null && breach.r2_gain !== undefined) ||
+                (breach.response_jump !== null && breach.response_jump !== undefined) ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    {t("agent.thresholdEvidence")}
+                    {breach.r2_gain !== null && breach.r2_gain !== undefined
+                      ? ` · ${t("agent.thresholdR2Gain")} ${formatDelta(breach.r2_gain, 3)}`
+                      : ""}
+                    {breach.response_jump !== null && breach.response_jump !== undefined
+                      ? ` · ${t("agent.thresholdResponseJump")} ${formatDelta(breach.response_jump, 3)}`
+                      : ""}
+                  </p>
+                ) : null}
+              </div>
             ))}
           </div>
         )}

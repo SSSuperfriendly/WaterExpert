@@ -819,6 +819,29 @@ export interface AgentMscimTrace {
   [key: string]: unknown;
 }
 
+/**
+ * A critical level the current state is above, and the fit that justifies it.
+ *
+ * `r2_gain` and `response_jump` are the evidence that this value is a threshold
+ * rather than a percentile: how much of the response variance the split
+ * explains, and how far the response moves across it. They come from the
+ * threshold graph, so they are null when the platform did not send one.
+ */
+export interface AgentThresholdBreach {
+  /** The graph's feature name — e.g. `precipitation_3d`. */
+  factor?: string;
+  value?: number;
+  threshold?: number;
+  unit?: string;
+  /** The graph's own wording for the feature, in English. */
+  label?: string;
+  r2_gain?: number | null;
+  piecewise_r2?: number | null;
+  response_jump?: number | null;
+  interpretation?: string;
+  [key: string]: unknown;
+}
+
 /** Which physical processes CMFBE credited, and which it debited. */
 export interface AgentCmfbeTrace {
   model?: string;
@@ -828,8 +851,14 @@ export interface AgentCmfbeTrace {
   error?: string;
   process_decomposition?: Record<string, number>;
   net_change?: number;
+  /** The levels screened against, by graph feature name. Empty when none were sent. */
   thresholds?: Record<string, number>;
-  threshold_breaches?: { factor?: string; value?: number; threshold?: number; [key: string]: unknown }[];
+  /**
+   * Where the levels came from. `unavailable` means the platform sent none, so
+   * an empty `threshold_breaches` is "nothing was screened" rather than "clear".
+   */
+  threshold_source?: "knowledge_graph" | "unavailable" | string;
+  threshold_breaches?: AgentThresholdBreach[];
   predictions?: {
     next_day_turbidity?: number;
     physics_turbidity?: number;

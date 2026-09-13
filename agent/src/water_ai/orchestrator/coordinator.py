@@ -169,7 +169,11 @@ class Orchestrator:
             if _notify:
                 _notify("cmfbe")
             try:
-                cmfbe_result = agents["CMFBEAgent"].act(state)
+                # The context goes in as a second argument, never merged into
+                # ``state`` (see ``run``'s note). CMFBE is the one diagnosis
+                # agent that reads it: the thresholds it screens against are the
+                # platform graph's, not a copy of them kept in the agent.
+                cmfbe_result = agents["CMFBEAgent"].act(state, knowledge_context)
                 diagnosis["cmfbe"] = cmfbe_result
             except Exception as e:
                 diagnosis["cmfbe"] = {"error": str(e)}

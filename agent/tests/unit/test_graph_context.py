@@ -153,6 +153,56 @@ class KnowledgeContextSchemaTest(unittest.TestCase):
             [("platform", "基线图谱"), ("inherited", "继承图谱（合作方 GraphRAG）")],
         )
 
+    def test_the_thresholds_survive_the_schema(self):
+        """``extra="ignore"`` makes an undeclared field vanish without a word.
+
+        So the thresholds are declared, and this is the test that keeps them
+        declared: drop the field from ``KnowledgeContext`` and the platform
+        still sends ten levels, ``model_dump`` still carries them, and CMFBE
+        finds none — a failure invisible from both ends, because each side is
+        internally consistent. It is the same shape as the drift this section
+        was added to end.
+        """
+        payload = _context(
+            thresholds={
+                "available": True,
+                "graph_name": "mechanism_parameter_threshold_knowledge_graph",
+                "scope": "wusongkou_daily_prototype",
+                "semantics": "empirical critical levels",
+                "guardrails": ["Do not reinterpret these as calibrated 2D thresholds."],
+                "nodes": [
+                    {
+                        "node_id": "threshold::precipitation_3d",
+                        "feature": "precipitation_3d",
+                        "label": "3-day cumulative precipitation",
+                        "threshold": 49.1,
+                        "unit": "mm",
+                        "response": "net_process_response",
+                        "r2_gain": 0.2506,
+                        "piecewise_r2": 0.4057,
+                        "response_jump": 0.4091,
+                        "interpretation": "Higher-than-threshold values force turbidity.",
+                    }
+                ],
+                "contextual_nodes": [],
+                "notes": [],
+            }
+        )
+        context = KnowledgeContext.model_validate(payload)
+
+        self.assertIsNotNone(context.thresholds)
+        dumped = context.model_dump()
+        self.assertTrue(dumped["thresholds"]["available"])
+        node = dumped["thresholds"]["nodes"][0]
+        self.assertEqual(node["feature"], "precipitation_3d")
+        self.assertEqual(node["threshold"], 49.1)
+        self.assertEqual(node["unit"], "mm")
+        self.assertEqual(node["r2_gain"], 0.2506)
+
+    def test_a_context_without_thresholds_is_not_an_error(self):
+        """An older platform sends none, which is a fact and not a failure."""
+        self.assertIsNone(KnowledgeContext.model_validate(_context()).thresholds)
+
 
 class KnowledgeBaseAgentTest(unittest.TestCase):
     def test_without_a_context_nothing_changes(self):

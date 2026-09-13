@@ -159,6 +159,68 @@ class LiveStrategyConsumesGraphEvidenceTest(unittest.TestCase):
                 trace = self.result["agent_traces"][agent]
                 self.assertIn("inference_source", trace["output"], trace["output"])
 
+    def test_the_agent_screened_against_the_platforms_levels(self) -> None:
+        """The thresholds on the far side are the graph's, feature for feature.
+
+        Not "a threshold is present": the whole dict has to match what the
+        platform sent, because the failure this replaced was one value
+        disagreeing with the graph while everything else looked right. The agent
+        held four of these as literals, and ``precipitation_3d`` had drifted to
+        35.9 against the graph's 49.1 — so a rule-based run warned about rain
+        that the platform's own analysis does not consider critical.
+        """
+        trace = self.result["agent_traces"]["cmfbe"]["output"]
+        self.assertEqual(trace.get("threshold_source"), "knowledge_graph", trace)
+        sent = {node["feature"]: node["threshold"] for node in self.context["thresholds"]["nodes"]}
+        self.assertTrue(sent)
+        self.assertEqual(trace.get("thresholds"), sent)
+        self.assertEqual(sent["precipitation_3d"], 49.1)
+
+    def test_a_breach_comes_back_naming_the_graphs_level(self) -> None:
+        """52 mm of 3-day rain is past this graph's 49.1, so it must be reported.
+
+        The other side of the pair above: the fix must not be "report nothing".
+        A state below the level is asserted too, so a screening that simply
+        always fired would fail here rather than pass.
+        """
+        for rainfall, expected in ((52.0, 1), (41.0, 0)):
+            with self.subTest(rainfall_3d=rainfall):
+                created = call(
+                    "/strategy",
+                    {
+                        "scenario": SCENARIO,
+                        "state": {**STATE, "rainfall_3d": rainfall},
+                        "episodes": 1,
+                        "backend": "api",
+                        "knowledge_context": self.context,
+                    },
+                )
+                payload: dict = {}
+                for _ in range(POLL_ATTEMPTS):
+                    payload = call(f"/strategy/{created['job_id']}")
+                    if payload.get("status") in ("completed", "failed"):
+                        break
+                    time.sleep(POLL_INTERVAL_SECONDS)
+                result = payload.get("result") or payload
+                self.assertEqual(payload.get("status"), "completed", payload.get("error"))
+
+                breaches = result["agent_traces"]["cmfbe"]["output"]["threshold_breaches"]
+                matching = [item for item in breaches if item["factor"] == "precipitation_3d"]
+                self.assertEqual(len(matching), expected, breaches)
+                if expected:
+                    self.assertEqual(matching[0]["threshold"], 49.1)
+                    self.assertEqual(matching[0]["value"], rainfall)
+                    self.assertEqual(matching[0]["unit"], "mm")
+
+    def test_every_breach_names_a_feature_the_platform_sent(self) -> None:
+        """An agent cannot breach a threshold it was not given."""
+        trace = self.result["agent_traces"]["cmfbe"]["output"]
+        sent = {node["feature"] for node in self.context["thresholds"]["nodes"]}
+        for breach in trace.get("threshold_breaches") or []:
+            with self.subTest(factor=breach["factor"]):
+                self.assertIn(breach["factor"], sent)
+                self.assertIsInstance(breach["threshold"], float)
+
     def test_the_run_is_not_silently_rule_based(self) -> None:
         """Checkpoints are on disk, so the models must be the ones answering.
 

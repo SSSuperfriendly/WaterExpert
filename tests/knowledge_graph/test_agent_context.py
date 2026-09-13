@@ -147,5 +147,110 @@ class AgentKnowledgeContextPayloadTest(unittest.TestCase):
             self.assertNotIn("excerpt", relation)
 
 
+class AgentThresholdPayloadTest(unittest.TestCase):
+    """The critical levels, which are the other half of what grounds a diagnosis.
+
+    The graph edges say what influences what. They do not say when a value has
+    gone too far, and until this section existed the only thresholds any agent
+    applied were four numbers written into ``cmfbe_agent``'s source — one of
+    which had drifted from this repository's own file by 27%, so the agent
+    warned about rain the platform does not consider critical.
+
+    These tests hold the wire that replaced it: the real levels, with the fit
+    that justifies each one, and enough provenance that a reader can tell a
+    screening threshold from a calibrated one.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.service = KnowledgeGraphService(make_settings())
+        cls.section = cls.service.build_agent_knowledge_context(
+            "s2_internal_release", SCENARIO_STATE
+        )["thresholds"]
+
+    def test_the_section_is_present_and_populated(self) -> None:
+        self.assertTrue(self.section["available"], self.section.get("notes"))
+        self.assertTrue(self.section["nodes"])
+
+    def test_the_levels_are_the_ones_the_repository_states(self) -> None:
+        """Read the file directly and compare, rather than trusting the wire.
+
+        The defect this replaced was a number that disagreed with the file, and
+        a test that asked the same code path twice would not have caught it.
+        """
+        import json
+
+        graph = json.loads(
+            (REPO_ROOT / "outputs" / "thresholds" / "mechanism_parameter_threshold_kg.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        expected = {node["feature"]: node["threshold"] for node in graph["threshold_nodes"]}
+        actual = {node["feature"]: node["threshold"] for node in self.section["nodes"]}
+        self.assertEqual(actual, expected)
+        # And the one the agent used to get wrong, spelled out, because a
+        # regression here should name the value rather than a dict difference.
+        self.assertEqual(actual["precipitation_3d"], 49.1)
+
+    def test_every_node_carries_what_makes_it_checkable(self) -> None:
+        """A bare number is not a threshold, it is an opinion with decimals.
+
+        ``unit`` is what makes the comparison meaningful, the fit is what makes
+        the level derived rather than declared, and the interpretation is the
+        claim itself in words.
+        """
+        for node in self.section["nodes"]:
+            with self.subTest(feature=node["feature"]):
+                self.assertIsInstance(node["threshold"], float)
+                self.assertTrue(node["unit"], node)
+                self.assertTrue(node["interpretation"], node)
+                self.assertIsNotNone(node["r2_gain"], node)
+                self.assertIsNotNone(node["response_jump"], node)
+
+    def test_the_graph_says_what_it_is_and_is_not_for(self) -> None:
+        """The guardrails limit the claim, and the agent should not have to fetch them.
+
+        The graph is a screening instrument for one prototype, and says so:
+        "do not reinterpret these as calibrated 2D hydrodynamic thresholds".
+        Sending the levels without that sentence would invite exactly the
+        reading the file spent three lines forbidding.
+        """
+        self.assertEqual(self.section["graph_name"], "mechanism_parameter_threshold_knowledge_graph")
+        self.assertTrue(self.section["scope"])
+        self.assertTrue(self.section["semantics"])
+        self.assertTrue(self.section["guardrails"])
+
+    def test_a_missing_graph_yields_a_shape_rather_than_an_absence(self) -> None:
+        """The agent asks one question instead of guarding ten fields.
+
+        Omitting the key would make "no graph" and "this payload predates the
+        field" the same absence, and the agent would have to read a real outage
+        as a version skew.
+        """
+        from backend.app.services.kg_service import threshold_section
+
+        for empty in (None, {}):
+            with self.subTest(value=empty):
+                section = threshold_section(empty)
+                self.assertFalse(section["available"])
+                self.assertEqual(section["nodes"], [])
+                self.assertTrue(section["notes"])
+
+    def test_a_graph_with_no_usable_nodes_is_not_reported_as_available(self) -> None:
+        """Nodes that failed to converge are not thresholds.
+
+        The export marks a feature whose split did not converge with an empty
+        ``threshold`` and a status saying why. Passing one on as a level would
+        have the agent compare a measurement against a blank.
+        """
+        from backend.app.services.kg_service import threshold_section
+
+        section = threshold_section(
+            {"graph_name": "g", "threshold_nodes": [{"feature": "x", "threshold": None}]}
+        )
+        self.assertFalse(section["available"])
+        self.assertEqual(section["nodes"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -408,10 +408,21 @@ class ArtifactRepository:
             ],
         }
 
+    def threshold_knowledge_graph(self) -> dict[str, Any]:
+        """The mechanism-parameter threshold graph, exactly as exported.
+
+        Public because it stopped being a report-only artifact: the agent's
+        knowledge context now carries these nodes, so the level a breach is
+        measured against is the one the graph states rather than a second copy
+        kept in the agent's own source — which is how the agent came to warn at
+        35.9 mm of 3-day rain while this file said 49.1.
+        """
+        return self._read_json(THRESHOLD_KG_PATH)
+
     def thresholds(self, feature: str | None = None) -> dict[str, Any]:
         summary = self._read_csv(THRESHOLD_SUMMARY_PATH)
         by_context = self._read_csv(THRESHOLD_BY_CONTEXT_PATH)
-        knowledge_graph = self._read_json(THRESHOLD_KG_PATH)
+        knowledge_graph = self.threshold_knowledge_graph()
 
         if feature:
             summary = summary[summary["feature"] == feature].copy()

@@ -53,6 +53,51 @@ class KnowledgeRelation(BaseModel):
     chunk_id: Optional[str] = None
 
 
+class KnowledgeThresholdNode(BaseModel):
+    """One critical level from the platform's threshold graph.
+
+    ``r2_gain`` and ``response_jump`` are what make the level a finding rather
+    than a number: the split's improvement in fit and how far the response
+    moves across it. ``interpretation`` is the claim in words.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    node_id: str = ""
+    feature: str = ""
+    label: str = ""
+    threshold: Optional[float] = None
+    unit: str = ""
+    response: str = ""
+    r2_gain: Optional[float] = None
+    piecewise_r2: Optional[float] = None
+    response_jump: Optional[float] = None
+    interpretation: str = ""
+
+
+class KnowledgeThresholds(BaseModel):
+    """The mechanism-parameter critical levels the agent screens against.
+
+    Declared here because it must not be dropped. ``KnowledgeContext`` is
+    ``extra="ignore"``, so a field the platform sends but this model does not
+    name is discarded in silence — the platform would send ten thresholds, the
+    agent would find none, and both would look correct from their own side. That
+    is the same shape as the defect this section replaced, and the reason the
+    reader in ``cmfbe_agent`` reports ``threshold_source`` rather than assuming.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    available: bool = False
+    graph_name: str = ""
+    scope: str = ""
+    semantics: str = ""
+    guardrails: list[str] = Field(default_factory=list)
+    nodes: list[KnowledgeThresholdNode] = Field(default_factory=list)
+    contextual_nodes: list[KnowledgeThresholdNode] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class KnowledgeContext(BaseModel):
     """Graph evidence retrieved by the platform for one request.
 
@@ -82,6 +127,11 @@ class KnowledgeContext(BaseModel):
     capabilities: dict[str, Any] = Field(default_factory=dict)
     degraded: bool = False
     notes: list[str] = Field(default_factory=list)
+    #: The critical levels, which are not a retrieval result: the same ten apply
+    #: whatever the question, and CMFBE screens against them. Absent means the
+    #: agent screened nothing and says so — it has no local copy to fall back on,
+    #: deliberately, because the copy it used to keep had gone stale.
+    thresholds: Optional[KnowledgeThresholds] = None
 
 
 class StrategyRequest(BaseModel):

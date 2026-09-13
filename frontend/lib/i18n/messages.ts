@@ -875,6 +875,12 @@ const zhCN: MessageTree = {
     thresholdTitle: "阈值",
     thresholdBreached: "已突破",
     thresholdClear: "未突破阈值",
+    thresholdSource: "阈值来源",
+    thresholdSourceGraph: "阈值图谱",
+    thresholdUnavailable: "本轮未获得阈值，未做超限判断",
+    thresholdEvidence: "判定依据",
+    thresholdR2Gain: "拟合增益",
+    thresholdResponseJump: "响应跃变",
     knowledgeTitle: "知识依据",
     knowledgeSubtitle: "候选措施及其依据：图谱关系、案例剂量、技术库条目",
     knowledgeGrounded: "本轮已接入知识图谱检索",
@@ -1051,6 +1057,12 @@ const zhCN: MessageTree = {
       precipitation_7d: "7日累计降雨",
       air_temp: "气温",
       water_air_temp_gap: "水气温差",
+      // The rest of the threshold graph's features. A breach names its feature,
+      // so a missing key here means an operator reads a raw identifier where the
+      // level it exceeded should be.
+      velocity_proxy: "水动力流速代理",
+      bed_shear_proxy: "床面切应力代理",
+      songpu_resuspension_potential: "松浦再悬浮潜力",
     },
     domain: {
       meteorology: "气象",
@@ -2003,6 +2015,12 @@ const enUS: MessageTree = {
     thresholdTitle: "Thresholds",
     thresholdBreached: "Breached",
     thresholdClear: "No thresholds breached",
+    thresholdSource: "Threshold source",
+    thresholdSourceGraph: "Threshold graph",
+    thresholdUnavailable: "No thresholds were supplied, so nothing was screened",
+    thresholdEvidence: "Evidence for the level",
+    thresholdR2Gain: "Fit gain",
+    thresholdResponseJump: "Response jump",
     knowledgeTitle: "Knowledge evidence",
     knowledgeSubtitle: "Candidate measures and what each rests on: a graph relation, a case dose, a technology entry",
     knowledgeGrounded: "Knowledge-graph retrieval was used for this run",
@@ -2179,6 +2197,12 @@ const enUS: MessageTree = {
       precipitation_7d: "7-day cumulative rainfall",
       air_temp: "Air temperature",
       water_air_temp_gap: "Water–air temperature gap",
+      // The rest of the threshold graph's features. A breach names its feature,
+      // so a missing key here means an operator reads a raw identifier where
+      // the level it exceeded should be.
+      velocity_proxy: "Hydrodynamic velocity proxy",
+      bed_shear_proxy: "Bed shear proxy",
+      songpu_resuspension_potential: "Songpu resuspension potential",
     },
     domain: {
       meteorology: "Meteorology",

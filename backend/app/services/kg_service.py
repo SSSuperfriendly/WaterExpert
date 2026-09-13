@@ -262,6 +262,123 @@ def agent_query(scenario: str, state: dict[str, Any] | None = None) -> str:
     return base
 
 
+def _unavailable_thresholds(note: str) -> dict[str, Any]:
+    """The threshold section when there is no graph to build it from.
+
+    A stable shape with ``available: False``, so the agent's reader can ask the
+    question once instead of guarding every field. The alternative — omitting
+    the key — makes "the graph is missing" and "this build predates the field"
+    the same absence, and the agent would then have to treat a real outage as a
+    version skew.
+    """
+    return {
+        "available": False,
+        "graph_name": "",
+        "scope": "",
+        "semantics": "",
+        "guardrails": [],
+        "nodes": [],
+        "contextual_nodes": [],
+        "notes": [note],
+    }
+
+
+def _as_float(value: Any) -> float | None:
+    """A number, or ``None`` — never a coerced string or a raise."""
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None  # drop NaN
+
+
+def _threshold_node_payload(node: dict[str, Any]) -> dict[str, Any]:
+    """One threshold node, flattened to the fields the agent reasons with.
+
+    ``threshold`` stays a real number and is never defaulted: a node without one
+    is not a threshold, and a reader that substitutes 0.0 for it would report
+    every measured value as a breach.
+    """
+    return {
+        "node_id": str(node.get("node_id") or ""),
+        "feature": str(node.get("feature") or ""),
+        "label": str(node.get("agent_label") or ""),
+        "threshold": _as_float(node.get("threshold")),
+        "unit": str(node.get("unit") or ""),
+        "response": str(node.get("response") or ""),
+        # Why this level and not another: the fit says how much of the response
+        # variance the split explains, and the jump is how far the response
+        # moves across it. Together they are the evidence for calling it a
+        # threshold rather than a percentile.
+        "r2_gain": _as_float(node.get("r2_gain")),
+        "piecewise_r2": _as_float(node.get("piecewise_r2")),
+        "response_jump": _as_float(node.get("response_jump")),
+        "interpretation": str(node.get("interpretation") or ""),
+    }
+
+
+def threshold_section(knowledge_graph: dict[str, Any] | None) -> dict[str, Any]:
+    """The mechanism-parameter threshold graph, as the agent receives it.
+
+    Until this existed the only threshold any agent applied was four numbers
+    written into ``cmfbe_agent``'s source, and one of them had drifted: the
+    agent called 35.9 mm of 3-day rain a breach while ``precipitation_3d`` in
+    this very graph was 49.1 — so the agent warned about rain that the
+    platform's own analysis does not consider critical, by 27%.
+
+    The graph was written for this use and says so: its guardrails read "use
+    them for screening, triage, and agent reasoning within the Wusongkou daily
+    prototype". The guardrails travel with the nodes for that reason — they are
+    the limits of the claim, and the agent should not have to fetch a second
+    document to find out it is holding a screening threshold rather than a
+    calibrated one.
+    """
+    if not isinstance(knowledge_graph, dict) or not knowledge_graph:
+        return _unavailable_thresholds("阈值图谱不存在或不可读")
+
+    # A node without a numeric level is dropped rather than passed on with
+    # ``threshold: null``. It would be a field the agent has to re-check, and
+    # the one thing a blank in this position invites is a reader taking it for
+    # zero — against which every measurement is a breach. This also gives the
+    # section a single invariant to state: everything in ``nodes`` is usable.
+    nodes = [
+        _threshold_node_payload(node)
+        for node in knowledge_graph.get("threshold_nodes") or []
+        if isinstance(node, dict)
+        and node.get("feature")
+        and _as_float(node.get("threshold")) is not None
+    ]
+    contextual = []
+    for node in knowledge_graph.get("contextual_threshold_nodes") or []:
+        if not isinstance(node, dict) or not node.get("feature"):
+            continue
+        if _as_float(node.get("threshold")) is None:
+            continue
+        contextual.append(
+            {
+                **_threshold_node_payload(node),
+                "context_type": str(node.get("context_type") or ""),
+                "context": str(node.get("context") or ""),
+            }
+        )
+
+    if not nodes and not contextual:
+        return _unavailable_thresholds("阈值图谱中没有阈值节点")
+
+    return {
+        "available": True,
+        "graph_name": str(knowledge_graph.get("graph_name") or ""),
+        "scope": str(knowledge_graph.get("scope") or ""),
+        "semantics": str(knowledge_graph.get("threshold_semantics") or ""),
+        "guardrails": [str(item) for item in knowledge_graph.get("guardrails") or []],
+        "nodes": nodes,
+        "contextual_nodes": contextual,
+        "notes": [],
+    }
+
+
 def parse_json(text: str) -> dict:
     try:
         return json.loads(text)
@@ -998,7 +1115,24 @@ class KnowledgeGraphService:
             "capabilities": {"chunk_level": False, "communities": False, "citations": False},
             "degraded": True,
             "notes": [],
+            "thresholds": _unavailable_thresholds("未读取阈值图谱"),
         }
+
+        # The thresholds are not a retrieval result. They are the same ten
+        # critical levels whatever the question, so they are read before the
+        # search and survive its failure — an agent that cannot reach the graph
+        # still must not measure a breach against a number it made up.
+        try:
+            from backend.app.services.artifact_repository import ArtifactRepository
+
+            context["thresholds"] = threshold_section(
+                ArtifactRepository(self.settings).threshold_knowledge_graph()
+            )
+        except Exception as exc:  # noqa: BLE001 — same promise as the graph: never fail the request
+            logger.warning("Threshold graph unavailable: %s", exc)
+            context["thresholds"] = _unavailable_thresholds(
+                f"阈值图谱读取失败：{type(exc).__name__}"
+            )
 
         try:
             result = pipeline.search(
