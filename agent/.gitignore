@@ -22,6 +22,11 @@ scratch/
 
 # Runtime-heavy data/outputs: present on disk (shipped by deploy rsync), not in git.
 # A fresh clone needs these copied from the Mac deploy dir (or the ECS /srv/waterexpert-agent).
-data/
-outputs/
+#
+# Anchored, because these two patterns are unanchored by default and were
+# swallowing ``src/water_ai/data/`` — the loader package itself. That is the
+# exact package whose absence crashed every agent start before 2026-09-09, and
+# it was being kept out of git by the rule meant to protect the datasets.
+/data/
+/outputs/
 .swap_backup*/
