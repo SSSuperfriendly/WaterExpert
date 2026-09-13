@@ -2,52 +2,24 @@
 
 from __future__ import annotations
 
-import json
-import math
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
 
+from ...data.case_library import cases_for, describe
 from ..schemas import KnowledgeContext
 
 router = APIRouter(prefix="/api", tags=["explain"])
 
-CASE_LIBRARY_PATH = Path(__file__).resolve().parents[4] / "data" / "case_library" / "cases.json"
-
-
-def _load_cases() -> list[dict[str, Any]]:
-    if not CASE_LIBRARY_PATH.exists():
-        return []
-    with CASE_LIBRARY_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _similarity(case_cond: dict, input_state: dict) -> float:
-    """Compute simple normalized distance-based similarity."""
-    keys = ["rainfall_3d", "turbidity", "flow_rate"]
-    dist = 0.0
-    count = 0
-    for k in keys:
-        cv = case_cond.get(k)
-        iv = input_state.get(k)
-        if cv is not None and iv is not None:
-            scale = max(abs(cv), abs(iv), 1.0)
-            dist += ((cv - iv) / scale) ** 2
-            count += 1
-    if count == 0:
-        return 0.0
-    return max(0.0, 1.0 - math.sqrt(dist / count))
-
 
 def _find_best_cases(scenario: str, state: dict, top_k: int = 2) -> list[dict[str, Any]]:
-    cases = _load_cases()
-    matched = [c for c in cases if c["scenario"] == scenario]
-    if not matched:
-        matched = cases
-    scored = [(c, _similarity(c.get("condition", {}), state)) for c in matched]
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return [{"case": c, "similarity": round(s, 3)} for c, s in scored[:top_k]]
+    """The closest cases this scenario has, widening to the library if it has none.
+
+    The widening is this route's own long-standing behaviour and belongs to it
+    rather than to the library, which is why it is requested explicitly here and
+    refused by the knowledge base — see :func:`~...case_library.cases_for`.
+    """
+    return cases_for(scenario, state, top_k=top_k, fallback_to_all=True)
 
 
 def _knowledge_section(context: KnowledgeContext | None) -> list[str]:
@@ -203,17 +175,5 @@ async def generate_explanation(payload: dict[str, Any]) -> dict[str, Any]:
         "scenario": scenario,
         "explanation": explanation,
         "knowledge_context_available": context is not None,
-        "matched_cases": [
-            {
-                "id": item["case"]["id"],
-                "title": item["case"]["title"],
-                "location": item["case"]["location"],
-                "year": item["case"]["year"],
-                "similarity": item["similarity"],
-                "summary": item["case"]["summary"],
-                "reference": item["case"]["reference"],
-                "outcome": item["case"]["outcome"],
-            }
-            for item in best_cases
-        ],
+        "matched_cases": [describe(item) for item in best_cases],
     }

@@ -16,6 +16,22 @@ from water_ai.api.routes.explain import generate_explanation
 from water_ai.api.schemas import KnowledgeContext
 from water_ai.orchestrator.coordinator import Orchestrator
 
+#: The keys every candidate carries, whatever it rests on. A consumer iterating
+#: ``recommendations`` indexes these by name, so their *presence* is the
+#: contract — and their *value* is the evidence, which is ``None`` wherever no
+#: source recorded one.
+PARAMETER_KEYS = (
+    "technique",
+    "origin",
+    "intensity",
+    "intensity_unit",
+    "intensity_field",
+    "cost_per_day",
+    "case_id",
+    "case_similarity",
+    "reference",
+)
+
 
 def _context(**overrides):
     """A context shaped exactly like the platform's, with one edge from each graph.
@@ -137,7 +153,7 @@ class KnowledgeContextSchemaTest(unittest.TestCase):
 
 class KnowledgeBaseAgentTest(unittest.TestCase):
     def test_without_a_context_nothing_changes(self):
-        """The pre-GraphRAG contract, byte for byte."""
+        """The pre-GraphRAG contract: the scenario's own vocabulary, no graph."""
         agent = KnowledgeBaseAgent()
         result = agent.act({"scenario_type": "s2_internal_release"})
 
@@ -148,7 +164,7 @@ class KnowledgeBaseAgentTest(unittest.TestCase):
             ["精细化流量控制", "原位曝气"],
         )
         for item in result["recommendations"]:
-            self.assertNotIn("origin", item)
+            self.assertEqual(item["origin"], "scenario")
 
     def test_a_graph_context_puts_retrieved_edges_first(self):
         agent = KnowledgeBaseAgent()
@@ -169,18 +185,32 @@ class KnowledgeBaseAgentTest(unittest.TestCase):
         # the literature, the dictionary knows what treatment costs to run.
         self.assertIn("精细化流量控制", [r["technique"] for r in result["recommendations"]])
 
-    def test_graph_candidates_carry_the_shape_downstream_stages_index(self):
-        """A missing price must not become a KeyError three stages later."""
+    def test_every_candidate_carries_the_shape_downstream_stages_index(self):
+        """A missing parameter must become neither a KeyError nor a plausible number."""
         agent = KnowledgeBaseAgent()
         result = agent.act(
             {"scenario_type": "s2_internal_release", "knowledge_context": _context()}
         )
 
-        grounded = [r for r in result["recommendations"] if r.get("origin") == "graph"]
+        self.assertTrue(result["recommendations"])
+        for item in result["recommendations"]:
+            for key in PARAMETER_KEYS:
+                self.assertIn(key, item, f"{item.get('technique')} is missing {key}")
+
+    def test_a_graph_candidate_reports_no_parameters_rather_than_inventing_them(self):
+        """The edge says wind resuspends sediment. It does not say how much."""
+        agent = KnowledgeBaseAgent()
+        result = agent.act(
+            {"scenario_type": "s2_internal_release", "knowledge_context": _context()}
+        )
+
+        grounded = [r for r in result["recommendations"] if r["origin"] == "graph"]
         self.assertTrue(grounded)
         for item in grounded:
-            self.assertIsInstance(item["intensity"], float)
-            self.assertIsInstance(item["cost_per_day"], float)
+            self.assertIsNone(item["intensity"])
+            self.assertIsNone(item["intensity_unit"])
+            self.assertIsNone(item["cost_per_day"])
+            self.assertIsNone(item["case_id"])
 
     def test_graph_candidates_carry_their_citation_and_provenance(self):
         agent = KnowledgeBaseAgent()
@@ -203,6 +233,108 @@ class KnowledgeBaseAgentTest(unittest.TestCase):
             }
         )
         self.assertEqual(result["source"], "KnowledgeBaseAgent")
+
+
+class CaseBackedParametersTest(unittest.TestCase):
+    """The knowledge base's numbers, and where each of them came from.
+
+    The scenario vocabulary used to be priced from two module constants, so
+    every technique it proposed carried an intensity of 0.5 and a cost of zero
+    that no document supported. These tests pin the replacement: a number is the
+    one a documented intervention recorded, it names the case it came from, and
+    where nothing recorded one the entry says so instead of picking a default.
+    """
+
+    #: Case 003's own condition, so it is the closest match by construction and
+    #: the expected parameters are the ones printed in the library.
+    DIANCHI = {"turbidity": 18.7, "flow_rate": 12.5, "rainfall_3d": 8.0}
+
+    def test_the_scenario_entries_are_priced_by_a_published_case(self):
+        result = KnowledgeBaseAgent().act(
+            {"scenario_type": "s2_internal_release", **self.DIANCHI}
+        )
+
+        by_technique = {item["technique"]: item for item in result["recommendations"]}
+        flow = by_technique["精细化流量控制"]
+        self.assertEqual((flow["intensity"], flow["intensity_unit"]), (2.5, "m³/s"))
+        self.assertEqual(flow["intensity_field"], "release_rate")
+        self.assertEqual(flow["case_id"], "case_003")
+        self.assertTrue(flow["reference"])
+
+        aeration = by_technique["原位曝气"]
+        self.assertEqual((aeration["intensity"], aeration["intensity_unit"]), (18.0, "kW"))
+        self.assertEqual(aeration["intensity_field"], "aeration_intensity")
+        self.assertEqual(aeration["case_id"], "case_003")
+
+    def test_the_case_quoted_is_the_one_most_like_the_current_water(self):
+        """A number is only informative if it came off a comparable water body."""
+        result = KnowledgeBaseAgent().act(
+            {"scenario_type": "s1_external_input", "turbidity": 32.5, "flow_rate": 35.2, "rainfall_3d": 52.0}
+        )
+
+        by_technique = {item["technique"]: item for item in result["recommendations"]}
+        self.assertEqual(by_technique["加大放水冲刷"]["case_id"], "case_001")
+        self.assertEqual(by_technique["加大放水冲刷"]["intensity"], 5.2)
+
+    def test_a_technique_no_case_supports_is_offered_without_a_number(self):
+        """增加沉淀池反冲 is a real option and the library records nothing for it."""
+        result = KnowledgeBaseAgent().act(
+            {"scenario_type": "s1_external_input", "turbidity": 32.5, "flow_rate": 35.2, "rainfall_3d": 52.0}
+        )
+
+        by_technique = {item["technique"]: item for item in result["recommendations"]}
+        unsupported = by_technique["增加沉淀池反冲"]
+        self.assertIsNone(unsupported["intensity"])
+        self.assertIsNone(unsupported["intensity_unit"])
+        self.assertIsNone(unsupported["case_id"])
+        self.assertEqual(unsupported["reference"], "")
+
+    def test_a_scenario_the_library_does_not_document_borrows_no_numbers(self):
+        """The failure mode is a case from another scenario lending its dose."""
+        result = KnowledgeBaseAgent().act(
+            {"scenario_type": "s9_undocumented", **self.DIANCHI}
+        )
+
+        self.assertEqual(result["case_evidence"], [])
+        self.assertTrue(result["recommendations"])
+        for item in result["recommendations"]:
+            self.assertIsNone(item["intensity"])
+            self.assertIsNone(item["case_id"])
+
+    def test_the_evidence_is_the_same_record_the_explanation_shows(self):
+        """A recommendation's case id has to resolve to a case the user can read."""
+        result = KnowledgeBaseAgent().act(
+            {"scenario_type": "s2_internal_release", **self.DIANCHI}
+        )
+
+        evidence = result["case_evidence"]
+        self.assertTrue(evidence)
+        best = evidence[0]
+        self.assertEqual(best["id"], "case_003")
+        self.assertEqual(best["scenario"], "s2_internal_release")
+        self.assertEqual(best["similarity"], 1.0)
+        self.assertEqual(best["intervention"]["aeration_intensity"], 18.0)
+        self.assertIn("recovery_days", best["outcome"])
+
+        cited = {
+            item["case_id"]
+            for item in result["recommendations"]
+            if item["case_id"]
+        }
+        self.assertEqual(cited, {"case_003"})
+
+    def test_a_scenario_the_seed_rows_cover_names_the_technology(self):
+        """The quadruples key on ``technology``; consumers index ``technique``."""
+        result = KnowledgeBaseAgent().act({"scenario_type": "s9_undocumented"})
+
+        self.assertTrue(result["recommendations"])
+        self.assertEqual(
+            [item["origin"] for item in result["recommendations"]], ["seed", "seed"]
+        )
+        self.assertEqual(
+            [item["technique"] for item in result["recommendations"]],
+            ["aeration", "controlled_release"],
+        )
 
 
 class SummarizeDiagnosisTest(unittest.TestCase):
