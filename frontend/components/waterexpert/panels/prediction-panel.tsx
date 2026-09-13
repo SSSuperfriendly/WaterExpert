@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
-import { useAppStore } from "@/lib/stores/app-store";
 import { endpoints } from "@/lib/api/endpoints";
 import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
 import { translateModel, translateSplit } from "@/lib/domain";
@@ -28,13 +27,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PredictionJob } from "@/lib/api/contracts";
 
 type MetricView = "turbidity" | "clearness" | "probability";
 
 export function PredictionPanel() {
   const { t } = useT();
-  const setActiveJobId = useAppStore((s) => s.setActiveJobId);
   const scope = useArtifactScope();
 
   const [model, setModel] = React.useState<string>("");
@@ -83,12 +80,7 @@ export function PredictionPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <JobRunnerPanel
-        onSelectJob={(job: PredictionJob) => {
-          setActiveJobId(job.job_id);
-          if (job.model_name) setModel(job.model_name);
-        }}
-      />
+      <JobRunnerPanel />
 
       <Card>
         <CardHeader className="flex-row flex-wrap items-end justify-between gap-3">

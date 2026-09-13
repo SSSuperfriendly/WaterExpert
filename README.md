@@ -10,7 +10,7 @@ The current handoff package also includes an agent-ready scenario triage layer. 
 
 This release now also exports a guarded recommendation playbook. It maps the empirical scenarios to reviewable follow-up actions, monitoring targets, and explicit no-overclaim rules so that a downstream agent can draft response suggestions without pretending that a validated RL controller already exists.
 
-The software-facing UI is a Next.js (App Router) application under `frontend/` that compiles to a static export at `frontend/out/` and is served by the FastAPI backend at `/ui`. It includes a demo login page plus goal-aligned pages for overview, database query, data upload, preprocessing, visualization, turbidity/clearness prediction, factor diagnosis, empirical threshold retrieval, boundary-change proxy detection, scenario triage, response playbook, Sobol/counterfactual sensitivity, and realtime validation.
+The software-facing UI is a Next.js (App Router) application under `frontend/` that compiles to a static export at `frontend/out/` and is served by the FastAPI backend at `/ui`. It includes a demo login page plus goal-aligned pages for overview, database query, data upload, visualization, turbidity/clearness prediction, factor diagnosis, empirical threshold retrieval, boundary-change proxy detection, scenario triage, response playbook, Sobol/counterfactual sensitivity, and realtime validation.
 
 ## Repository Scope
 
@@ -287,7 +287,6 @@ After login, the main navigation is:
 - `系统总览`
 - `数据库与数据查询`
 - `数据导入与上传`
-- `数据预处理`
 - `可视化分析`
 - `浊度/清澈度预测`
 - `致浑因子诊断`

@@ -31,7 +31,6 @@ class ApiContractTest(unittest.TestCase):
             "/api/v1/auth/register",
             "/api/v1/meta",
             "/api/v1/capabilities",
-            "/api/v1/stations",
             "/api/v1/audit-events",
             "/api/v1/datasets",
             "/api/v1/datasets/import",

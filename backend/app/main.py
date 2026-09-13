@@ -857,11 +857,6 @@ def meta(
     return artifact_payload(lambda artifacts: artifacts.metadata(), scope="integrated")
 
 
-@app.get("/api/v1/stations")
-def stations() -> list[dict]:
-    return run_repository_call(repository.stations)
-
-
 @app.get("/api/v1/capabilities")
 def capabilities() -> dict:
     """The deployment's structured vocabulary (data types, models, severities,

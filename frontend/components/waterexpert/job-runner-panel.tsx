@@ -1,17 +1,16 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useT } from "@/lib/i18n/use-t";
 import { useAppStore } from "@/lib/stores/app-store";
 import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { endpoints } from "@/lib/api/endpoints";
-import { translateModel } from "@/lib/domain";
-import { formatDateTime } from "@/lib/format";
+import { describeApiError, translateModel } from "@/lib/domain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -20,106 +19,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
-import type { PredictionJob } from "@/lib/api/contracts";
-
-const POLL_INTERVAL_MS = 5000;
+import { Activity01Icon } from "@hugeicons/core-free-icons";
 
 /**
- * The date range the pipeline actually ran on.
- *
- * A job may ask for a window wider than the data covers; the pipeline clips it
- * and reports what it used in `effective_parameters`. Showing that rather than
- * the request keeps the table honest about what produced the results.
+ * The create half of a prediction run. The job list, queue, logs and result
+ * selection live in the task centre, which is the single place a run is
+ * monitored; this panel only submits a new one.
  */
-function effectiveRange(t: ReturnType<typeof useT>["t"], job: PredictionJob) {
-  const effective = job.effective_parameters;
-  const start = effective?.effective_start_date ?? job.start_date;
-  const end = effective?.effective_end_date ?? job.end_date;
-  if (!start && !end) return t("prediction.rangeFullCoverage");
-  return `${start ?? "—"} → ${end ?? "—"}`;
-}
-
-function statusBadge(t: ReturnType<typeof useT>["t"], status: string) {
-  if (status === "completed") {
-    return <Badge variant="secondary">{t("status.completed")}</Badge>;
-  }
-  if (status === "failed") {
-    return <Badge variant="destructive">{t("status.failed")}</Badge>;
-  }
-  if (status === "orphaned") {
-    return <Badge variant="outline">{t("status.error")}</Badge>;
-  }
-  return <Badge variant="default">{t("status.running")}</Badge>;
-}
-
-export function JobRunnerPanel({
-  onSelectJob,
-}: {
-  onSelectJob?: (job: PredictionJob) => void;
-}) {
+export function JobRunnerPanel() {
   const { t } = useT();
-  const activeJobId = useAppStore((s) => s.activeJobId);
   const setActiveJobId = useAppStore((s) => s.setActiveJobId);
   const activeCaseId = useAppStore((s) => s.activeCaseId);
   const stationCode = useAppStore((s) => s.stationCode);
   const capabilities = useCapabilities();
 
-  // Models come from the deployment's catalogue; before it loads the select is
-  // simply empty rather than defaulting to a hard-coded key.
   const models = (capabilities.data?.models ?? []).map((entry) => entry.key);
-
-  const [jobs, setJobs] = React.useState<PredictionJob[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [creating, setCreating] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  // Form state
   const [model, setModel] = React.useState<string>("");
+  const effectiveModel = model || models[0] || "";
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [useExisting, setUseExisting] = React.useState(true);
-  const effectiveModel = model || models[0] || "";
-
-  const loadJobs = React.useCallback(async () => {
-    try {
-      const list = await endpoints.jobs();
-      setJobs(list);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.error"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time job list load; state is written only after the fetch settles
-    loadJobs();
-  }, [loadJobs]);
-
-  // Poll while any job is running.
-  React.useEffect(() => {
-    const hasRunning = jobs.some((j) => j.status === "running");
-    if (!hasRunning) return;
-    const id = setInterval(loadJobs, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [jobs, loadJobs]);
+  const [creating, setCreating] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [createdJobId, setCreatedJobId] = React.useState<string | null>(null);
 
   const handleCreate = async () => {
     setCreating(true);
     setError(null);
+    setCreatedJobId(null);
     try {
-      await endpoints.createJob({
+      const job = await endpoints.createJob({
         model_name: effectiveModel,
         station_code: stationCode,
         start_date: startDate || undefined,
@@ -127,9 +57,10 @@ export function JobRunnerPanel({
         use_existing_artifacts: useExisting,
         case_id: activeCaseId ?? undefined,
       });
-      await loadJobs();
+      setActiveJobId(job.job_id);
+      setCreatedJobId(job.job_id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.error"));
+      setError(describeApiError(t, err));
     } finally {
       setCreating(false);
     }
@@ -183,70 +114,20 @@ export function JobRunnerPanel({
             />
             {t("prediction.useExisting")}
           </label>
-          <Button onClick={handleCreate} disabled={creating}>
+          <Button onClick={handleCreate} disabled={creating || !effectiveModel}>
             {creating ? t("prediction.running") : t("prediction.runJob")}
           </Button>
         </div>
 
         {error && <p className="text-destructive text-xs">{error}</p>}
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">{t("prediction.jobList")}</p>
-            <Button variant="ghost" size="sm" onClick={loadJobs}>
-              <HugeiconsIcon icon={RefreshIcon} className="size-4" />
-              {t("common.refresh")}
-            </Button>
-          </div>
-
-          {loading ? (
-            <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
-          ) : jobs.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("prediction.noJobs")}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("prediction.jobId")}</TableHead>
-                    <TableHead>{t("prediction.modelName")}</TableHead>
-                    <TableHead>{t("prediction.effectiveRange")}</TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead>{t("prediction.createdAt")}</TableHead>
-                    <TableHead>{t("common.actions")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {jobs.map((job) => (
-                    <TableRow key={job.job_id}>
-                      <TableCell className="font-mono text-xs">{job.job_id.slice(0, 12)}</TableCell>
-                      <TableCell>{translateModel(t, job.model_name)}</TableCell>
-                      <TableCell className="text-xs">
-                        {effectiveRange(t, job)}
-                      </TableCell>
-                      <TableCell>{statusBadge(t, job.status)}</TableCell>
-                      <TableCell className="text-xs">{formatDateTime(job.created_at)}</TableCell>
-                      <TableCell>
-                        {job.status === "completed" && (
-                          <Button
-                            variant={activeJobId === job.job_id ? "secondary" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              setActiveJobId(job.job_id);
-                              onSelectJob?.(job);
-                            }}
-                          >
-                            {t("common.view")}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+        {createdJobId && (
+          <p className="text-muted-foreground text-xs">
+            {t("prediction.jobSubmitted")}{" "}
+            <Link href="/tasks" className="font-medium underline underline-offset-2">
+              {t("prediction.goToTasks")}
+            </Link>
+          </p>
+        )}
       </CardContent>
     </Card>
   );

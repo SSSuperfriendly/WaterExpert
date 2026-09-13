@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
+import { useAppStore } from "@/lib/stores/app-store";
 import { endpoints } from "@/lib/api/endpoints";
 import { downloadAuthenticated } from "@/lib/api/client";
 import { translateJobStatus, translateFailureCategory, translateModel } from "@/lib/domain";
@@ -47,6 +49,9 @@ function ProgressBar({ value }: { value: number }) {
 
 export default function TasksPage() {
   const { t } = useT();
+  const router = useRouter();
+  const setActiveJobId = useAppStore((s) => s.setActiveJobId);
+  const setCaseContext = useAppStore((s) => s.setCaseContext);
   const queue = useApi<JobQueueSnapshot>(() => endpoints.jobQueue());
   const jobs = useApi<PredictionJob[]>(() => endpoints.jobs());
   // Selection is stored as the job id; the selected job object is derived from
@@ -61,6 +66,24 @@ export default function TasksPage() {
     [selectedId]
   );
 
+  const rows = jobs.data ?? [];
+  const hasActiveJobs = rows.some(
+    (job) => job.status === "queued" || job.status === "running"
+  );
+
+  // The task centre is the one place a run is watched, so it polls while any
+  // job is queued or running instead of making the user refresh.
+  const reloadQueue = queue.reload;
+  const reloadJobs = jobs.reload;
+  React.useEffect(() => {
+    if (!hasActiveJobs) return;
+    const id = setInterval(() => {
+      void reloadQueue();
+      void reloadJobs();
+    }, 5000);
+    return () => clearInterval(id);
+  }, [hasActiveJobs, reloadQueue, reloadJobs]);
+
   const act = async (fn: () => Promise<PredictionJob>) => {
     try {
       await fn();
@@ -70,7 +93,13 @@ export default function TasksPage() {
     }
   };
 
-  const rows = jobs.data ?? [];
+  const viewResults = (job: PredictionJob) => {
+    // A job bound to a case is read through that case; one without a case is
+    // read through the job. Clearing the case here keeps the scope unambiguous.
+    setCaseContext(job.case_id ?? null, null);
+    setActiveJobId(job.job_id);
+    router.push("/prediction");
+  };
 
   return (
     <AppShell title={t("tasks.title")}>
@@ -147,6 +176,15 @@ export default function TasksPage() {
                             >
                               {t("common.details")}
                             </Button>
+                            {job.status === "completed" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => viewResults(job)}
+                              >
+                                {t("tasks.viewResults")}
+                              </Button>
+                            )}
                             {(job.status === "queued" || job.status === "running") && (
                               <Button
                                 variant="outline"

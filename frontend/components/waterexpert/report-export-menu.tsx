@@ -4,6 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { endpoints, REPORT_FORMATS } from "@/lib/api/endpoints";
 import { downloadAuthenticated } from "@/lib/api/client";
+import { describeApiError } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,11 +26,13 @@ export function ReportExportMenu({ jobId }: { jobId?: string | null }) {
   const { t } = useT();
   const [busyFormat, setBusyFormat] = React.useState<ReportFormat | null>(null);
   const [doneFormat, setDoneFormat] = React.useState<ReportFormat | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   const triggerDownload = React.useCallback(
     async (format: ReportFormat) => {
       setBusyFormat(format);
       setDoneFormat(null);
+      setError(null);
       try {
         // With no active job the endpoint can't scope to a run, so fall back to
         // the shared research artifacts (scope=integrated) — the button keeps
@@ -39,17 +42,19 @@ export function ReportExportMenu({ jobId }: { jobId?: string | null }) {
         await downloadAuthenticated(result.download_url, result.filename);
         setDoneFormat(format);
       } catch (err) {
-        console.error("Report export failed:", err);
+        setError(describeApiError(t, err));
+        setTimeout(() => setError(null), 5000);
       } finally {
         setBusyFormat(null);
         setTimeout(() => setDoneFormat(null), 2500);
       }
     },
-    [jobId]
+    [jobId, t]
   );
 
   return (
-    <DropdownMenu>
+    <div className="flex items-center gap-2">
+      <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <Button variant="outline" size="sm" className="gap-2">
@@ -78,6 +83,12 @@ export function ReportExportMenu({ jobId }: { jobId?: string | null }) {
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenu>
+      {error && (
+        <span className="text-destructive max-w-[12rem] truncate text-xs" title={error}>
+          {error}
+        </span>
+      )}
+    </div>
   );
 }

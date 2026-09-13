@@ -259,16 +259,6 @@ class ArtifactRepository:
             ),
         }
 
-    def stations(self) -> list[dict[str, Any]]:
-        dataset_summary = self._dataset_summary()
-        station_profile = self._station_profile(dataset_summary)
-        return [
-            {
-                **station_profile,
-                "scope": self._scope_note(dataset_summary),
-            }
-        ]
-
     def metadata(self) -> dict[str, Any]:
         self.assert_source_ready()
         dashboard = self.dashboard()

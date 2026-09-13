@@ -10,6 +10,7 @@ import { formatDateTime } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { StatCard } from "@/components/waterexpert/stat-card";
+import { TextPromptDialog } from "@/components/waterexpert/text-prompt-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,13 @@ export default function EventsPage() {
   const [creating, setCreating] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [promptAction, setPromptAction] = React.useState<{
+    eventId: string;
+    kind: "assign" | "close" | "false_positive";
+  } | null>(null);
+  const [promptValue, setPromptValue] = React.useState("");
+  const [promptBusy, setPromptBusy] = React.useState(false);
 
   const reload = () => Promise.all([events.reload(), summary.reload()]);
 
@@ -83,19 +91,67 @@ export default function EventsPage() {
   };
 
   const act = async (fn: () => Promise<unknown>) => {
+    setActionError(null);
     try {
       await fn();
       await reload();
-    } catch {
-      // Refusals surface via the list reload.
+    } catch (err) {
+      setActionError(describeApiError(t, err));
     }
   };
 
-  const prompt = (message: string, required = true): string | null => {
-    const value = window.prompt(message);
-    if (required && (!value || !value.trim())) return null;
-    return value;
+  const openPrompt = (eventId: string, kind: "assign" | "close" | "false_positive") => {
+    setPromptValue("");
+    setActionError(null);
+    setPromptAction({ eventId, kind });
   };
+
+  const confirmPrompt = async () => {
+    if (!promptAction) return;
+    const value = promptValue.trim();
+    if (!value) return;
+    setPromptBusy(true);
+    setActionError(null);
+    try {
+      if (promptAction.kind === "assign") {
+        await endpoints.assignEvent(promptAction.eventId, value);
+      } else if (promptAction.kind === "close") {
+        await endpoints.closeEvent(promptAction.eventId, value);
+      } else {
+        await endpoints.falsePositiveEvent(promptAction.eventId, value);
+      }
+      setPromptAction(null);
+      setPromptValue("");
+      await reload();
+    } catch (err) {
+      setActionError(describeApiError(t, err));
+    } finally {
+      setPromptBusy(false);
+    }
+  };
+
+  const promptMeta = promptAction
+    ? promptAction.kind === "assign"
+      ? {
+          title: t("events.assign"),
+          label: t("events.assignee"),
+          placeholder: t("events.assigneePlaceholder"),
+          multiline: false,
+        }
+      : promptAction.kind === "close"
+        ? {
+            title: t("events.close"),
+            label: t("events.postMortem"),
+            placeholder: t("events.postMortemPlaceholder"),
+            multiline: true,
+          }
+        : {
+            title: t("events.falsePositive"),
+            label: t("events.reason"),
+            placeholder: t("events.reasonPlaceholder"),
+            multiline: true,
+          }
+    : null;
 
   const rows = events.data ?? [];
   const selected = rows.find((e) => e.event_id === selectedId) ?? null;
@@ -176,7 +232,8 @@ export default function EventsPage() {
           <CardHeader>
             <CardTitle>{t("events.listTitle")}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            {actionError && <p className="text-destructive text-xs">{actionError}</p>}
             {events.loading ? (
               <LoadingState rows={5} />
             ) : events.error ? (
@@ -232,10 +289,7 @@ export default function EventsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    const assignee = prompt(t("events.assigneePlaceholder"));
-                                    if (assignee) act(() => endpoints.assignEvent(e.event_id, assignee));
-                                  }}
+                                  onClick={() => openPrompt(e.event_id, "assign")}
                                 >
                                   {t("events.assign")}
                                 </Button>
@@ -278,10 +332,7 @@ export default function EventsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    const post = prompt(t("events.postMortemPlaceholder"));
-                                    if (post) act(() => endpoints.closeEvent(e.event_id, post));
-                                  }}
+                                  onClick={() => openPrompt(e.event_id, "close")}
                                 >
                                   {t("events.close")}
                                 </Button>
@@ -299,10 +350,7 @@ export default function EventsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    const post = prompt(t("events.postMortemPlaceholder"));
-                                    if (post) act(() => endpoints.closeEvent(e.event_id, post));
-                                  }}
+                                  onClick={() => openPrompt(e.event_id, "close")}
                                 >
                                   {t("events.close")}
                                 </Button>
@@ -312,10 +360,7 @@ export default function EventsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {
-                                  const reason = prompt(t("events.reasonPlaceholder"));
-                                  if (reason) act(() => endpoints.falsePositiveEvent(e.event_id, reason));
-                                }}
+                                onClick={() => openPrompt(e.event_id, "false_positive")}
                               >
                                 {t("events.falsePositive")}
                               </Button>
@@ -378,6 +423,19 @@ export default function EventsPage() {
           </CardContent>
         </Card>
       </div>
+      <TextPromptDialog
+        open={promptAction !== null}
+        title={promptMeta?.title ?? ""}
+        label={promptMeta?.label ?? ""}
+        placeholder={promptMeta?.placeholder}
+        value={promptValue}
+        multiline={promptMeta?.multiline ?? false}
+        confirmLabel={t("common.confirm")}
+        busy={promptBusy}
+        onChange={setPromptValue}
+        onConfirm={confirmPrompt}
+        onCancel={() => setPromptAction(null)}
+      />
     </AppShell>
   );
 }

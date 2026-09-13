@@ -115,11 +115,9 @@ export const endpoints = {
   capabilities: () => apiClient.get<Capabilities>("/api/v1/capabilities"),
   dashboard: (scope: ArtifactScope = {}) =>
     apiClient.get<DashboardPayload & { provenance?: Provenance }>("/api/v1/dashboard", scope),
-  stations: () => apiClient.get<Record<string, unknown>>("/api/v1/stations"),
 
   // Database
   databaseSummary: () => apiClient.get<DatabaseSummary>("/api/v1/database/summary"),
-  databaseStations: () => apiClient.get<Record<string, unknown>>("/api/v1/database/stations"),
   query: (params: Record<string, string | number | undefined>) =>
     apiClient.get<QueryResult>("/api/v1/database/query", params),
 

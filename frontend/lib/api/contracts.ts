@@ -283,6 +283,7 @@ export interface PredictionJob {
   status: string;
   progress?: number;
   priority?: number;
+  case_id?: string | null;
   stage?: string;
   elapsed_seconds?: number;
   estimated_remaining_seconds?: number;

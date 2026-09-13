@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
+import { useAppStore } from "@/lib/stores/app-store";
 import { endpoints } from "@/lib/api/endpoints";
 import { translateColumn } from "@/lib/domain";
 import { formatNumber } from "@/lib/format";
@@ -20,9 +21,12 @@ const PAGE_SIZE = 50;
 
 export function DatabaseQueryPanel() {
   const { t } = useT();
+  // The station is the global one, not a second local picker: the header select
+  // is the single place a station is chosen, and this form follows it.
+  const stationCode = useAppStore((s) => s.stationCode);
+  const setStationCode = useAppStore((s) => s.setStationCode);
 
   const [filters, setFilters] = React.useState({
-    station_code: "",
     keyword: "",
     start_date: "",
     end_date: "",
@@ -33,14 +37,14 @@ export function DatabaseQueryPanel() {
   const query = useApi(
     () =>
       endpoints.query({
-        station_code: filters.station_code || undefined,
+        station_code: stationCode || undefined,
         keyword: filters.keyword || undefined,
         start_date: filters.start_date || undefined,
         end_date: filters.end_date || undefined,
         limit: PAGE_SIZE,
         offset: (page - 1) * PAGE_SIZE,
       }),
-    [submitted, page]
+    [submitted, page, stationCode]
   );
 
   const runSearch = (e: React.FormEvent) => {
@@ -76,8 +80,8 @@ export function DatabaseQueryPanel() {
             <div className="space-y-1.5">
               <Label>{t("database.stationCode")}</Label>
               <Input
-                value={filters.station_code}
-                onChange={(e) => setFilters((f) => ({ ...f, station_code: e.target.value }))}
+                value={stationCode}
+                onChange={(e) => setStationCode(e.target.value)}
                 placeholder="2586"
               />
             </div>
