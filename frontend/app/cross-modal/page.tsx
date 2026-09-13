@@ -65,18 +65,6 @@ export default function CrossModalPage() {
             />
           </div>
 
-          {data.modality_status && Object.keys(data.modality_status).length > 0 && (
-            <Card>
-              <CardContent className="flex flex-wrap gap-2 pt-6">
-                {Object.entries(data.modality_status).map(([modality, status]) => (
-                  <Badge key={modality} variant="outline" className="gap-1 font-normal">
-                    {modality}: {status}
-                  </Badge>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
           <Tabs defaultValue="images">
             <TabsList>
               <TabsTrigger value="images">
