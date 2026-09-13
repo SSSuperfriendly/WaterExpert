@@ -1099,7 +1099,18 @@ def create_prediction_job(
 
 @app.get("/api/v1/prediction-jobs")
 def list_prediction_jobs() -> list[dict]:
-    return runtime_jobs.list_jobs()
+    jobs = runtime_jobs.list_jobs()
+    # Polling the list is how the task centre and the job runner learn a run
+    # finished, so it is also where a bound case learns. Without this the case
+    # would sit at ``running`` until someone fetched the job by id, and every
+    # result page would keep refusing with CASE_NOT_READY.
+    for job in jobs:
+        case_id = job.get("case_id")
+        if case_id:
+            run_service_call(
+                lambda cid=str(case_id), snapshot=job: case_service.sync_from_job(cid, snapshot)
+            )
+    return jobs
 
 
 @app.get("/api/v1/prediction-jobs/queue")

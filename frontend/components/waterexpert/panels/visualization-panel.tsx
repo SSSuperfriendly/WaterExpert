@@ -4,6 +4,7 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
+import { useAppStore } from "@/lib/stores/app-store";
 import { formatNumber, formatDelta } from "@/lib/format";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
@@ -20,12 +21,13 @@ import { Label } from "@/components/ui/label";
 
 export function VisualizationPanel() {
   const { t } = useT();
+  const stationCode = useAppStore((s) => s.stationCode);
   const [indicator, setIndicator] = React.useState("turbidity");
   const [limit, setLimit] = React.useState(180);
 
   const { data, loading, error, reload } = useApi(
-    () => endpoints.visualization("2586", indicator, limit),
-    [indicator, limit]
+    () => endpoints.visualization(stationCode, indicator, limit),
+    [stationCode, indicator, limit]
   );
 
   const series = (data?.series ?? []) as { date: string; value: number }[];

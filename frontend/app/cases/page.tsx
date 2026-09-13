@@ -38,11 +38,13 @@ export default function CasesPage() {
   const { t } = useT();
   const router = useRouter();
   const setCaseContext = useAppStore((s) => s.setCaseContext);
+  const setActiveJobId = useAppStore((s) => s.setActiveJobId);
 
   const cases = useApi<Case[]>(() => endpoints.cases());
   const summary = useApi<CaseSummary>(() => endpoints.caseSummary());
 
   const [creating, setCreating] = React.useState(false);
+  const [runningCaseId, setRunningCaseId] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [targetDate, setTargetDate] = React.useState("");
@@ -51,6 +53,24 @@ export default function CasesPage() {
   const openCase = (c: Case) => {
     setCaseContext(c.case_id, c.target_date ?? null);
     router.push("/prediction");
+  };
+
+  const runCase = async (c: Case) => {
+    setRunningCaseId(c.case_id);
+    setError(null);
+    try {
+      const job = await endpoints.runCase(c.case_id, {
+        model_name: "cmfbe_stgcn",
+        use_existing_artifacts: true,
+      });
+      setCaseContext(c.case_id, c.target_date ?? null);
+      setActiveJobId(job.job_id);
+      router.push("/prediction");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setRunningCaseId(null);
+    }
   };
 
   const handleCreate = async () => {
@@ -183,6 +203,13 @@ export default function CasesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => runCase(c)}
+                            disabled={runningCaseId === c.case_id}
+                          >
+                            {runningCaseId === c.case_id ? t("case.running") : t("case.run")}
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => openCase(c)}>
                             {t("case.open")}
                           </Button>

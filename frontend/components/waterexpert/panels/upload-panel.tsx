@@ -4,29 +4,12 @@ import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
-import { formatDateTime } from "@/lib/format";
-import {
-  describeApiError,
-  translateBlockingReason,
-  translateDataType,
-  translateDatasetStatus,
-  translateQualityGrade,
-  translateStage,
-} from "@/lib/domain";
-import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { describeApiError, translateBlockingReason, translateStage } from "@/lib/domain";
+import { DatasetAssetTable } from "@/components/waterexpert/dataset-asset-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -46,14 +29,6 @@ const DATA_TYPES = [
   { value: "boundary_labels", labelKey: "upload.boundaryLabels" },
   { value: "spatial", labelKey: "upload.spatial" },
 ];
-
-/** A→D. Only A and B may feed a prediction run. */
-function gradeBadge(t: ReturnType<typeof useT>["t"], grade?: string) {
-  if (!grade) return null;
-  const variant =
-    grade === "a" ? "secondary" : grade === "b" ? "outline" : "destructive";
-  return <Badge variant={variant}>{translateQualityGrade(t, grade)}</Badge>;
-}
 
 export function UploadPanel() {
   const { t } = useT();
@@ -222,54 +197,12 @@ export function UploadPanel() {
           <CardTitle>{t("upload.datasetList")}</CardTitle>
         </CardHeader>
         <CardContent>
-          {datasets.loading ? (
-            <LoadingState rows={3} />
-          ) : datasets.error ? (
-            <ErrorState error={datasets.error} onRetry={datasets.reload} />
-          ) : rows.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("common.noData")}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("upload.dataset")}</TableHead>
-                    <TableHead>{t("upload.dataType")}</TableHead>
-                    <TableHead>{t("upload.coverage")}</TableHead>
-                    <TableHead>{t("upload.quality")}</TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead>{t("prediction.createdAt")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((dataset) => (
-                    <TableRow key={dataset.dataset_id}>
-                      <TableCell className="max-w-[16rem] truncate">
-                        {dataset.title ?? dataset.dataset_id}
-                      </TableCell>
-                      <TableCell>
-                        {translateDataType(t, dataset.data_type)}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {dataset.coverage_start && dataset.coverage_end
-                          ? `${dataset.coverage_start} → ${dataset.coverage_end}`
-                          : "—"}
-                      </TableCell>
-                      <TableCell>{gradeBadge(t, dataset.quality_grade)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {translateDatasetStatus(t, dataset.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {formatDateTime(dataset.created_at)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DatasetAssetTable
+            rows={rows}
+            loading={datasets.loading}
+            error={datasets.error}
+            onReload={datasets.reload}
+          />
         </CardContent>
       </Card>
     </div>

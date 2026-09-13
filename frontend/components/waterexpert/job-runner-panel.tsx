@@ -70,6 +70,8 @@ export function JobRunnerPanel({
   const { t } = useT();
   const activeJobId = useAppStore((s) => s.activeJobId);
   const setActiveJobId = useAppStore((s) => s.setActiveJobId);
+  const activeCaseId = useAppStore((s) => s.activeCaseId);
+  const stationCode = useAppStore((s) => s.stationCode);
 
   const [jobs, setJobs] = React.useState<PredictionJob[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -113,10 +115,11 @@ export function JobRunnerPanel({
     try {
       await endpoints.createJob({
         model_name: model,
-        station_code: "2586",
+        station_code: stationCode,
         start_date: startDate || undefined,
         end_date: endDate || undefined,
         use_existing_artifacts: useExisting,
+        case_id: activeCaseId ?? undefined,
       });
       await loadJobs();
     } catch (err) {
@@ -135,6 +138,9 @@ export function JobRunnerPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-muted-foreground text-xs">
+          {activeCaseId ? `${t("case.caseId")}: ${activeCaseId}` : t("case.noCaseBound")}
+        </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label>{t("prediction.modelName")}</Label>

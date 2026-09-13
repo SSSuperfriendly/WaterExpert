@@ -19,6 +19,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 import pandas as pd
 from fastapi.testclient import TestClient
@@ -262,6 +263,34 @@ class CaseRunTest(CaseApiTestCase):
     def test_running_a_missing_case_is_404(self) -> None:
         response = self.client.post("/api/v1/cases/nope/run", json={})
         self.assertEqual(response.status_code, 404)
+
+
+class JobListCaseSyncTest(CaseApiTestCase):
+    """Polling the job *list* is the path the UI takes, so the bound case must
+    advance there too — not only when the job is fetched by id."""
+
+    def test_polling_the_job_list_advances_a_bound_case(self) -> None:
+        case_id = self._create_case().json()["case_id"]
+        main.case_service.attach_job(case_id, {"job_id": "job-1", "status": "running"})
+        self.assertEqual(
+            main.case_service.get_case(case_id)["status"], str(CaseStatus.RUNNING)
+        )
+
+        completed = {
+            "job_id": "job-1",
+            "case_id": case_id,
+            "status": "completed",
+            "finished_at": "2030-01-01T00:00:00Z",
+            "artifacts": [],
+            "effective_parameters": {},
+        }
+        with mock.patch.object(main.runtime_jobs, "list_jobs", return_value=[completed]):
+            response = self.client.get("/api/v1/prediction-jobs")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            main.case_service.get_case(case_id)["status"], str(CaseStatus.READY)
+        )
 
 
 class CaseProvenanceTest(CaseApiTestCase):
