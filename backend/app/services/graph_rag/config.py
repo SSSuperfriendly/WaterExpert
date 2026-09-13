@@ -82,6 +82,9 @@ class GraphRagConfig:
 
     # ---- linking ----------------------------------------------------------
     evidence_aliases: bool = True
+    #: Let the platform's own field vocabulary (``ingestion/schema_registry``)
+    #: reach the graph's entity names — see ``platform_vocabulary``.
+    platform_vocabulary: bool = True
 
     # ---- agent injection --------------------------------------------------
     agent_top_k: int = 5
@@ -187,6 +190,7 @@ class GraphRagConfig:
             chunk_excerpt_chars=as_int("CHUNK_EXCERPT_CHARS", 400),
             max_chunks_per_relation=as_int("MAX_CHUNKS_PER_REL", 2),
             evidence_aliases=as_bool("EVIDENCE_ALIASES", True),
+            platform_vocabulary=as_bool("PLATFORM_VOCABULARY", True),
             agent_top_k=as_int("AGENT_TOP_K", 5),
             agent_context_max_chars=as_int("AGENT_MAX_CHARS", 1500),
             warmup_on_startup=as_bool("WARMUP", True),

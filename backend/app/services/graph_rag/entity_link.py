@@ -48,12 +48,18 @@ from backend.app.services.graph_rag.lexicon import (
     is_latin_entity,
     latin_tokens,
 )
+from backend.app.services.graph_rag.platform_vocabulary import vocabulary
 
 #: Seed scores, one per linking layer. Named rather than inlined so the ranking
 #: question ("why did this node become a seed?") has one answer per constant.
 SEED_EXACT = 1.00
 SEED_SYNONYM = 0.90
 SEED_BILINGUAL = 0.85
+#: The platform's own field vocabulary reaching a graph entity — ``平均气温``
+#: to ``AIR TEMPERATURE``. Same weight as :data:`SEED_BILINGUAL` and for the
+#: same reason: both are a *translation* between two vocabularies for one
+#: quantity, not a guess at association. See ``platform_vocabulary``.
+SEED_PLATFORM = 0.85
 SEED_CONTAINED = 0.80
 SEED_RELATED = 0.55
 SEED_EVIDENCE_ALIAS = 0.50
@@ -201,6 +207,8 @@ class EntityLexicon:
                 self._add_entity(node_key, source.source_id, name, entity_type)
             if self._config.evidence_aliases:
                 self._add_evidence_aliases(source)
+        if self._config.platform_vocabulary:
+            self._add_platform_vocabulary()
 
     # ---- construction ------------------------------------------------------
     def _add_entity(self, node_key: str, source_id: str, name: str, entity_type: str) -> None:
@@ -255,6 +263,107 @@ class EntityLexicon:
                 for token in tokens:
                     if len(token) >= 4:
                         self._record(token, endpoint, SEED_EVIDENCE_ALIAS, "evidence_alias")
+
+    def _add_platform_vocabulary(self) -> None:
+        """Register the platform's field vocabulary against the graph's names.
+
+        The registry in ``ingestion/schema_registry.py`` is the contract every
+        column of platform data is validated against; the graph is the evidence
+        base. This is the only place the two meet, and it is derived rather than
+        hand-written, so a field added to the registry reaches the graph without
+        anyone remembering to also edit a translation table.
+
+        Registered after every entity is known, because the bridge is computed
+        over the entity names themselves — it has to see ``AIR TEMPERATURE`` to
+        know that ``air_temp`` names it.
+
+        **It declines wherever the graph has already been taught the field.**
+        A field is served when its *primary* entity — the one its own name
+        matches most completely — is already reachable at translation strength.
+        ``风速`` is the worked case: the curated tables already reach
+        ``WIND SPEED``, so bridging the field as well would spend eight of the
+        inherited source's twelve seed slots on ``WIND``, ``WINDS``,
+        ``CRITICAL WIND SPEED`` and their neighbours, every one of them a
+        quieter restatement of a node the link had already found. The gap the
+        bridge actually exists for is the other kind — ``平均气温``, ``相对湿度``,
+        ``气压``, ``高锰酸盐指数``, columns no curated table ever mentioned — and
+        there the primary entity is unreachable, so the bridge speaks.
+
+        Coverage decides which entity is primary, not the order the names
+        happen to arrive in: ``air_temp`` names ``AIR TEMPERATURE`` (2 of 2
+        tokens) before ``TEMPERATURE`` (1 of 2), which is the difference between
+        "this field is unserved" and "this field is already covered".
+        """
+        # "Taught" means the graph knows a *translation* for the entity, not
+        # that the entity has a name. Every entity is registered under its own
+        # name — that is what ``exact`` and ``contained`` are — so counting
+        # those would make every field look served and switch the bridge off
+        # entirely. What matters is whether some curated layer already carries
+        # the entity across the vocabulary gap.
+        taught = {
+            node_key
+            for bucket in self._surfaces.values()
+            for node_key, score, via in bucket
+            if score >= SEED_BILINGUAL and via in ("synonym", "bilingual")
+        }
+        keys_by_name: dict[str, list[str]] = {}
+        for node_key, (display, _type) in self._entities.items():
+            keys_by_name.setdefault(display, []).append(node_key)
+
+        bridged = vocabulary().bridges_to(name for name, _type in self._entities.values())
+        # term canonical -> (coverage, entity name) for every entity it names.
+        by_term: dict[str, list[tuple[float, str]]] = {}
+        for name, matches in bridged.items():
+            for match in matches:
+                by_term.setdefault(match.term.canonical, []).append((match.coverage, name))
+
+        served: set[str] = set()
+        for canonical, found in by_term.items():
+            best = max(coverage for coverage, _name in found)
+            for coverage, name in found:
+                if coverage < best:
+                    continue
+                if any(key in taught for key in keys_by_name.get(name, ())):
+                    served.add(canonical)
+                    break
+
+        for node_key, (name, _entity_type) in self._entities.items():
+            for match in bridged.get(name, ()):
+                if match.term.canonical in served:
+                    continue
+                for surface in match.term.surfaces:
+                    self._record(normalize(surface), node_key, SEED_PLATFORM, "platform_vocab")
+
+    def _expand_platform(self, question: str, hits: dict[str, tuple[float, str, str]]) -> None:
+        """Also link the registry's name for a quantity the question names in prose.
+
+        An index can only match what it was told to match. ``平均气温`` is a
+        registered surface once the bridge has run, but a question says ``气温``,
+        and no amount of index building turns one into the other — that
+        translation belongs to the platform vocabulary, which knows they are the
+        same field because the registry says so.
+
+        The seed is recorded against the span the question actually used, so
+        ``matched_via`` names where it came from rather than where it landed.
+
+        Only translation-grade surfaces are followed. An expansion is a claim
+        that two names mean the same field; a surface the index knows only as an
+        evidence alias is not that, and following one would drag in every entity
+        whose English description happened to contain the word — the platform
+        graph's edges describe ``浊度`` in English, so ``turbidity`` is on file
+        as a weak alias of six unrelated nodes.
+        """
+        for trigger, surfaces in vocabulary().triggered_by(question):
+            for surface in surfaces:
+                key = normalize(surface)
+                if key == normalize(trigger):
+                    continue
+                for node_key, score, _via in self._surfaces.get(key, ()):
+                    if score < SEED_BILINGUAL:
+                        continue
+                    self._keep_best(
+                        hits, node_key, min(score, SEED_PLATFORM), "platform_vocab", trigger
+                    )
 
     def _record(self, surface: str, node_key: str, score: float, via: str) -> None:
         if len(surface) < 2:
@@ -326,6 +435,9 @@ class EntityLexicon:
                 continue
             for node_key, score, via in self._surfaces[surface]:
                 self._keep_best(hits, node_key, score, via, surface)
+
+        if self._config.platform_vocabulary:
+            self._expand_platform(question, hits)
 
         if len(hits) < FUZZY_TRIGGER_SEEDS:
             self._fuzzy(question, spaced_question, hits)
