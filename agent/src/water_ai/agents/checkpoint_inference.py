@@ -155,8 +155,32 @@ class TimeSeriesCheckpointRunner:
             "hidden_dim": hidden_dim,
             "transformer_layers": transformer_layers,
             "num_heads": num_heads,
+            "max_sequence_length": self._sequence_length(state_dict),
             "dropout": 0.0,
         }
+
+    def _sequence_length(self, state_dict: dict[str, torch.Tensor]) -> int:
+        """The look-back window the checkpoint was trained with.
+
+        Read off the position embedding rather than from ``meta['history_days']``,
+        for the same reason ``hidden_dim`` is read off the projection: the
+        tensor is what has to match, and when the two disagree the tensor is the
+        one `load_state_dict` will complain about.
+
+        The window is architecture, not a setting, and leaving it to the model's
+        own default is how every checkpoint came to be rejected — the models
+        default to 32 days, the checkpoints carry 21, and a rejected checkpoint
+        is a silent downgrade to rule-based inference rather than an error
+        anyone sees.
+        """
+        for key in ("backbone.position_embedding", "position_embedding"):
+            embedding = state_dict.get(key)
+            if embedding is not None and embedding.dim() == 3:
+                return int(embedding.shape[1])
+        # A checkpoint with no position embedding at all: the model's own
+        # default is right, and history_days is the best available statement of
+        # what the training window was.
+        return int(self.history_days)
 
     def _load_feature_statistics(self) -> None:
         if self.data_path.exists():

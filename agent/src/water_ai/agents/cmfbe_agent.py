@@ -204,7 +204,8 @@ class CMFBEAgent(BaseAgent):
             "agent": self.name,
             "checkpoint": self.checkpoint_path,
             "threshold_summary": self.threshold_summary,
-            "status": "ready" if self.runner.checkpoint_path.exists() else "degraded",
+            # Loaded, not merely present — see ``MSCIMAgent.health``.
+            "status": "ready" if self.runner.model is not None else "degraded",
             "checkpoint_loaded": self.runner.model is not None,
             "checkpoint_error": self.runner.load_error,
         }

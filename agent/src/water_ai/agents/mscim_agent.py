@@ -134,11 +134,18 @@ class MSCIMAgent(BaseAgent):
         return max(0.50, min(0.95, gate_confidence - delta_penalty))
 
     def health(self) -> dict[str, Any]:
-        """Check agent health."""
+        """Check agent health — whether the model runs, not whether a file exists.
+
+        Existence was the old test, and it is the reason a checkpoint that
+        ``load_state_dict`` rejects still reported ``ready``: the swap on
+        2026-09-08 was signed off by a signal that could not fail, while every
+        request was answered by :meth:`_fallback_act`. Readiness has to mean the
+        model is loaded.
+        """
         return {
             "agent": self.name,
             "checkpoint": self.checkpoint_path,
-            "status": "ready" if self.runner.checkpoint_path.exists() else "degraded",
+            "status": "ready" if self.runner.model is not None else "degraded",
             "checkpoint_loaded": self.runner.model is not None,
             "checkpoint_error": self.runner.load_error,
         }

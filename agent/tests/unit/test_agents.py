@@ -1,5 +1,7 @@
 import unittest
 
+import torch
+
 from water_ai.agents import (
     MSCIMAgent,
     CMFBEAgent,
@@ -8,6 +10,7 @@ from water_ai.agents import (
     RLTGRRAgent,
     SafetyAgent,
 )
+from water_ai.agents.checkpoint_inference import TimeSeriesCheckpointRunner
 
 
 class TestAgents(unittest.TestCase):
@@ -50,6 +53,36 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(cmfbe_result["inference_source"], "checkpoint")
         self.assertIn("turbidity", mscim_result["prediction"])
         self.assertIn("next_day_turbidity", cmfbe_result["predictions"])
+
+
+class LookbackWindowTest(unittest.TestCase):
+    """The architecture has to come off the checkpoint, not off a default.
+
+    Every checkpoint in ``outputs/models`` was trained on a 21-day window and
+    both prototypes default to 32. The window was the one dimension
+    ``_model_kwargs`` did not derive from the state dict, so ``load_state_dict``
+    rejected every one of them — and a rejected checkpoint does not raise, it
+    silently downgrades the agent to rule-based inference. These tests pin the
+    derivation without needing the 18 MB checkpoints on disk.
+    """
+
+    def runner(self) -> TimeSeriesCheckpointRunner:
+        return TimeSeriesCheckpointRunner(
+            checkpoint_path="outputs/models/mscim.pt", model_kind="mscim"
+        )
+
+    def test_the_window_is_read_off_the_position_embedding(self):
+        state_dict = {"position_embedding": torch.zeros(1, 21, 64)}
+        self.assertEqual(self.runner()._sequence_length(state_dict), 21)
+
+    def test_the_cmfbe_key_is_read_too(self):
+        state_dict = {"backbone.position_embedding": torch.zeros(1, 21, 64)}
+        self.assertEqual(self.runner()._sequence_length(state_dict), 21)
+
+    def test_a_checkpoint_without_one_falls_back_to_its_recorded_history(self):
+        runner = self.runner()
+        runner.history_days = 21
+        self.assertEqual(runner._sequence_length({}), 21)
 
 
 if __name__ == "__main__":
