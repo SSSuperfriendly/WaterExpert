@@ -76,6 +76,20 @@ class TimeSeriesCheckpointRunner:
             top_features=self._top_features(outputs),
         )
 
+    @property
+    def ready(self) -> bool:
+        """Whether the checkpoint actually loaded — loading it first if need be.
+
+        Readiness must not be a question about whether anyone has asked yet.
+        ``model`` is ``None`` until the first prediction, so a health check that
+        only reads it reports a cold, perfectly good agent as broken, and then
+        reports it healthy the moment the first request warms it. Neither
+        reading is a fact about the checkpoint. This forces the load — once per
+        process, cached by ``loaded`` — and answers about the result.
+        """
+        self._ensure_loaded()
+        return self.model is not None
+
     def _ensure_loaded(self) -> None:
         if self.loaded:
             return

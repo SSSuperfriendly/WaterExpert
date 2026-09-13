@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 import torch
 
@@ -83,6 +84,34 @@ class LookbackWindowTest(unittest.TestCase):
         runner = self.runner()
         runner.history_days = 21
         self.assertEqual(runner._sequence_length({}), 21)
+
+
+class ReadinessTest(unittest.TestCase):
+    """``ready`` has to be a fact about the checkpoint, not about traffic.
+
+    ``model`` stays ``None`` until the first prediction, so a health check that
+    only looks at it calls a cold, healthy agent broken — and then calls it
+    healthy the moment a request warms it. Both readings are wrong, and the
+    second is the worse of the two: it is the 2026-09-08 sign-off again, where
+    the signal that cleared the swap could not fail because nothing had asked
+    it a question it could fail.
+    """
+
+    def test_a_cold_runner_answers_by_loading_rather_than_looking(self):
+        runner = TimeSeriesCheckpointRunner(checkpoint_path="/nonexistent/x.pt", model_kind="mscim")
+        self.assertIsNone(runner.model)
+        self.assertFalse(runner.ready)
+        # Not "not yet asked": asked, and the answer is no.
+        self.assertTrue(runner.loaded)
+        self.assertIn("not found", runner.load_error or "")
+
+    def test_a_degraded_agent_says_so_on_a_server_that_has_served_nothing(self):
+        agent = MSCIMAgent()
+        agent.runner.checkpoint_path = Path("/nonexistent/x.pt")
+        health = agent.health()
+        self.assertEqual(health["status"], "degraded")
+        self.assertFalse(health["checkpoint_loaded"])
+        self.assertTrue(health["checkpoint_error"])
 
 
 if __name__ == "__main__":

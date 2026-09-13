@@ -140,12 +140,14 @@ class MSCIMAgent(BaseAgent):
         ``load_state_dict`` rejects still reported ``ready``: the swap on
         2026-09-08 was signed off by a signal that could not fail, while every
         request was answered by :meth:`_fallback_act`. Readiness has to mean the
-        model is loaded.
+        model is loaded — see :attr:`TimeSeriesCheckpointRunner.ready`, which
+        loads rather than merely looking.
         """
+        loaded = self.runner.ready
         return {
             "agent": self.name,
             "checkpoint": self.checkpoint_path,
-            "status": "ready" if self.runner.model is not None else "degraded",
-            "checkpoint_loaded": self.runner.model is not None,
+            "status": "ready" if loaded else "degraded",
+            "checkpoint_loaded": loaded,
             "checkpoint_error": self.runner.load_error,
         }

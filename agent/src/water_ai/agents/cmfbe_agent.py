@@ -200,12 +200,13 @@ class CMFBEAgent(BaseAgent):
         return min(2.0, 0.08 * flow)
 
     def health(self) -> dict[str, Any]:
+        # Loaded, not merely present — see ``MSCIMAgent.health``.
+        loaded = self.runner.ready
         return {
             "agent": self.name,
             "checkpoint": self.checkpoint_path,
             "threshold_summary": self.threshold_summary,
-            # Loaded, not merely present — see ``MSCIMAgent.health``.
-            "status": "ready" if self.runner.model is not None else "degraded",
-            "checkpoint_loaded": self.runner.model is not None,
+            "status": "ready" if loaded else "degraded",
+            "checkpoint_loaded": loaded,
             "checkpoint_error": self.runner.load_error,
         }
