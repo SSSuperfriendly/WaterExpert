@@ -47,7 +47,7 @@ function InferenceBadge({ source }: { source: string | undefined }) {
   }
   if (source === "fallback_rules") {
     return (
-      <Badge variant="destructive" className="text-xs">
+      <Badge variant="outline" className="text-xs">
         {t("agent.inferenceFallback")}
       </Badge>
     );
@@ -94,15 +94,13 @@ function ThresholdSourceBadge({ source }: { source: string | undefined }) {
   );
 }
 
-/** The heading every agent block shares: name, provenance, and any load error. */
+/** The heading every agent block shares: name and provenance. */
 function AgentHeading({
   agent,
   source,
-  error,
 }: {
   agent: string;
   source: string | undefined;
-  error: string | undefined;
 }) {
   const { t } = useT();
   return (
@@ -112,14 +110,6 @@ function AgentHeading({
         <span className="text-muted-foreground text-xs">{t("agent.inferenceSource")}:</span>
         <InferenceBadge source={source} />
       </div>
-      {source === "fallback_rules" && (
-        <p className="text-destructive text-xs">{t("agent.inferenceFallbackNote")}</p>
-      )}
-      {error && (
-        <p className="text-muted-foreground font-mono text-[11px] break-all">
-          {t("agent.checkpointError")}: {error}
-        </p>
-      )}
     </div>
   );
 }
@@ -141,7 +131,7 @@ export function MscimDiagnosis({ trace }: { trace: AgentMscimTrace }) {
   if (trace.error) {
     return (
       <div className="space-y-3">
-        <AgentHeading agent="MSCIM" source={trace.inference_source} error={trace.error} />
+        <AgentHeading agent="MSCIM" source={trace.inference_source} />
       </div>
     );
   }
@@ -153,11 +143,7 @@ export function MscimDiagnosis({ trace }: { trace: AgentMscimTrace }) {
 
   return (
     <div className="space-y-3">
-      <AgentHeading
-        agent="MSCIM"
-        source={trace.inference_source}
-        error={trace.checkpoint_error}
-      />
+      <AgentHeading agent="MSCIM" source={trace.inference_source} />
 
       <div className="grid grid-cols-2 gap-2">
         <Stat
@@ -219,7 +205,7 @@ export function CmfbeDiagnosis({ trace }: { trace: AgentCmfbeTrace }) {
   if (trace.error) {
     return (
       <div className="space-y-3">
-        <AgentHeading agent="CMFBE-ST-GCN" source={trace.inference_source} error={trace.error} />
+        <AgentHeading agent="CMFBE-ST-GCN" source={trace.inference_source} />
       </div>
     );
   }
@@ -236,11 +222,7 @@ export function CmfbeDiagnosis({ trace }: { trace: AgentCmfbeTrace }) {
 
   return (
     <div className="space-y-3">
-      <AgentHeading
-        agent="CMFBE-ST-GCN"
-        source={trace.inference_source}
-        error={trace.checkpoint_error}
-      />
+      <AgentHeading agent="CMFBE-ST-GCN" source={trace.inference_source} />
 
       <div className="grid grid-cols-2 gap-2">
         <Stat

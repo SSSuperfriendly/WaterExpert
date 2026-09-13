@@ -172,11 +172,6 @@ function AssetCard({ asset }: { asset: CrossModalAsset }) {
                 />
               ))}
             </div>
-            {!asset.video_url && (
-              <p className="text-muted-foreground mt-1 text-[10px]">
-                {t("crossModal.videoSourceUnavailable")}
-              </p>
-            )}
           </div>
         )}
 
