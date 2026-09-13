@@ -73,6 +73,28 @@ export function translateKgSource(t: T, source: string | undefined | null): stri
   return translateEnum(t, "kg.source", source);
 }
 
+/**
+ * The display name of one graph source, taking the backend at its word.
+ *
+ * `translateKgSource` has to *guess* a key from the source id, which is right
+ * for the three the platform ships and renders a literal `kg.source.inherited`
+ * only because that key happens to exist. The QA and subgraph payloads already
+ * name the key they want used (`label_key`), so use it, fall back to the label
+ * the backend sent, and only then to the raw id. A guessed key is never
+ * rendered: a source the UI has not been taught about shows its own name.
+ */
+export function translateKgSourceInfo(
+  t: T,
+  source: { source_id?: string; label?: string; label_key?: string } | undefined | null
+): string {
+  if (!source) return "—";
+  if (source.label_key) {
+    const localized = t(source.label_key);
+    if (!localized.startsWith("kg.")) return localized;
+  }
+  return source.label || source.source_id || "—";
+}
+
 /** Model-evaluation split: train / valid / test. */
 export function translateSplit(t: T, split: string | undefined | null): string {
   return translateEnum(t, "enums.split", split);

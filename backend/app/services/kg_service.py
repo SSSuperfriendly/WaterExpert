@@ -916,6 +916,44 @@ class KnowledgeGraphService:
             project_root=self.settings.project_root,
         )
 
+    def subgraph(
+        self,
+        *,
+        nodes: list[dict[str, Any]] | None = None,
+        community_ids: list[str] | None = None,
+        include_neighbours: bool = False,
+        focus: dict[str, Any] | None = None,
+        max_edges: int | None = None,
+    ) -> dict[str, Any]:
+        """The drawable subgraph around the entities an answer cited.
+
+        Reads through the same memoised index the retrieval does, so asking the
+        canvas to draw what a question just found costs no parquet read — the
+        bundle is already in memory and keyed on the files' mtimes.
+        """
+        from backend.app.services.graph_rag import pipeline, subgraph as subgraph_module
+        from backend.app.services.graph_rag.config import GraphRagConfig
+
+        config = GraphRagConfig.from_env()
+        bundle, _linker, _directories = pipeline.load_bundle(
+            config,
+            runtime_dir=self.kg_dir,
+            baseline_dir=self.baseline_root,
+            project_root=self.settings.project_root,
+        )
+
+        overrides: dict[str, Any] = {}
+        if max_edges is not None:
+            overrides["max_edges"] = int(max_edges)
+        return subgraph_module.subgraph(
+            bundle,
+            nodes=nodes or [],
+            community_ids=community_ids or [],
+            include_neighbours=include_neighbours,
+            focus=focus,
+            **overrides,
+        )
+
     def build_agent_knowledge_context(
         self,
         scenario: str,

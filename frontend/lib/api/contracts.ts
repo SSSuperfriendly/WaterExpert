@@ -557,6 +557,8 @@ export interface KgGraphPayload {
 export interface KgMatchedRelation {
   source?: string;
   source_type?: string;
+  /** Which graph the edge came from — ``platform`` or ``inherited``. */
+  source_id?: string;
   relation?: string;
   target?: string;
   target_type?: string;
@@ -571,7 +573,14 @@ export interface KgQaPath {
   path_id?: string;
   source_id?: string;
   nodes: string[];
-  edges?: Array<{ source: string; relation?: string; target: string; evidence?: string }>;
+  edges?: Array<{
+    source: string;
+    source_id?: string;
+    relation?: string;
+    target: string;
+    evidence?: string;
+    source_file?: string;
+  }>;
   hops?: number;
   score?: number;
   score_parts?: Record<string, number>;
@@ -606,13 +615,83 @@ export interface KgQaSeed {
   matched_via?: string;
   surface?: string;
   entity_type?: string;
+  source_id?: string;
 }
 
 export interface KgQaSourceInfo {
   source_id: string;
   label: string;
+  /** The i18n key for ``label`` — the backend's own, not one the UI guesses. */
+  label_key?: string;
+  provenance?: string;
   relation_count?: number;
+  node_count?: number;
   chunk_level?: boolean;
+}
+
+/** A chunk of source text, present only where the index has chunk provenance. */
+export interface KgQaChunk {
+  chunk_id: string;
+  excerpt: string;
+  source_file?: string;
+  ordinal?: number;
+  truncated?: boolean;
+  used_by_relations?: string[][];
+}
+
+/**
+ * One drawable node of a retrieved subgraph.
+ *
+ * ``id`` is the namespaced key (``platform::浊度``) and is the only identity the
+ * canvas uses: it is what a request round-trips, what an edge names as its
+ * endpoints, and what a highlight matches on. The two graphs are namespaced
+ * precisely because a bare name is ambiguous between them.
+ */
+export interface KgSubgraphNode {
+  id: string;
+  name: string;
+  source_id: string;
+  type?: string;
+  degree?: number;
+}
+
+/**
+ * One drawable edge.
+ *
+ * ``id`` is unique per parallel edge — two relations between the same ordered
+ * pair get different ids — because ``vis.DataSet`` keys on it, and a collision
+ * silently drops a relation the answer cited.
+ */
+export interface KgSubgraphEdge {
+  id: string;
+  source_id: string;
+  source: string;
+  target: string;
+  display_source: string;
+  display_target: string;
+  relation?: string;
+  evidence?: string;
+  source_file?: string;
+  chunk_id?: string | null;
+}
+
+/**
+ * The canvas's answer to "draw what this question found".
+ *
+ * Referentially complete by construction: every edge endpoint appears in
+ * ``nodes``. ``missing`` and ``truncated`` are the honest edges of the
+ * response — an entity that could not be found and a cap that bit — reported
+ * rather than silently dropped, because a silently short subgraph looks exactly
+ * like a complete one.
+ */
+export interface KgSubgraph {
+  nodes: KgSubgraphNode[];
+  edges: KgSubgraphEdge[];
+  sources?: KgQaSourceInfo[];
+  missing?: Array<{ source_id: string; name: string }>;
+  unresolved_communities?: string[];
+  truncated?: boolean;
+  focus_edge_id?: string | null;
 }
 
 /**
@@ -634,7 +713,7 @@ export interface KgQaResult {
   capabilities?: { chunk_level?: boolean; communities?: boolean; citations?: boolean };
   sources?: KgQaSourceInfo[];
   paths?: KgQaPath[];
-  chunks?: Array<{ chunk_id: string; excerpt: string; used_by_relations?: string[][] }>;
+  chunks?: KgQaChunk[];
   communities?: KgQaCommunity[];
   citations?: KgQaCitation[];
   seed_entities?: KgQaSeed[];

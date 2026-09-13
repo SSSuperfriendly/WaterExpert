@@ -197,6 +197,41 @@ class KnowledgeGraphQARequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
 
 
+class SubgraphEntity(BaseModel):
+    """One entity to draw, named the way the API names it."""
+
+    source_id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=512)
+
+
+class SubgraphFocus(BaseModel):
+    """The one edge the caller wants located on the canvas.
+
+    Endpoints are not enough on their own — two relations can join the same
+    pair — so ``index`` picks among the parallel edges, in the order they are
+    drawn.
+    """
+
+    source_id: str = Field(min_length=1, max_length=64)
+    source: str = Field(min_length=1, max_length=512)
+    target: str = Field(min_length=1, max_length=512)
+    index: int = Field(default=0, ge=0)
+
+
+class KnowledgeGraphSubgraphRequest(BaseModel):
+    """What the canvas should draw for one answer.
+
+    The entities default to empty so that a request naming only communities, or
+    only neighbours, is valid rather than a 422.
+    """
+
+    nodes: list[SubgraphEntity] = Field(default_factory=list, max_length=500)
+    community_ids: list[str] = Field(default_factory=list, max_length=64)
+    include_neighbours: bool = False
+    focus: SubgraphFocus | None = None
+    max_edges: int = Field(default=300, ge=1, le=2000)
+
+
 # ---------------------------------------------------------------------------
 # External deployed WaterExpert agent (docs/internal/INTEGRATION_GUIDE.md)
 # ---------------------------------------------------------------------------

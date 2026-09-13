@@ -45,7 +45,7 @@ _SYSTEM_PROMPT = """你是水体清澈度领域的知识图谱问答助手。你
 
 
 def source_of(relation: Relation) -> str:
-    return relation.source.partition("::")[0]
+    return relation.source_id
 
 
 def _sentences(text: str) -> list[str]:
@@ -101,22 +101,28 @@ def build_materials(
         marker = f"关系{marker_numbers['关系']}"
         source_id = source_of(relation)
         source = bundle.sources.get(source_id)
-        label = source.label if source is not None else source_id
+        # Two different things used to share the name ``label``, and the second
+        # assignment silently won: the source name was overwritten by the word
+        # "证据"/"关系描述" before the ``来源:`` line and ``source_label`` read it.
+        # The prompt therefore told the model every edge came from a file called
+        # "关系描述", and every citation reported that as its graph. Distinct
+        # names, because they are distinct facts.
+        source_label = source.label if source is not None else source_id
         lines.append(f"[{marker}] {relation.display()}")
         if relation.evidence:
             # Labelled edge: the evidence supports the label. Unlabelled edge:
             # the description *is* the relation, so say so rather than calling it
             # evidence for a label that does not exist.
-            label = "证据" if relation.relation else "关系描述"
-            lines.append(f"  {label}: {relation.evidence}")
+            evidence_label = "证据" if relation.relation else "关系描述"
+            lines.append(f"  {evidence_label}: {relation.evidence}")
         origin = relation.source_file or "未知来源"
-        lines.append(f"  来源: {origin}（{label}）")
+        lines.append(f"  来源: {origin}（{source_label}）")
         citations.append(
             {
                 "marker": f"[{marker}]",
                 "kind": "relation",
                 "source_id": source_id,
-                "source_label": label,
+                "source_label": source_label,
                 **relation.as_dict(),
             }
         )
@@ -288,10 +294,16 @@ def fallback_answer(
             # edge's target. Alternating source/target by edge index instead —
             # which is what this did — renders a one-edge path as a lone node
             # and a two-edge path as source, target, source.
-            display = " → ".join(
+            # The edge label goes in as an arrow, matching ``Relation.display``.
+            # It used to be bracketed — ``[导致]``, ``[相关]`` — which is the
+            # exact shape of a citation marker while resolving as neither
+            # ``MARKER_RE`` nor ``CITATION_RE``. The result was text that looked
+            # clickable to a reader and counted as uncited to the validator. The
+            # real markers are appended below; this never needed to be one.
+            display = " ".join(
                 [path.edges[0].display_source]
                 + [
-                    f"[{edge.relation or '相关'}] {edge.display_target}"
+                    f"--{edge.relation or '相关'}--> {edge.display_target}"
                     for edge in path.edges
                 ]
             )

@@ -11,6 +11,7 @@ import { KgBuildPanel } from "@/components/waterexpert/panels/kg-build-panel";
 import { KgViewPanel } from "@/components/waterexpert/panels/kg-view-panel";
 import { KgQaPanel } from "@/components/waterexpert/panels/kg-qa-panel";
 import { KgHighlightProvider } from "@/lib/kg/highlight-context";
+import { PanelErrorBoundary } from "@/components/waterexpert/panel-error-boundary";
 
 const TAB_QA = "qa";
 const TAB_VIEW = "overviewView";
@@ -41,13 +42,17 @@ export default function KnowledgeGraphPage() {
             </div>
           </TabsContent>
           <TabsContent value={TAB_VIEW}>
-            <div className="flex flex-col gap-6">
-              <KgOverviewPanel />
-              <KgViewPanel />
-            </div>
+            <PanelErrorBoundary resetKey={tab}>
+              <div className="flex flex-col gap-6">
+                <KgOverviewPanel />
+                <KgViewPanel />
+              </div>
+            </PanelErrorBoundary>
           </TabsContent>
           <TabsContent value={TAB_QA}>
-            <KgQaPanel onJumpToGraph={() => setTab(TAB_VIEW)} />
+            <PanelErrorBoundary resetKey={tab}>
+              <KgQaPanel onJumpToGraph={() => setTab(TAB_VIEW)} />
+            </PanelErrorBoundary>
           </TabsContent>
         </Tabs>
       </KgHighlightProvider>

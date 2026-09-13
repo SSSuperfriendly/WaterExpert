@@ -49,6 +49,7 @@ from backend.app.schemas import (
     KnowledgeGraphBuildRequest,
     KnowledgeGraphPreprocessRequest,
     KnowledgeGraphQARequest,
+    KnowledgeGraphSubgraphRequest,
     LoginRequest,
     ModelRegisterRequest,
     ModelTransitionRequest,
@@ -1950,6 +1951,26 @@ def knowledge_graph_qa(payload: KnowledgeGraphQARequest) -> dict:
         return kg_service.qa(payload.question)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/v1/knowledge-graph/subgraph")
+async def knowledge_graph_subgraph(payload: KnowledgeGraphSubgraphRequest) -> dict:
+    """The subgraph the canvas draws for one answer.
+
+    Async with the work pushed to a thread on purpose: reading the memoised
+    bundle is cheap, but the *first* call builds the index, which is seconds of
+    synchronous pandas and networkx. Run inline that would stall every other
+    request on a single-worker box — including the health check.
+    """
+    focus = payload.focus.model_dump() if payload.focus is not None else None
+    return await run_in_threadpool(
+        kg_service.subgraph,
+        nodes=[entity.model_dump() for entity in payload.nodes],
+        community_ids=list(payload.community_ids),
+        include_neighbours=payload.include_neighbours,
+        focus=focus,
+        max_edges=payload.max_edges,
+    )
 
 
 @app.get("/api/v1/knowledge-graph/files/{name}")

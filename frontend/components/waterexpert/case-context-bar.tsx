@@ -36,7 +36,13 @@ export function CaseContextBar() {
     <div className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs">
       <HugeiconsIcon icon={Folder02Icon} className="text-muted-foreground size-4 shrink-0" />
       <span className="text-muted-foreground shrink-0">{t("case.caseId")}:</span>
-      <Link href={`/cases/${activeCaseId}`} className="font-mono font-medium underline-offset-2 hover:underline">
+      {/* A query parameter, not ``/cases/<id>``: the app is a static export, so
+          a route per case id cannot exist and the old link was a 404. The cases
+          page reads ``?case=`` and opens that case's detail block. */}
+      <Link
+        href={`/cases?case=${encodeURIComponent(activeCaseId)}`}
+        className="font-mono font-medium underline-offset-2 hover:underline"
+      >
         {activeCaseId}
       </Link>
       {targetDate && (

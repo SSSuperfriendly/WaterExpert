@@ -27,6 +27,7 @@ import type {
   KgFileInfo,
   KgGraphPayload,
   KgQaResult,
+  KgSubgraph,
   KnowledgeGraphSummary,
   LoginResponse,
   PredictionsPayload,
@@ -370,6 +371,12 @@ export const endpoints = {
     graph: () => apiClient.get<KgGraphPayload>("/api/v1/knowledge-graph/graph"),
     qa: (question: string) =>
       apiClient.post<KgQaResult>("/api/v1/knowledge-graph/qa", { question }),
+    subgraph: (payload: {
+      nodes: Array<{ source_id: string; name: string }>;
+      community_ids?: string[];
+      include_neighbours?: boolean;
+      focus?: { source_id: string; source: string; target: string; index?: number };
+    }) => apiClient.post<KgSubgraph>("/api/v1/knowledge-graph/subgraph", payload),
     downloadUrl: (name: string) => `/api/v1/knowledge-graph/files/${name}`,
   },
 };

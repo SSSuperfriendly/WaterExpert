@@ -74,6 +74,18 @@ class Relation:
     target_degree: int = 0
 
     @property
+    def source_id(self) -> str:
+        """Which graph this edge came from — ``platform`` or ``inherited``.
+
+        Derived rather than stored: the namespace is already in ``source``, and a
+        second field could disagree with the one that actually addresses the
+        node. Callers need it to label a citation and to ask the canvas for the
+        right subgraph; without it a bare entity name is ambiguous across the two
+        graphs, which is exactly how the QA panel used to crash the view.
+        """
+        return split_node_key(self.source)[0]
+
+    @property
     def display_source(self) -> str:
         return split_node_key(self.source)[1]
 
@@ -110,10 +122,17 @@ class Relation:
         return " ".join(text.split())
 
     def as_dict(self) -> dict[str, Any]:
-        """The shape the API has always returned for ``matched_relations``."""
+        """The shape the API has always returned for ``matched_relations``.
+
+        ``source_id`` is the one addition. The four keys the UI has always read
+        keep their names and their *display* (prefix-stripped) values, so this
+        stays additive for every existing consumer; the new key is what lets a
+        caller say which graph an edge belongs to without parsing the endpoints.
+        """
         return {
             "source": self.display_source,
             "source_type": self.source_type,
+            "source_id": self.source_id,
             "relation": self.relation,
             "target": self.display_target,
             "target_type": self.target_type,

@@ -3,16 +3,20 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { endpoints } from "@/lib/api/endpoints";
-import { describeApiError } from "@/lib/domain";
-import type { KgQaResult } from "@/lib/api/contracts";
+import { describeApiError, translateKgSource, translateKgSourceInfo } from "@/lib/domain";
+import type { KgQaCitation, KgQaResult } from "@/lib/api/contracts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, ErrorState } from "@/components/waterexpert/ui-states";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiNetworkIcon, Search01Icon } from "@hugeicons/core-free-icons";
-import { edgeKey, type KgHighlight } from "@/lib/kg/vis-network";
-import { useKgHighlight } from "@/lib/kg/highlight-context";
+import {
+  useKgHighlight,
+  type KgEdgeFocus,
+  type KgNodeRef,
+  type KgSubgraphRequest,
+} from "@/lib/kg/highlight-context";
 
 /**
  * Citation markers as the answer writes them: ``[关系3]``, ``[分块1]``, ``[社区2]``.
@@ -31,6 +35,21 @@ const SAMPLES = [
   "悬浮物如何影响清澈度？",
   "农业活动如何影响沉积物？",
 ];
+
+/**
+ * What one click asks the canvas for, on top of the answer's own entities.
+ *
+ * A patch rather than a whole request because every affordance here starts from
+ * the same drawing — the answer's subgraph — and changes exactly one thing
+ * about it: which part to light up, or one more community to merge in. Building
+ * complete requests per affordance would let the node list drift between them,
+ * and a citation whose entity was not in the list would land in ``missing``.
+ */
+type Patch = {
+  focus?: KgEdgeFocus;
+  focusNode?: KgNodeRef;
+  communityIds?: string[];
+};
 
 /**
  * Split an answer into text and citation markers.
@@ -70,6 +89,20 @@ function renderAnswer(
   return nodes;
 }
 
+/** How many citations of the same ordered pair came before this one. */
+function occurrenceIndexes(citations: KgQaCitation[]): Map<string, number> {
+  const seen = new Map<string, number>();
+  const out = new Map<string, number>();
+  for (const citation of citations) {
+    if (citation.kind !== "relation" || !citation.source || !citation.target) continue;
+    const triple = `${citation.source_id ?? ""}::${citation.source}>${citation.target}`;
+    const index = seen.get(triple) ?? 0;
+    seen.set(triple, index + 1);
+    out.set(citation.marker, index);
+  }
+  return out;
+}
+
 export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}) {
   const { t } = useT();
   const shared = useKgHighlight();
@@ -102,43 +135,146 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
     []
   );
 
-  const sources = result?.sources ?? [];
-  const labelFor = (sourceId: string | undefined) =>
-    sources.find((s) => s.source_id === sourceId)?.label ||
-    (sourceId ? t(`kg.source.${sourceId}`) : "");
+  const sources = React.useMemo(() => result?.sources ?? [], [result]);
+  const relations = React.useMemo(() => result?.matched_relations ?? [], [result]);
+  const paths = React.useMemo(() => result?.paths ?? [], [result]);
+  const seeds = React.useMemo(() => result?.seed_entities ?? [], [result]);
+  const citations = React.useMemo(() => result?.citations ?? [], [result]);
+  const communities = React.useMemo(() => result?.communities ?? [], [result]);
+  const chunks = React.useMemo(() => result?.chunks ?? [], [result]);
 
-  // The subgraph the retrieval actually touched, in the canvas's own vocabulary.
-  const highlight: KgHighlight | null = React.useMemo(() => {
-    if (!result) return null;
-    const nodeIds = new Set<string>();
-    const edgeKeys = new Set<string>();
+  /**
+   * Every entity the answer stands on, in the canvas's vocabulary.
+   *
+   * Collected from all five places the answer names one — paths, relations,
+   * citations, seeds and community members — because a citation can point at an
+   * edge the relation list does not carry, and asking the canvas to focus that
+   * edge without its endpoints would return a focus of ``null``.
+   */
+  const answerNodes = React.useMemo<KgNodeRef[]>(() => {
+    if (!result) return [];
+    const refs = new Map<string, KgNodeRef>();
+    const add = (sourceId?: string, name?: string) => {
+      if (!sourceId || !name) return;
+      refs.set(`${sourceId}::${name}`, { source_id: sourceId, name });
+    };
     for (const path of result.paths ?? []) {
-      path.nodes.forEach((node) => nodeIds.add(node));
-      (path.edges ?? []).forEach((edge) => edgeKeys.add(edgeKey(edge.source, edge.target)));
+      path.nodes.forEach((name) => add(path.source_id, name));
+      (path.edges ?? []).forEach((edge) => {
+        add(edge.source_id, edge.source);
+        add(edge.source_id, edge.target);
+      });
     }
     for (const relation of result.matched_relations ?? []) {
-      if (relation.source) nodeIds.add(relation.source);
-      if (relation.target) nodeIds.add(relation.target);
-      if (relation.source && relation.target) edgeKeys.add(edgeKey(relation.source, relation.target));
+      add(relation.source_id, relation.source);
+      add(relation.source_id, relation.target);
     }
-    if (nodeIds.size === 0) return null;
-    return {
-      title: t("kg.highlightBanner", { title: result.question }),
-      nodeIds: [...nodeIds],
-      edgeKeys: [...edgeKeys],
-    };
-  }, [result, t]);
+    for (const citation of result.citations ?? []) {
+      add(citation.source_id, citation.source);
+      add(citation.source_id, citation.target);
+    }
+    for (const seed of result.seed_entities ?? []) add(seed.source_id, seed.name);
+    return [...refs.values()];
+  }, [result]);
 
-  const jumped = React.useRef<KgQaResult | null>(null);
+  const markerIndex = React.useMemo(() => occurrenceIndexes(citations), [citations]);
+
+  const labelFor = (sourceId?: string) => {
+    const known = sources.find((s) => s.source_id === sourceId);
+    // The backend sends ``label_key``; using it means a source this UI was never
+    // taught about shows its own name instead of a literal i18n key.
+    return known ? translateKgSourceInfo(t, known) : translateKgSource(t, sourceId);
+  };
+
+  /** Ask the canvas for this answer's subgraph, plus one change to it. */
+  const show = React.useCallback(
+    (patch: Patch, options: { jump?: boolean; marker?: string | null } = {}) => {
+      const { jump = false, marker = null } = options;
+      setActiveMarker(marker);
+      if (!shared) return;
+      const request: KgSubgraphRequest = {
+        nodes: answerNodes,
+        communityIds: patch.communityIds,
+        focus: patch.focus,
+        focusNode: patch.focusNode,
+      };
+      shared.setHighlight({ title: result?.question ?? question, request });
+      if (jump) onJumpToGraph?.();
+    },
+    [shared, answerNodes, onJumpToGraph, question, result]
+  );
+
+  const showEdge = React.useCallback(
+    (focus: KgEdgeFocus, options?: { jump?: boolean; marker?: string | null }) =>
+      show({ focus }, options),
+    [show]
+  );
+
+  const showNode = React.useCallback(
+    (node: KgNodeRef, options?: { jump?: boolean; marker?: string | null }) =>
+      show({ focusNode: node }, options),
+    [show]
+  );
+
+  /** Merge a community in, or drop it again if it is already merged. */
+  const toggleCommunity = React.useCallback(
+    (communityId: string, options: { jump?: boolean; marker?: string | null } = {}) => {
+      const current = shared?.highlight?.request.communityIds ?? [];
+      const next = current.includes(communityId)
+        ? current.filter((id) => id !== communityId)
+        : [...current, communityId];
+      show({ communityIds: next }, options);
+    },
+    [shared, show]
+  );
+
+  // A citation marker in the answer text resolves through ``citations`` rather
+  // than by position: the backend numbers each kind separately and tells us the
+  // id behind every marker, so guessing an offset would be strictly worse.
+  const onCitation = React.useCallback(
+    (marker: string) => {
+      const citation = citations.find((item) => item.marker === marker);
+      if (!citation) {
+        setActiveMarker(marker);
+        return;
+      }
+      if (citation.kind === "relation") {
+        showEdge(
+          {
+            source_id: citation.source_id ?? "",
+            source: citation.source ?? "",
+            target: citation.target ?? "",
+            index: markerIndex.get(marker) ?? 0,
+          },
+          { marker }
+        );
+        return;
+      }
+      if (citation.kind === "community" && citation.community_id) {
+        toggleCommunity(citation.community_id, { marker });
+        return;
+      }
+      // A chunk citation has no edge to point at, so it only marks itself.
+      setActiveMarker(marker);
+    },
+    [citations, markerIndex, showEdge, toggleCommunity]
+  );
+
+  // The answer's own subgraph is pushed to the canvas as soon as it arrives, so
+  // switching to the graph tab is enough to see the grounding — the button at
+  // the bottom is a shortcut, not the only way through.
+  const pushed = React.useRef<KgQaResult | null>(null);
   React.useEffect(() => {
-    if (!highlight || !shared) return;
-    if (jumped.current === result) return;
-    jumped.current = result;
-    shared.setHighlight(highlight);
-  }, [highlight, shared, result]);
+    if (!result || !shared || pushed.current === result) return;
+    pushed.current = result;
+    setActiveMarker(null);
+    shared.setHighlight({
+      title: result.question,
+      request: { nodes: answerNodes },
+    });
+  }, [result, shared, answerNodes]);
 
   const issues = result?.stats?.hallucinated_markers ?? [];
-  const chunkLevel = result?.capabilities?.chunk_level;
 
   return (
     <div className="flex flex-col gap-6">
@@ -199,15 +335,13 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                {renderAnswer(result.answer, setActiveMarker, activeMarker)}
+                {renderAnswer(result.answer, onCitation, activeMarker)}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline">
                   {t("kg.mode")}
                   {"："}
-                  {t(
-                    `kg.mode${(result.mode ?? "none").replace(/^./, (c) => c.toUpperCase())}`
-                  )}
+                  {t(`kg.mode${(result.mode ?? "none").replace(/^./, (c) => c.toUpperCase())}`)}
                 </Badge>
                 {result.stats?.elapsed_ms != null ? (
                   <Badge variant="outline">
@@ -235,13 +369,10 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
                   {t("kg.citationIssues")} {issues.join("、")}
                 </p>
               ) : null}
-              {chunkLevel === false ? (
-                <p className="text-muted-foreground text-xs">{t("kg.chunkUnavailable")}</p>
-              ) : null}
             </CardContent>
           </Card>
 
-          {(result.paths ?? []).length > 0 ? (
+          {paths.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -250,7 +381,7 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
-                {(result.paths ?? []).map((path, index) => (
+                {paths.map((path, index) => (
                   <div
                     key={path.path_id ?? index}
                     className="flex flex-wrap items-center gap-1 text-sm"
@@ -258,7 +389,20 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
                     {path.nodes.map((node, nodeIndex) => (
                       <React.Fragment key={`${node}-${nodeIndex}`}>
                         {nodeIndex > 0 ? <span className="text-muted-foreground">→</span> : null}
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5">{node}</span>
+                        <button
+                          type="button"
+                          title={t("kg.focusInGraph")}
+                          onClick={() =>
+                            path.source_id &&
+                            showNode(
+                              { source_id: path.source_id, name: node },
+                              { jump: true }
+                            )
+                          }
+                          className="rounded bg-slate-100 px-1.5 py-0.5 hover:bg-sky-100"
+                        >
+                          {node}
+                        </button>
                       </React.Fragment>
                     ))}
                     <Badge variant="outline" className="ml-2 text-xs">
@@ -273,19 +417,32 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
             </Card>
           ) : null}
 
-          {(result.seed_entities ?? []).length > 0 ? (
+          {seeds.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>{t("kg.seedEntities")}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
-                {(result.seed_entities ?? []).map((seed) => (
-                  <Badge key={seed.name} variant="outline" className="gap-1 font-normal">
+                {seeds.map((seed, index) => (
+                  <button
+                    key={`${seed.name}-${index}`}
+                    type="button"
+                    title={seed.source_id ? t("kg.focusInGraph") : undefined}
+                    disabled={!seed.source_id}
+                    onClick={() =>
+                      seed.source_id &&
+                      showNode({ source_id: seed.source_id, name: seed.name }, { jump: true })
+                    }
+                    className="hover:bg-muted/40 rounded-full border px-2.5 py-1 text-xs disabled:opacity-60"
+                  >
                     {seed.name}
-                    <span className="text-muted-foreground text-xs">
-                      {seed.matched_via} · {seed.score?.toFixed(2)}
+                    <span className="text-muted-foreground ml-1">
+                      {t("kg.matchedVia")}
+                      {"："}
+                      {seed.matched_via}
+                      {seed.score != null ? ` · ${seed.score.toFixed(2)}` : ""}
                     </span>
-                  </Badge>
+                  </button>
                 ))}
               </CardContent>
             </Card>
@@ -296,11 +453,26 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
               <CardTitle>{t("kg.matchedRelations")}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-              {(result.matched_relations ?? []).length === 0 ? (
+              {relations.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{t("kg.noAnswer")}</p>
               ) : (
-                (result.matched_relations ?? []).map((relation, index) => {
+                relations.map((relation, index) => {
                   const marker = `[关系${index + 1}]`;
+                  const focus: KgEdgeFocus = {
+                    source_id: relation.source_id ?? "",
+                    source: relation.source ?? "",
+                    target: relation.target ?? "",
+                    // Parallel edges share endpoints; the count of earlier
+                    // relations over the same pair is what tells them apart.
+                    index: relations
+                      .slice(0, index)
+                      .filter(
+                        (other) =>
+                          other.source_id === relation.source_id &&
+                          other.source === relation.source &&
+                          other.target === relation.target
+                      ).length,
+                  };
                   return (
                     <div
                       key={`${relation.source}-${relation.target}-${index}`}
@@ -310,6 +482,18 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
                       }
                     >
                       <div>
+                        <button
+                          type="button"
+                          onClick={() => showEdge(focus, { marker })}
+                          className={
+                            "mr-1 rounded px-1 text-xs underline underline-offset-2 " +
+                            (activeMarker === marker
+                              ? "bg-sky-100 text-sky-900"
+                              : "text-sky-700 hover:bg-sky-50")
+                          }
+                        >
+                          {marker}
+                        </button>
                         {relation.source}
                         <span className="text-muted-foreground">
                           {" --"}
@@ -318,13 +502,21 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
                         </span>
                         {relation.target}
                       </div>
-                      {relation.source_file ? (
-                        <div className="text-muted-foreground mt-1 text-xs">
-                          {t("kg.sourceFile")}
-                          {"："}
-                          {relation.source_file}
-                        </div>
-                      ) : null}
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        {relation.source_file ? (
+                          <button
+                            type="button"
+                            title={t("kg.focusInGraph")}
+                            onClick={() => showEdge(focus, { jump: true, marker })}
+                            className="text-muted-foreground underline underline-offset-2 hover:text-sky-700"
+                          >
+                            {t("kg.sourceFile")}
+                            {"："}
+                            {relation.source_file}
+                          </button>
+                        ) : null}
+                        <span className="text-muted-foreground">{labelFor(relation.source_id)}</span>
+                      </div>
                     </div>
                   );
                 })
@@ -332,35 +524,62 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
             </CardContent>
           </Card>
 
-          {(result.citations ?? []).length > 0 ? (
+          {chunks.length > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle>{t("kg.citations")}</CardTitle>
+                <CardTitle>{t("kg.chunks")}</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                {(result.citations ?? []).map((citation) => (
-                  <div
-                    key={citation.marker}
-                    className={
-                      "flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors " +
-                      (activeMarker === citation.marker ? "border-sky-300 bg-sky-50" : "")
-                    }
-                  >
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {citation.marker}
-                    </Badge>
-                    <span>
-                      {citation.source}
-                      {" → "}
-                      {citation.target}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {labelFor(citation.source_id)}
-                    </span>
-                    {citation.source_file ? (
-                      <span className="text-muted-foreground text-xs">
-                        {citation.source_file}
-                      </span>
+              <CardContent className="flex flex-col gap-3">
+                {chunks.map((chunk) => (
+                  <div key={chunk.chunk_id} className="rounded-md border px-3 py-2 text-sm">
+                    <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono">{chunk.chunk_id}</span>
+                      {chunk.source_file ? <span>{chunk.source_file}</span> : null}
+                      {chunk.truncated ? (
+                        <Badge variant="outline" className="text-xs">
+                          {t("kg.subgraphTruncated")}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 leading-relaxed">{chunk.excerpt}</p>
+                    {(chunk.used_by_relations ?? []).length > 0 ? (
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                        {(chunk.used_by_relations ?? []).map((triple, tripleIndex) => {
+                          // A chunk names the relations that used it by their
+                          // display endpoints, which do not say which graph they
+                          // came from. Where the answer also carries the
+                          // relation, it can be located; where it does not, the
+                          // text is shown as the fact it is rather than dressed
+                          // up as a link that would resolve to nothing.
+                          const sourceId = relations.find(
+                            (relation) =>
+                              relation.source === triple[0] && relation.target === triple[2]
+                          )?.source_id;
+                          const label = `${triple[0]} --${triple[1]}--> ${triple[2]}`;
+                          return sourceId ? (
+                            <button
+                              key={`${chunk.chunk_id}-${tripleIndex}`}
+                              type="button"
+                              title={t("kg.focusInGraph")}
+                              onClick={() =>
+                                showEdge(
+                                  {
+                                    source_id: sourceId,
+                                    source: triple[0] ?? "",
+                                    target: triple[2] ?? "",
+                                  },
+                                  { jump: true }
+                                )
+                              }
+                              className="text-muted-foreground underline underline-offset-2 hover:text-sky-700"
+                            >
+                              {label}
+                            </button>
+                          ) : (
+                            <span key={`${chunk.chunk_id}-${tripleIndex}`}>{label}</span>
+                          );
+                        })}
+                      </div>
                     ) : null}
                   </div>
                 ))}
@@ -368,13 +587,67 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
             </Card>
           ) : null}
 
-          {(result.communities ?? []).length > 0 ? (
+          {citations.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("kg.citations")}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {citations.map((citation) => (
+                  <div
+                    key={citation.marker}
+                    className={
+                      "flex flex-col gap-1 rounded-md border px-3 py-2 text-sm transition-colors " +
+                      (activeMarker === citation.marker ? "border-sky-300 bg-sky-50" : "")
+                    }
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onCitation(citation.marker)}
+                        className={
+                          "rounded px-1 font-mono text-xs underline underline-offset-2 " +
+                          (activeMarker === citation.marker
+                            ? "bg-sky-100 text-sky-900"
+                            : "text-sky-700 hover:bg-sky-50")
+                        }
+                      >
+                        {citation.marker}
+                      </button>
+                      {citation.kind === "community" ? (
+                        <span className="font-mono text-xs">{citation.community_id}</span>
+                      ) : (
+                        <span>
+                          {citation.source}
+                          {" → "}
+                          {citation.target}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs">
+                        {labelFor(citation.source_id)}
+                      </span>
+                      {citation.source_file ? (
+                        <span className="text-muted-foreground text-xs">
+                          {citation.source_file}
+                        </span>
+                      ) : null}
+                    </div>
+                    {citation.evidence ? (
+                      <p className="text-muted-foreground text-xs">{citation.evidence}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {communities.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>{t("kg.communities")}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                {(result.communities ?? []).map((community) => (
+                {communities.map((community) => (
                   <div key={community.community_id} className="rounded-md border px-3 py-2">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="font-mono text-xs">{community.community_id}</span>
@@ -386,6 +659,13 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
                           {t("kg.communityExtractive")}
                         </Badge>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={() => toggleCommunity(community.community_id, { jump: true })}
+                        className="text-sky-700 text-xs underline underline-offset-2 hover:text-sky-900"
+                      >
+                        {t("kg.expandCommunity")}
+                      </button>
                     </div>
                     {community.summary ? (
                       <p className="text-muted-foreground mt-2 text-sm">{community.summary}</p>
@@ -396,16 +676,9 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
             </Card>
           ) : null}
 
-          {shared && highlight ? (
+          {shared ? (
             <div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  shared.setHighlight(highlight);
-                  onJumpToGraph?.();
-                }}
-              >
+              <Button variant="outline" size="sm" onClick={() => show({}, { jump: true })}>
                 <HugeiconsIcon icon={AiNetworkIcon} className="size-4" />
                 {t("kg.viewInGraph")}
               </Button>

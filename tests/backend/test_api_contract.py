@@ -109,6 +109,7 @@ class ApiContractTest(unittest.TestCase):
             "/api/v1/knowledge-graph/graph",
             "/api/v1/knowledge-graph/kg/clear",
             "/api/v1/knowledge-graph/qa",
+            "/api/v1/knowledge-graph/subgraph",
             "/api/v1/knowledge-graph/files/{name}",
             "/api/v1/agent/health",
             "/api/v1/agent/scenarios",
