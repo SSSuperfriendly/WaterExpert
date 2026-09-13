@@ -6,6 +6,10 @@ request. These tests pin what that dict's *absence* looks like as carefully as
 its presence — an agent that has never heard of ``knowledge_context`` must still
 receive a request it can serve, and that is what ``with_knowledge=false`` and a
 failing retrieval both have to produce.
+
+Both routes retrieve by default. The flag survives as the opt-out, and the
+absence case is still asserted on both, because that is the shape the deployed
+request schema documents for a request with no evidence.
 """
 
 from __future__ import annotations
@@ -76,18 +80,44 @@ class AgentKnowledgeInjectionTest(unittest.TestCase):
         self._explain_patch.stop()
         main.app.dependency_overrides.clear()
 
-    # ---- strategy: opt-in -------------------------------------------------
+    # ---- strategy: on by default ------------------------------------------
 
-    def test_strategy_without_the_flag_sends_no_context(self) -> None:
-        response = self.client.post(
-            "/api/v1/agent/strategy",
-            json={"scenario": "s2_internal_release", "state": STATE},
-        )
+    def test_strategy_attaches_the_context_by_default(self) -> None:
+        """The control loop is the path the graph exists to inform.
+
+        This was opt-in, on the reasoning that a strategy run is the expensive
+        path. It is — but the retrieval is not, and nothing opted in, so the
+        knowledge base's grounded branch was unreachable in production.
+        """
+        with mock.patch.object(
+            main.kg_service, "build_agent_knowledge_context", return_value=_context()
+        ) as retrieve:
+            response = self.client.post(
+                "/api/v1/agent/strategy",
+                json={"scenario": "s2_internal_release", "state": STATE},
+            )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(self.sent), 1)
-        self.assertNotIn("knowledge_context", self.sent[0])
-        # The documented agent contract, unchanged.
+        retrieve.assert_called_once()
+        self.assertEqual(self.sent[0]["knowledge_context"]["mode"], "local")
+
+    def test_strategy_can_be_asked_not_to(self) -> None:
+        with mock.patch.object(
+            main.kg_service, "build_agent_knowledge_context", return_value=_context()
+        ) as retrieve:
+            response = self.client.post(
+                "/api/v1/agent/strategy",
+                json={
+                    "scenario": "s2_internal_release",
+                    "state": STATE,
+                    "with_knowledge": False,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        retrieve.assert_not_called()
+        # The documented agent contract for a request carrying no evidence:
+        # exactly the four keys the deployed request schema declares.
         self.assertEqual(
             set(self.sent[0]), {"scenario", "state", "episodes", "backend"}
         )

@@ -2055,9 +2055,11 @@ async def _agent_knowledge_context(scenario: str, state: dict) -> dict | None:
 async def agent_strategy_create(payload: AgentStrategyRequest) -> dict:
     """Queue a strategy-generation job on the deployed model and return its id.
 
-    ``with_knowledge`` is opt-in here rather than on by default: a strategy run
-    is the expensive, agentic path, and a caller that did not ask for graph
-    evidence should not silently pay the retrieval cost for it.
+    ``with_knowledge`` is on by default, as on ``/explain``. The retrieval costs
+    no model call and failure degrades to a request without evidence, so there
+    is nothing for a caller to protect by leaving it off — and while it was off,
+    no caller ever turned it on, which left the knowledge base's grounded branch
+    dead in production.
     """
     state = payload.state.model_dump(exclude_none=True)
     body = {

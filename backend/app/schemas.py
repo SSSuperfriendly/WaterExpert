@@ -264,10 +264,15 @@ class AgentStrategyRequest(BaseModel):
     state: AgentStateRequest
     episodes: int = Field(default=1, ge=1, le=10)
     backend: Literal["api", "local"] = "api"
-    #: Attach retrieved knowledge-graph evidence to the request body. Off by
-    #: default: a strategy run is the expensive path, and a caller that did not
-    #: ask for graph evidence should not silently pay for the retrieval.
-    with_knowledge: bool = False
+    #: Attach retrieved knowledge-graph evidence to the request body. On by
+    #: default, as on ``explain`` below. This was opt-in, on the reasoning that
+    #: a strategy run is the expensive path — and it is, but the *retrieval* is
+    #: not: it is graph traversal and TF-IDF with no model call, and it already
+    #: degrades to no-context when anything goes wrong. Left opt-in with no
+    #: caller opting in, the knowledge base's whole grounded branch was
+    #: unreachable, and the control loop answered from its curated dictionary
+    #: alone.
+    with_knowledge: bool = True
 
 
 class AgentExplainRequest(BaseModel):
