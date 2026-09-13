@@ -13,6 +13,8 @@ import {
 } from "@/lib/domain";
 import { formatDateTime } from "@/lib/format";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
+import { ConfirmDialog } from "@/components/waterexpert/confirm-dialog";
+import { Modal } from "@/components/waterexpert/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Dataset } from "@/lib/api/contracts";
+import type { Dataset, DatasetLineage, FieldDictionary } from "@/lib/api/contracts";
 
 /** A→D. Only A and B may feed a prediction run. */
 function gradeBadge(t: ReturnType<typeof useT>["t"], grade?: string) {
@@ -35,9 +37,9 @@ function gradeBadge(t: ReturnType<typeof useT>["t"], grade?: string) {
 
 /**
  * The governance half of the data asset centre: the dataset list with its
- * versions, each version's quality report and row preview, and the archive /
- * delete actions. UploadPanel owns the ingest half; this owns everything a
- * user does *after* a file was accepted.
+ * versions, each version's quality report, row preview, lineage and field
+ * dictionary, plus archive/delete. UploadPanel owns the ingest half; this owns
+ * everything a user does *after* a file was accepted.
  */
 export function DatasetAssetTable({
   rows,
@@ -54,27 +56,24 @@ export function DatasetAssetTable({
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = React.useState<{
+    dataset: Dataset;
+    kind: "archive" | "delete";
+  } | null>(null);
+  const [fieldDictionaryType, setFieldDictionaryType] = React.useState<string | null>(null);
 
-  const archive = async (dataset: Dataset) => {
-    if (!window.confirm(t("upload.confirmArchive"))) return;
+  const confirmPending = async () => {
+    if (!pendingConfirm) return;
+    const { dataset, kind } = pendingConfirm;
     setBusyId(dataset.dataset_id);
     setActionError(null);
     try {
-      await endpoints.archiveDataset(dataset.dataset_id);
-      onReload();
-    } catch (err) {
-      setActionError(describeApiError(t, err));
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const remove = async (dataset: Dataset) => {
-    if (!window.confirm(t("upload.confirmDelete"))) return;
-    setBusyId(dataset.dataset_id);
-    setActionError(null);
-    try {
-      await endpoints.deleteDataset(dataset.dataset_id);
+      if (kind === "archive") {
+        await endpoints.archiveDataset(dataset.dataset_id);
+      } else {
+        await endpoints.deleteDataset(dataset.dataset_id);
+      }
+      setPendingConfirm(null);
       onReload();
     } catch (err) {
       setActionError(describeApiError(t, err));
@@ -145,8 +144,15 @@ export function DatasetAssetTable({
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => setFieldDictionaryType(dataset.data_type)}
+                      >
+                        {t("datasetDetail.fieldDictionary")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         disabled={busyId === dataset.dataset_id}
-                        onClick={() => archive(dataset)}
+                        onClick={() => setPendingConfirm({ dataset, kind: "archive" })}
                       >
                         {t("upload.archive")}
                       </Button>
@@ -154,7 +160,7 @@ export function DatasetAssetTable({
                         variant="ghost"
                         size="sm"
                         disabled={busyId === dataset.dataset_id}
-                        onClick={() => remove(dataset)}
+                        onClick={() => setPendingConfirm({ dataset, kind: "delete" })}
                       >
                         {t("upload.delete")}
                       </Button>
@@ -173,6 +179,34 @@ export function DatasetAssetTable({
           </TableBody>
         </Table>
       </div>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title={
+          pendingConfirm?.kind === "delete"
+            ? t("upload.delete")
+            : t("upload.archive")
+        }
+        message={
+          pendingConfirm?.kind === "delete"
+            ? t("upload.confirmDelete")
+            : t("upload.confirmArchive")
+        }
+        confirmLabel={
+          pendingConfirm?.kind === "delete"
+            ? t("upload.delete")
+            : t("upload.archive")
+        }
+        destructive={pendingConfirm?.kind === "delete"}
+        busy={busyId !== null}
+        onConfirm={confirmPending}
+        onCancel={() => setPendingConfirm(null)}
+      />
+
+      <FieldDictionaryModal
+        dataType={fieldDictionaryType}
+        onClose={() => setFieldDictionaryType(null)}
+      />
     </div>
   );
 }
@@ -181,6 +215,7 @@ function DatasetVersions({ datasetId }: { datasetId: string }) {
   const { t } = useT();
   const versions = useApi(() => endpoints.datasetVersions(datasetId), [datasetId]);
   const [selectedVersion, setSelectedVersion] = React.useState<string | null>(null);
+  const [lineageVersionId, setLineageVersionId] = React.useState<string | null>(null);
 
   return (
     <div className="space-y-3 py-2">
@@ -219,19 +254,28 @@ function DatasetVersions({ datasetId }: { datasetId: string }) {
                     {formatDateTime(version.created_at)}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setSelectedVersion(
-                          selectedVersion === version.version_id ? null : version.version_id
-                        )
-                      }
-                    >
-                      {selectedVersion === version.version_id
-                        ? t("upload.close")
-                        : t("upload.preview")}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setSelectedVersion(
+                            selectedVersion === version.version_id ? null : version.version_id
+                          )
+                        }
+                      >
+                        {selectedVersion === version.version_id
+                          ? t("upload.close")
+                          : t("upload.preview")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLineageVersionId(version.version_id)}
+                      >
+                        {t("datasetDetail.lineage")}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -240,6 +284,11 @@ function DatasetVersions({ datasetId }: { datasetId: string }) {
         </div>
       )}
       {selectedVersion && <VersionDetail versionId={selectedVersion} />}
+
+      <LineageModal
+        versionId={lineageVersionId}
+        onClose={() => setLineageVersionId(null)}
+      />
     </div>
   );
 }
@@ -307,6 +356,136 @@ function VersionDetail({ versionId }: { versionId: string }) {
           <p className="text-muted-foreground text-xs">{t("common.noData")}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function FieldDictionaryModal({
+  dataType,
+  onClose,
+}: {
+  dataType: string | null;
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  const dictionary = useApi<FieldDictionary | null>(
+    () => (dataType ? endpoints.datasetFieldDictionary(dataType) : Promise.resolve(null)),
+    [dataType]
+  );
+  const fields = dictionary.data?.fields ?? [];
+
+  return (
+    <Modal
+      open={dataType !== null}
+      title={t("datasetDetail.fieldDictionary")}
+      onClose={onClose}
+      size="lg"
+    >
+      {dictionary.loading ? (
+        <LoadingState rows={3} />
+      ) : dictionary.error ? (
+        <ErrorState error={dictionary.error} onRetry={dictionary.reload} />
+      ) : dictionary.data ? (
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-xs">
+            {dictionary.data.label ?? dictionary.data.data_type}
+            {dictionary.data.granularity ? ` · ${dictionary.data.granularity}` : ""}
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("datasetDetail.field")}</TableHead>
+                  <TableHead>{t("datasetDetail.kind")}</TableHead>
+                  <TableHead>{t("datasetDetail.unit")}</TableHead>
+                  <TableHead>{t("datasetDetail.required")}</TableHead>
+                  <TableHead>{t("datasetDetail.aliases")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {fields.map((field) => (
+                  <TableRow key={field.canonical}>
+                    <TableCell className="text-xs font-medium">
+                      {field.label ?? field.canonical}
+                    </TableCell>
+                    <TableCell className="text-xs">{field.kind ?? "—"}</TableCell>
+                    <TableCell className="text-xs">{field.unit ?? "—"}</TableCell>
+                    <TableCell className="text-xs">
+                      {field.required ? t("datasetDetail.yes") : "—"}
+                    </TableCell>
+                    <TableCell className="max-w-[18rem] truncate text-xs">
+                      {(field.aliases ?? []).slice(0, 4).join("、") || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : null}
+    </Modal>
+  );
+}
+
+function LineageModal({
+  versionId,
+  onClose,
+}: {
+  versionId: string | null;
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  const lineage = useApi<DatasetLineage | null>(
+    () => (versionId ? endpoints.datasetLineage(versionId) : Promise.resolve(null)),
+    [versionId]
+  );
+  const data = lineage.data;
+
+  return (
+    <Modal
+      open={versionId !== null}
+      title={t("datasetDetail.lineage")}
+      onClose={onClose}
+      size="md"
+    >
+      {lineage.loading ? (
+        <LoadingState rows={3} />
+      ) : lineage.error ? (
+        <ErrorState error={lineage.error} onRetry={lineage.reload} />
+      ) : data ? (
+        <dl className="space-y-2 text-xs">
+          <LineageRow label={t("datasetDetail.source")} value={data.source_name ?? "—"} />
+          <LineageRow label={t("datasetDetail.sourceKind")} value={data.source_kind ?? "—"} />
+          <LineageRow label={t("datasetDetail.sha256")} value={data.source_sha256 ?? "—"} mono />
+          <LineageRow
+            label={t("datasetDetail.createdAt")}
+            value={data.created_at ? formatDateTime(data.created_at) : "—"}
+          />
+          <LineageRow label={t("datasetDetail.createdBy")} value={data.created_by ?? "—"} />
+          <LineageRow
+            label={t("datasetDetail.usedByCases")}
+            value={(data.used_by_cases ?? []).join("、") || "—"}
+            mono
+          />
+        </dl>
+      ) : null}
+    </Modal>
+  );
+}
+
+function LineageRow({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <dt className="text-muted-foreground shrink-0">{label}</dt>
+      <dd className={`min-w-0 text-right ${mono ? "font-mono" : ""}`}>{value}</dd>
     </div>
   );
 }

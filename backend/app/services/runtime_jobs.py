@@ -586,15 +586,6 @@ class RuntimeJobService:
             return self._time_out_job(record)
         return self._attach_log_preview(record)
 
-    def get_job_series(self, job_id: str) -> dict[str, Any]:
-        record = self.refresh_job(job_id)
-        if record.get("status") != COMPLETED_STATUS:
-            raise RuntimeError("Job artifacts are not ready yet.")
-        return self.get_job_repository(job_id, require_completed=True).predictions(
-            model=record.get("model_name"),
-            split="test",
-        )
-
     def get_job_repository(
         self, job_id: str, require_completed: bool = False
     ) -> ArtifactRepository:

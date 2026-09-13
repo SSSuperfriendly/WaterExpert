@@ -6,11 +6,13 @@ import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
 import { useAppStore } from "@/lib/stores/app-store";
-import { translateJobStatus } from "@/lib/domain";
+import { translateJobStatus, describeApiError } from "@/lib/domain";
 import { formatDateTime } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { StatCard } from "@/components/waterexpert/stat-card";
+import { Modal } from "@/components/waterexpert/modal";
+import { ConfirmDialog } from "@/components/waterexpert/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,15 @@ export default function CasesPage() {
   const [description, setDescription] = React.useState("");
   const [targetDate, setTargetDate] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [editingCase, setEditingCase] = React.useState<Case | null>(null);
+  const [editTitle, setEditTitle] = React.useState("");
+  const [editDescription, setEditDescription] = React.useState("");
+  const [editTargetDate, setEditTargetDate] = React.useState("");
+  const [pendingConfirm, setPendingConfirm] = React.useState<{
+    caseItem: Case;
+    kind: "archive" | "delete";
+  } | null>(null);
+  const [actionBusy, setActionBusy] = React.useState(false);
 
   const openCase = (c: Case) => {
     setCaseContext(c.case_id, c.target_date ?? null);
@@ -70,6 +81,54 @@ export default function CasesPage() {
       setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setRunningCaseId(null);
+    }
+  };
+
+  const openEdit = (c: Case) => {
+    setEditTitle(c.title ?? "");
+    setEditDescription(c.description ?? "");
+    setEditTargetDate(c.target_date ?? "");
+    setEditingCase(c);
+    setError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingCase || !editTitle.trim()) return;
+    setActionBusy(true);
+    setError(null);
+    try {
+      await endpoints.updateCase(editingCase.case_id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+        target_date: editTargetDate || undefined,
+      });
+      setEditingCase(null);
+      await cases.reload();
+      await summary.reload();
+    } catch (err) {
+      setError(describeApiError(t, err));
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const confirmPending = async () => {
+    if (!pendingConfirm) return;
+    setActionBusy(true);
+    setError(null);
+    try {
+      if (pendingConfirm.kind === "archive") {
+        await endpoints.archiveCase(pendingConfirm.caseItem.case_id);
+      } else {
+        await endpoints.deleteCase(pendingConfirm.caseItem.case_id);
+      }
+      setPendingConfirm(null);
+      await cases.reload();
+      await summary.reload();
+    } catch (err) {
+      setError(describeApiError(t, err));
+    } finally {
+      setActionBusy(false);
     }
   };
 
@@ -222,6 +281,23 @@ export default function CasesPage() {
                           >
                             {t("common.details")}
                           </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                            {t("case.edit")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingConfirm({ caseItem: c, kind: "archive" })}
+                          >
+                            {t("case.archive")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingConfirm({ caseItem: c, kind: "delete" })}
+                          >
+                            {t("case.delete")}
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -232,6 +308,62 @@ export default function CasesPage() {
           )}
         </CardContent>
       </Card>
+
+      <Modal
+        open={editingCase !== null}
+        title={t("case.editTitle")}
+        onClose={() => setEditingCase(null)}
+      >
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>{t("case.title")}</Label>
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("case.targetDate")}</Label>
+            <Input
+              type="date"
+              value={editTargetDate}
+              onChange={(e) => setEditTargetDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("case.description")}</Label>
+            <Textarea
+              rows={3}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setEditingCase(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button size="sm" onClick={saveEdit} disabled={actionBusy || !editTitle.trim()}>
+              {actionBusy ? t("common.loading") : t("common.save")}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title={
+          pendingConfirm?.kind === "delete" ? t("case.delete") : t("case.archive")
+        }
+        message={
+          pendingConfirm?.kind === "delete"
+            ? t("case.confirmDelete")
+            : t("case.confirmArchive")
+        }
+        confirmLabel={
+          pendingConfirm?.kind === "delete" ? t("case.delete") : t("case.archive")
+        }
+        destructive={pendingConfirm?.kind === "delete"}
+        busy={actionBusy}
+        onConfirm={confirmPending}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AppShell>
   );
 }

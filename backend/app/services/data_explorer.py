@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from statistics import fmean, median, pstdev
+from statistics import fmean
 from typing import Any
 
 from backend.app.config import Settings
@@ -348,114 +348,6 @@ class DataExplorerService:
             if station.station_code == station_code:
                 return station.as_dict()
         return {"station_code": station_code, "station_name": station_code}
-
-    def preprocessing_summary(self, station_code: str) -> dict[str, Any]:
-        rows = self._rows_for_station(station_code)
-        total_rows = len(rows)
-        profiles: list[dict[str, Any]] = []
-        total_missing = 0
-        total_outliers = 0
-
-        for field in NUMERIC_FIELDS:
-            numeric_values: list[float] = []
-            values_with_missing: list[float | None] = []
-            for row in rows:
-                numeric = _to_float(row.get(field))
-                values_with_missing.append(numeric)
-                if numeric is not None:
-                    numeric_values.append(numeric)
-            missing_count = sum(1 for value in values_with_missing if value is None)
-            total_missing += missing_count
-            sorted_values = sorted(numeric_values)
-            q1 = _quantile(sorted_values, 0.25)
-            q3 = _quantile(sorted_values, 0.75)
-            iqr = (q3 - q1) if q1 is not None and q3 is not None else None
-            if iqr is not None:
-                lower_bound = q1 - 1.5 * iqr
-                upper_bound = q3 + 1.5 * iqr
-                outlier_count = sum(
-                    1 for value in numeric_values if value < lower_bound or value > upper_bound
-                )
-            else:
-                outlier_count = 0
-            total_outliers += outlier_count
-            std_value = pstdev(numeric_values) if len(numeric_values) >= 2 else None
-            profile = {
-                "feature": field,
-                "feature_label": INDICATOR_LABELS.get(field, field),
-                "valid_count": len(numeric_values),
-                "missing_count": missing_count,
-                "missing_rate": _safe_divide(missing_count, total_rows),
-                "mean": fmean(numeric_values) if numeric_values else None,
-                "median": median(numeric_values) if numeric_values else None,
-                "min": min(numeric_values) if numeric_values else None,
-                "max": max(numeric_values) if numeric_values else None,
-                "std": std_value,
-                "outlier_count": outlier_count,
-                "outlier_rate": _safe_divide(outlier_count, len(numeric_values)),
-                "standardization_hint": self._standardization_hint(std_value, outlier_count, len(numeric_values)),
-            }
-            profiles.append(profile)
-
-        recommendations = self._preprocess_recommendations(
-            total_rows=total_rows,
-            total_missing=total_missing,
-            total_outliers=total_outliers,
-            profiles=profiles,
-        )
-
-        return {
-            "station": self._station_profile(station_code),
-            "rows_analyzed": total_rows,
-            "date_start": rows[0].get("date", "") if rows else "",
-            "date_end": rows[-1].get("date", "") if rows else "",
-            "total_missing_cells": total_missing,
-            "total_outlier_flags": total_outliers,
-            "feature_profiles": profiles,
-            "recommendations": recommendations,
-        }
-
-    def _standardization_hint(
-        self, std_value: float | None, outlier_count: int, valid_count: int
-    ) -> str:
-        if valid_count == 0:
-            return "缺少有效值，需先补齐数据。"
-        if outlier_count > 0:
-            return "建议先处理异常值，再进行标准化。"
-        if std_value is None or std_value == 0:
-            return "波动很小，可保持原尺度。"
-        return "建议进行 Z-score 标准化。"
-
-    def _preprocess_recommendations(
-        self,
-        *,
-        total_rows: int,
-        total_missing: int,
-        total_outliers: int,
-        profiles: list[dict[str, Any]],
-    ) -> list[str]:
-        if total_rows == 0:
-            return ["当前站点暂无可分析数据。"]
-
-        recommendations: list[str] = []
-        if total_missing:
-            recommendations.append("存在缺失值，建议按时间序列先做插值或邻近站点补齐。")
-        if total_outliers:
-            recommendations.append("存在 IQR 异常值标记，建议结合监测日志核对后再入模。")
-        wide_features = [
-            item["feature_label"]
-            for item in profiles
-            if item.get("std") is not None and float(item["std"]) > 10
-        ]
-        if wide_features:
-            recommendations.append(
-                "以下指标波动范围较大，建议标准化后再参与透明度预测："
-                + "、".join(wide_features[:4])
-            )
-        if not recommendations:
-            recommendations.append("当前样本质量较稳定，可直接进入建模或可视化分析。")
-        recommendations.append("当前页面展示的是吴淞口/全站数据库样本级预处理摘要，不替代研究脚本的正式训练前处理。")
-        return recommendations
 
     def visualization_payload(
         self,

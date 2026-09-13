@@ -1034,11 +1034,6 @@ def database_query(
     )
 
 
-@app.get("/api/v1/preprocess/summary")
-def preprocess_summary(station_code: str = Query(default="2586")) -> dict:
-    return run_repository_call(lambda: data_explorer.preprocessing_summary(station_code))
-
-
 @app.get("/api/v1/visualization/summary")
 def visualization_summary(
     station_code: str = Query(default="2586"),
@@ -1140,16 +1135,6 @@ def get_prediction_job(job_id: str) -> dict:
     if job.get("case_id"):
         run_service_call(lambda: case_service.sync_from_job(str(job["case_id"]), job))
     return task_view(job)
-
-
-@app.get("/api/v1/prediction-jobs/{job_id}/series")
-def get_prediction_job_series(job_id: str) -> dict:
-    try:
-        return runtime_jobs.get_job_series(job_id)
-    except KeyError as exc:
-        raise error_response(ErrorCode.NOT_FOUND, f"Prediction job {job_id} not found.", 404) from exc
-    except RuntimeError as exc:
-        raise error_response(ErrorCode.CASE_NOT_READY, str(exc), 409) from exc
 
 
 @app.post("/api/v1/prediction-jobs/{job_id}/cancel")

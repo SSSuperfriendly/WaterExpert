@@ -226,25 +226,6 @@ export interface QueryResult {
   };
 }
 
-export interface PreprocessSummary {
-  station?: string;
-  rows_analyzed?: number;
-  date_start?: string;
-  date_end?: string;
-  total_missing_cells?: number;
-  total_outlier_flags?: number;
-  feature_profiles?: {
-    feature: string;
-    feature_label?: string;
-    missing?: number;
-    missing_rate?: number;
-    outliers?: number;
-    completeness?: number;
-    [key: string]: unknown;
-  }[];
-  recommendations?: string[];
-}
-
 export interface VisualizationPayload {
   station?: string;
   indicator?: string;
@@ -1160,5 +1141,46 @@ export interface CrossModalSummary {
   date_ranges?: Record<string, { start?: string; end?: string }>;
   supervised_dates?: string[];
   preview_assets?: CrossModalAsset[];
+  [key: string]: unknown;
+}
+
+/** One field in a data type's dictionary (GET /datasets/field-dictionary/{type}). */
+export interface DataField {
+  canonical: string;
+  label?: string;
+  kind?: string;
+  unit?: string | null;
+  aliases?: string[];
+  accepted_units?: string[];
+  minimum?: number | null;
+  maximum?: number | null;
+  required?: boolean;
+  aggregation?: string;
+}
+
+export interface FieldDictionary {
+  data_type: string;
+  label?: string;
+  granularity?: string;
+  notes?: string[];
+  fields: DataField[];
+}
+
+/** Where a dataset version came from and which cases consumed it. */
+export interface DatasetLineage {
+  version_id: string;
+  dataset_id?: string | null;
+  source_name?: string | null;
+  source_kind?: string | null;
+  source_sha256?: string | null;
+  raw_path?: string | null;
+  created_at?: string | null;
+  created_by?: string | null;
+  stage?: string;
+  status?: string;
+  kind?: string;
+  notes?: string[];
+  proxy?: Record<string, unknown>;
+  used_by_cases?: string[];
   [key: string]: unknown;
 }

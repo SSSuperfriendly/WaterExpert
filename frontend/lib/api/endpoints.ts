@@ -19,10 +19,12 @@ import type {
   DatabaseSummary,
   Dataset,
   DatasetFreshness,
+  DatasetLineage,
   DatasetPreview,
   DatasetQualityReport,
   DatasetVersion,
   DiagnosticsPayload,
+  FieldDictionary,
   JobArtifact,
   JobQueueSnapshot,
   KgBuildJob,
@@ -34,7 +36,6 @@ import type {
   LoginResponse,
   PredictionsPayload,
   PredictionJob,
-  PreprocessSummary,
   Provenance,
   QueryResult,
   RealtimeValidation,
@@ -149,19 +150,15 @@ export const endpoints = {
   datasetPreview: (versionId: string, limit = 50) =>
     apiClient.get<DatasetPreview>(`/api/v1/dataset-versions/${versionId}/preview`, { limit }),
   datasetLineage: (versionId: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/v1/dataset-versions/${versionId}/lineage`),
+    apiClient.get<DatasetLineage>(`/api/v1/dataset-versions/${versionId}/lineage`),
   datasetFieldDictionary: (dataType: string) =>
-    apiClient.get<Record<string, unknown>>(`/api/v1/datasets/field-dictionary/${dataType}`),
+    apiClient.get<FieldDictionary>(`/api/v1/datasets/field-dictionary/${dataType}`),
   datasetFreshness: () =>
     apiClient.get<DatasetFreshness>("/api/v1/datasets/freshness"),
   datasetQualityAlerts: (limit = 10) =>
     apiClient.get<DatasetVersion[]>("/api/v1/datasets/quality-alerts", { limit }),
 
-  // Preprocess & visualization
-  preprocessSummary: (stationCode = "2586") =>
-    apiClient.get<PreprocessSummary>("/api/v1/preprocess/summary", {
-      station_code: stationCode,
-    }),
+  // Visualization
   visualization: (stationCode = "2586", indicator = "turbidity", limit = 180) =>
     apiClient.get<VisualizationPayload>("/api/v1/visualization/summary", {
       station_code: stationCode,
@@ -182,8 +179,6 @@ export const endpoints = {
   jobs: () => apiClient.get<PredictionJob[]>("/api/v1/prediction-jobs"),
   jobQueue: () => apiClient.get<JobQueueSnapshot>("/api/v1/prediction-jobs/queue"),
   job: (jobId: string) => apiClient.get<PredictionJob>(`/api/v1/prediction-jobs/${jobId}`),
-  jobSeries: (jobId: string) =>
-    apiClient.get<unknown>(`/api/v1/prediction-jobs/${jobId}/series`),
   cancelJob: (jobId: string) =>
     apiClient.post<PredictionJob>(`/api/v1/prediction-jobs/${jobId}/cancel`),
   retryJob: (jobId: string) =>
