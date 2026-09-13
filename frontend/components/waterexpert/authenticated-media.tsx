@@ -26,11 +26,13 @@ export function AuthenticatedMedia({
   alt,
   className,
   fallbackLabel,
+  kind = "image",
 }: {
   path: string;
   alt: string;
   className?: string;
   fallbackLabel?: string;
+  kind?: "image" | "video";
 }) {
   const [media, setMedia] = React.useState<MediaState>({ path });
 
@@ -75,6 +77,10 @@ export function AuthenticatedMedia({
 
   if (!current.url) {
     return <div className={`bg-muted animate-pulse ${className ?? ""}`} aria-hidden />;
+  }
+
+  if (kind === "video") {
+    return <video src={current.url} controls className={className} aria-label={alt} />;
   }
 
   // eslint-disable-next-line @next/next/no-img-element -- the source is a runtime object URL from an authenticated fetch; next/image cannot optimize it

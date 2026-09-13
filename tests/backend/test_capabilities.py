@@ -12,11 +12,15 @@ Two data-layer contracts:
 
 from __future__ import annotations
 
+import tempfile
 import unittest
+from dataclasses import replace
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from backend.app import main
+from backend.app.services.cross_modal_repository import CrossModalRepository
 from tests.backend._helpers import admin_auth_guard
 
 
@@ -52,6 +56,36 @@ class CapabilitiesTest(unittest.TestCase):
         frames = videos[0]["representative_frames"]
         self.assertTrue(frames)
         self.assertTrue(all("/api/v1/cross-modal/media" in frame for frame in frames))
+
+
+class CrossModalVideoSourceTest(unittest.TestCase):
+    """A source video is playable when it is on disk, and the persistent media
+    drop is a valid home for it (the raw UAV tree is overwritten by releases)."""
+
+    def _repository(self, root: Path) -> CrossModalRepository:
+        settings = replace(main.settings, project_root=root, runtime_root=root)
+        return CrossModalRepository(settings)
+
+    def test_a_video_in_the_media_drop_is_playable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            media = root / "var" / "media" / "zhangjiabang_uav"
+            media.mkdir(parents=True)
+            (media / "clip.mp4").write_bytes(b"fake-video")
+
+            url = self._repository(root)._source_video_url(
+                "data/raw/zhangjiabang_uav/clip.mp4"
+            )
+
+            self.assertIsNotNone(url)
+            self.assertIn("/api/v1/cross-modal/media", str(url))
+
+    def test_a_missing_video_is_not_playable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            url = self._repository(Path(tmp))._source_video_url(
+                "data/raw/zhangjiabang_uav/nope.mp4"
+            )
+            self.assertIsNone(url)
 
 
 if __name__ == "__main__":

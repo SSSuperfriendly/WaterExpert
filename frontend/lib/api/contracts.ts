@@ -1128,25 +1128,26 @@ export interface Capabilities {
 
 /**
  * The Zhangjiabang cross-modal satellite view: UAV assets (images and videos
- * sliced into representative frames), the fused daily table and the model
- * comparison. Every field comes from the processed artifacts on disk.
+ * sliced into representative frames). Every field comes from the processed
+ * artifacts on disk; ``sequence`` is the stable per-date ordinal the UI labels
+ * assets with, so a raw filename is never the display name.
  */
 export interface CrossModalAsset {
   asset_id?: string;
   sample_date?: string;
   sample_site_role?: string;
   media_type?: string;
+  sequence?: number;
   file_name?: string;
   file_size_bytes?: number;
   preview_url?: string;
+  video_url?: string | null;
   representative_frames?: string[];
   frame_count?: number;
   fps?: number;
   duration_seconds?: number;
   turbidity_visual_proxy?: number;
   sharpness_laplacian?: number;
-  visual_transformer_embedding_norm?: number;
-  visual_transformer_embed_dim?: number;
   [key: string]: unknown;
 }
 
@@ -1158,7 +1159,5 @@ export interface CrossModalSummary {
   date_ranges?: Record<string, { start?: string; end?: string }>;
   supervised_dates?: string[];
   preview_assets?: CrossModalAsset[];
-  daily_rows?: Record<string, unknown>[];
-  model_evaluation?: Record<string, unknown> | null;
   [key: string]: unknown;
 }

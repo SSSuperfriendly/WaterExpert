@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
 import { endpoints } from "@/lib/api/endpoints";
@@ -9,65 +8,33 @@ import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { StatCard } from "@/components/waterexpert/stat-card";
 import { AuthenticatedMedia } from "@/components/waterexpert/authenticated-media";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { CrossModalAsset } from "@/lib/api/contracts";
 
-interface EvaluationTarget {
-  best_display_name?: string;
-  best_rmse?: number;
-  baseline_rmse?: number;
-  sample_count?: number;
-  cv_strategy?: string;
+function assetLabel(t: ReturnType<typeof useT>["t"], asset: CrossModalAsset): string {
+  const kind = asset.media_type === "video" ? t("crossModal.video") : t("crossModal.image");
+  const sequence = String(asset.sequence ?? 1).padStart(2, "0");
+  return `${kind} #${sequence}`;
 }
-
-const EMPTY_ROWS: Record<string, unknown>[] = [];
-
-//: Columns the fused daily table shows by default. A presentation subset — the
-//: full row still lives in the artifact — filtered to the ones this deployment's
-//: data actually carries, so the table stays within the page width.
-const PREFERRED_DAILY_COLUMNS = [
-  "sample_date",
-  "sample_site_role",
-  "fusion_readiness",
-  "turbidity_ntu",
-  "secchi_depth_m",
-  "uav_asset_count",
-  "uav_turbidity_visual_proxy_mean",
-  "historical_proxy_weather_precipitation_median",
-];
 
 /**
  * The Zhangjiabang cross-modal satellite view.
  *
- * It renders whatever the processed artifacts carry — asset metadata, the
- * representative frames a video was sliced into, the fused daily table and the
- * model comparison — so it is a view over the data layer, not a re-implementation
- * of it. Every image is fetched through the authenticated media endpoint.
+ * Images and videos are shown as separate collections. A video plays when its
+ * source file is on disk (served through the authenticated media endpoint) and
+ * otherwise falls back to the representative frames it was sliced into — the
+ * raw UAV drop is gitignored, so frames are what this deployment usually has.
+ * Assets are labelled by a stable date ordinal, never by the raw filename.
  */
 export default function CrossModalPage() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.crossModal());
 
   const assets = data?.preview_assets ?? [];
-  const dailyRows = data?.daily_rows ?? EMPTY_ROWS;
-  const dailyColumns = React.useMemo(() => {
-    const all = Object.keys(dailyRows[0] ?? {});
-    const preferred = PREFERRED_DAILY_COLUMNS.filter((column) => all.includes(column));
-    return preferred.length > 0 ? preferred : all.slice(0, 8);
-  }, [dailyRows]);
-  const targets = (data?.model_evaluation?.targets ?? {}) as Record<
-    string,
-    EvaluationTarget
-  >;
+  const images = assets.filter((asset) => asset.media_type !== "video");
+  const videos = assets.filter((asset) => asset.media_type === "video");
   const counts = data?.counts ?? {};
 
   return (
@@ -77,7 +44,7 @@ export default function CrossModalPage() {
       ) : error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : !data ? null : (
-        <div className="flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           <p className="text-muted-foreground text-sm">
             {data.site ? `${t("crossModal.site")}: ${data.site} · ` : ""}
             {data.generated_at
@@ -100,10 +67,7 @@ export default function CrossModalPage() {
 
           {data.modality_status && Object.keys(data.modality_status).length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>{t("crossModal.modalityStatus")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
+              <CardContent className="flex flex-wrap gap-2 pt-6">
                 {Object.entries(data.modality_status).map(([modality, status]) => (
                   <Badge key={modality} variant="outline" className="gap-1 font-normal">
                     {modality}: {status}
@@ -113,108 +77,41 @@ export default function CrossModalPage() {
             </Card>
           )}
 
-          <div>
-            <h2 className="mb-3 text-sm font-medium">{t("crossModal.assetGallery")}</h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {assets.map((asset) => (
-                <AssetCard key={asset.asset_id ?? asset.file_name} asset={asset} />
-              ))}
-            </div>
-          </div>
-
-          {dailyRows.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("crossModal.fusedDaily")}</CardTitle>
-                <p className="text-muted-foreground text-xs">{t("crossModal.fusedDailyHint")}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {dailyColumns.map((column) => (
-                          <TableHead key={column}>{column}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dailyRows.map((row, index) => (
-                        <TableRow key={index}>
-                          {dailyColumns.map((column) => (
-                            <TableCell key={column} className="text-xs whitespace-nowrap">
-                              {row[column] === null || row[column] === undefined
-                                ? "—"
-                                : String(row[column])}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {Object.keys(targets).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("crossModal.modelEvaluation")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("crossModal.target")}</TableHead>
-                        <TableHead>{t("crossModal.bestModel")}</TableHead>
-                        <TableHead>{t("crossModal.bestRmse")}</TableHead>
-                        <TableHead>{t("crossModal.baselineRmse")}</TableHead>
-                        <TableHead>{t("crossModal.improvement")}</TableHead>
-                        <TableHead>{t("crossModal.sampleCount")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(targets).map(([target, evaluation]) => {
-                        const best = evaluation.best_rmse;
-                        const baseline = evaluation.baseline_rmse;
-                        const improvement =
-                          best !== undefined && baseline !== undefined && baseline > 0
-                            ? (baseline - best) / baseline
-                            : null;
-                        return (
-                          <TableRow key={target}>
-                            <TableCell className="text-xs">{target}</TableCell>
-                            <TableCell className="text-xs">
-                              {evaluation.best_display_name ?? "—"}
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {formatNumber(best, 4)}
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {formatNumber(baseline, 4)}
-                            </TableCell>
-                            <TableCell className="text-xs">
-                              {improvement === null
-                                ? "—"
-                                : `${(improvement * 100).toFixed(1)}%`}
-                            </TableCell>
-                            <TableCell className="text-xs">
-                              {evaluation.sample_count ?? "—"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Tabs defaultValue="images">
+            <TabsList>
+              <TabsTrigger value="images">
+                {t("crossModal.tabImages")} ({images.length})
+              </TabsTrigger>
+              <TabsTrigger value="videos">
+                {t("crossModal.tabVideos")} ({videos.length})
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="images">
+              <AssetGrid assets={images} />
+            </TabsContent>
+            <TabsContent value="videos">
+              <AssetGrid assets={videos} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </AppShell>
+  );
+}
+
+function AssetGrid({ assets }: { assets: CrossModalAsset[] }) {
+  const { t } = useT();
+
+  if (assets.length === 0) {
+    return <p className="text-muted-foreground text-sm">{t("common.noData")}</p>;
+  }
+
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {assets.map((asset) => (
+        <AssetCard key={asset.asset_id ?? asset.file_name} asset={asset} />
+      ))}
+    </div>
   );
 }
 
@@ -222,19 +119,27 @@ function AssetCard({ asset }: { asset: CrossModalAsset }) {
   const { t } = useT();
   const isVideo = asset.media_type === "video";
   const frames = asset.representative_frames ?? [];
+  const label = assetLabel(t, asset);
   const metrics: Array<[string, unknown]> = [
     [t("crossModal.turbidityProxy"), asset.turbidity_visual_proxy],
     [t("crossModal.sharpness"), asset.sharpness_laplacian],
-    [t("crossModal.embeddingNorm"), asset.visual_transformer_embedding_norm],
   ];
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="min-w-0 overflow-hidden">
       <div className="bg-muted relative aspect-video w-full overflow-hidden">
-        {asset.preview_url ? (
+        {isVideo && asset.video_url ? (
+          <AuthenticatedMedia
+            kind="video"
+            path={asset.video_url}
+            alt={label}
+            className="h-full w-full object-contain"
+            fallbackLabel={t("crossModal.mediaUnavailable")}
+          />
+        ) : asset.preview_url ? (
           <AuthenticatedMedia
             path={asset.preview_url}
-            alt={asset.file_name ?? asset.asset_id ?? "uav asset"}
+            alt={label}
             className="h-full w-full object-cover"
             fallbackLabel={t("crossModal.mediaUnavailable")}
           />
@@ -245,7 +150,9 @@ function AssetCard({ asset }: { asset: CrossModalAsset }) {
       </div>
       <CardContent className="space-y-2 pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium">{asset.file_name ?? asset.asset_id}</span>
+          <span className="truncate text-sm font-medium" title={asset.file_name ?? ""}>
+            {label}
+          </span>
           <span className="text-muted-foreground shrink-0 text-xs">{asset.sample_date}</span>
         </div>
 
@@ -259,12 +166,17 @@ function AssetCard({ asset }: { asset: CrossModalAsset }) {
                 <AuthenticatedMedia
                   key={frame}
                   path={frame}
-                  alt={`${asset.file_name ?? "video"} frame ${index + 1}`}
+                  alt={`${label} ${index + 1}`}
                   className="h-12 w-20 shrink-0 rounded object-cover"
                   fallbackLabel="—"
                 />
               ))}
             </div>
+            {!asset.video_url && (
+              <p className="text-muted-foreground mt-1 text-[10px]">
+                {t("crossModal.videoSourceUnavailable")}
+              </p>
+            )}
           </div>
         )}
 
@@ -274,16 +186,14 @@ function AssetCard({ asset }: { asset: CrossModalAsset }) {
               ? `${t("crossModal.frameCount")}: ${asset.frame_count} · `
               : ""}
             {asset.fps ? `${asset.fps} fps · ` : ""}
-            {asset.duration_seconds
-              ? `${formatNumber(asset.duration_seconds, 1)}s`
-              : ""}
+            {asset.duration_seconds ? `${formatNumber(asset.duration_seconds, 1)}s` : ""}
           </p>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
-          {metrics.map(([label, value]) => (
-            <div key={label}>
-              <p className="text-muted-foreground truncate text-[10px]">{label}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {metrics.map(([metricLabel, value]) => (
+            <div key={metricLabel}>
+              <p className="text-muted-foreground truncate text-[10px]">{metricLabel}</p>
               <p className="font-mono text-xs">{formatNumber(value, 3)}</p>
             </div>
           ))}
