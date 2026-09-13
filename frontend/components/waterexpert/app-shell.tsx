@@ -59,11 +59,11 @@ export function AppShell({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <AppHeader title={title} />
-        <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-6">
           <CaseContextBar />
-          <div className="flex flex-col gap-6">{children}</div>
+          <div className="flex min-w-0 flex-col gap-6">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>

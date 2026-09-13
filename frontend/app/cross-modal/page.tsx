@@ -29,6 +29,22 @@ interface EvaluationTarget {
   cv_strategy?: string;
 }
 
+const EMPTY_ROWS: Record<string, unknown>[] = [];
+
+//: Columns the fused daily table shows by default. A presentation subset — the
+//: full row still lives in the artifact — filtered to the ones this deployment's
+//: data actually carries, so the table stays within the page width.
+const PREFERRED_DAILY_COLUMNS = [
+  "sample_date",
+  "sample_site_role",
+  "fusion_readiness",
+  "turbidity_ntu",
+  "secchi_depth_m",
+  "uav_asset_count",
+  "uav_turbidity_visual_proxy_mean",
+  "historical_proxy_weather_precipitation_median",
+];
+
 /**
  * The Zhangjiabang cross-modal satellite view.
  *
@@ -42,8 +58,12 @@ export default function CrossModalPage() {
   const { data, loading, error, reload } = useApi(() => endpoints.crossModal());
 
   const assets = data?.preview_assets ?? [];
-  const dailyRows = data?.daily_rows ?? [];
-  const dailyColumns = dailyRows.length > 0 ? Object.keys(dailyRows[0]) : [];
+  const dailyRows = data?.daily_rows ?? EMPTY_ROWS;
+  const dailyColumns = React.useMemo(() => {
+    const all = Object.keys(dailyRows[0] ?? {});
+    const preferred = PREFERRED_DAILY_COLUMNS.filter((column) => all.includes(column));
+    return preferred.length > 0 ? preferred : all.slice(0, 8);
+  }, [dailyRows]);
   const targets = (data?.model_evaluation?.targets ?? {}) as Record<
     string,
     EvaluationTarget
@@ -106,6 +126,7 @@ export default function CrossModalPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("crossModal.fusedDaily")}</CardTitle>
+                <p className="text-muted-foreground text-xs">{t("crossModal.fusedDailyHint")}</p>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
