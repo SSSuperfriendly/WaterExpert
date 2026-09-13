@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
-import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
@@ -133,7 +132,7 @@ def estimate_piecewise_threshold(
 ) -> dict[str, float | int | str]:
     subset = data[[feature, response]].replace([np.inf, -np.inf], np.nan).dropna()
     subset = subset.sort_values(feature)
-    n = int(len(subset))
+    n = len(subset)
     if n < min_side * 2 or subset[feature].nunique() < 4:
         return {"n": n, "status": "insufficient"}
 

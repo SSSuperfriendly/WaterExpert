@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,12 +24,12 @@ class WaterQualityState(BaseModel):
     date: str = Field(..., description="Date in YYYY-MM-DD format")
     turbidity: float = Field(..., ge=0, le=500, description="Turbidity in NTU (0-500)")
     flow_rate: float = Field(..., ge=0, le=100, description="Flow rate in m³/s")
-    temperature: Optional[float] = Field(None, ge=0, le=50, description="Temperature in °C")
-    ph: Optional[float] = Field(None, ge=0, le=14, description="pH value")
-    dissolved_oxygen: Optional[float] = Field(None, ge=0, le=15, description="DO in mg/L")
-    chlorophyll_a: Optional[float] = Field(None, ge=0, le=100, description="Chl-a in μg/L")
-    rainfall_3d: Optional[float] = Field(None, ge=0, description="3-day cumulative rainfall (mm)")
-    rainfall_7d: Optional[float] = Field(None, ge=0, description="7-day cumulative rainfall (mm)")
+    temperature: float | None = Field(None, ge=0, le=50, description="Temperature in °C")
+    ph: float | None = Field(None, ge=0, le=14, description="pH value")
+    dissolved_oxygen: float | None = Field(None, ge=0, le=15, description="DO in mg/L")
+    chlorophyll_a: float | None = Field(None, ge=0, le=100, description="Chl-a in μg/L")
+    rainfall_3d: float | None = Field(None, ge=0, description="3-day cumulative rainfall (mm)")
+    rainfall_7d: float | None = Field(None, ge=0, description="7-day cumulative rainfall (mm)")
 
 
 class KnowledgeRelation(BaseModel):
@@ -50,7 +50,7 @@ class KnowledgeRelation(BaseModel):
     source_id: str = ""
     source_label: str = ""
     source_file: str = ""
-    chunk_id: Optional[str] = None
+    chunk_id: str | None = None
 
 
 class KnowledgeThresholdNode(BaseModel):
@@ -66,12 +66,12 @@ class KnowledgeThresholdNode(BaseModel):
     node_id: str = ""
     feature: str = ""
     label: str = ""
-    threshold: Optional[float] = None
+    threshold: float | None = None
     unit: str = ""
     response: str = ""
-    r2_gain: Optional[float] = None
-    piecewise_r2: Optional[float] = None
-    response_jump: Optional[float] = None
+    r2_gain: float | None = None
+    piecewise_r2: float | None = None
+    response_jump: float | None = None
     interpretation: str = ""
 
 
@@ -131,7 +131,7 @@ class KnowledgeContext(BaseModel):
     #: whatever the question, and CMFBE screens against them. Absent means the
     #: agent screened nothing and says so — it has no local copy to fall back on,
     #: deliberately, because the copy it used to keep had gone stale.
-    thresholds: Optional[KnowledgeThresholds] = None
+    thresholds: KnowledgeThresholds | None = None
 
 
 class StrategyRequest(BaseModel):
@@ -143,11 +143,11 @@ class StrategyRequest(BaseModel):
     state: WaterQualityState = Field(..., description="Current water quality state")
     episodes: int = Field(1, ge=1, le=10, description="Number of episodes to run")
     backend: str = Field("api", description="DeepSeek backend: 'api' or 'local'")
-    request_id: Optional[str] = Field(None, description="Optional request tracking ID")
+    request_id: str | None = Field(None, description="Optional request tracking ID")
     #: Graph evidence the platform retrieved for this request. Absent means the
     #: knowledge base falls back to its curated scenario dictionary, exactly as
     #: it did before the graph was wired in.
-    knowledge_context: Optional[KnowledgeContext] = Field(
+    knowledge_context: KnowledgeContext | None = Field(
         None, description="Retrieved knowledge-graph evidence (platform-supplied)"
     )
 
@@ -171,16 +171,16 @@ class StrategyResult(BaseModel):
     strategy: dict[str, Any] = Field(default_factory=dict)
     metrics: dict[str, Any] = Field(default_factory=dict)
     agent_traces: dict[str, Any] = Field(default_factory=dict)
-    reasoning_viz_path: Optional[str] = None
-    report_path: Optional[str] = None
-    error: Optional[str] = None
-    completed_at: Optional[datetime] = None
+    reasoning_viz_path: str | None = None
+    report_path: str | None = None
+    error: str | None = None
+    completed_at: datetime | None = None
 
 
 class BatchStrategyRequest(BaseModel):
     """Request body for batch strategy generation."""
 
-    requests: list[StrategyRequest] = Field(..., min_items=1, max_items=100)
+    requests: list[StrategyRequest] = Field(..., min_length=1, max_length=100)
     parallel: bool = Field(False, description="Run requests in parallel")
 
 
@@ -210,8 +210,8 @@ class AgentStatus(BaseModel):
     name: str
     type: str
     status: str  # 'ready', 'error', 'unavailable'
-    version: Optional[str] = None
-    last_used: Optional[datetime] = None
+    version: str | None = None
+    last_used: datetime | None = None
 
 
 class SystemStatus(BaseModel):

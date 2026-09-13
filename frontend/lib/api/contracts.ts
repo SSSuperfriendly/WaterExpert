@@ -4,18 +4,6 @@
  * payloads are dicts) but typed enough to render safely.
  */
 
-export type RiskBand = "high" | "heightened" | "watch" | "low" | "medium";
-export type ScenarioKey =
-  | "external_input"
-  | "internal_release"
-  | "algal_dominant"
-  | "chronic_composite";
-export type ModelKey =
-  | "cmfbe_stgcn"
-  | "mscim"
-  | "mscim_no_kg"
-  | "persistence_baseline"
-  | "ridge_window_baseline";
 export type ReportFormat = "html" | "md" | "json" | "pdf";
 
 export interface LoginResponse {

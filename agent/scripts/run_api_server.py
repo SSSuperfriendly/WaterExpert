@@ -54,7 +54,7 @@ def main():
     # Check DeepSeek API key
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if api_key:
-        print(f"✓ DEEPSEEK_API_KEY configured (using API backend)")
+        print("✓ DEEPSEEK_API_KEY configured (using API backend)")
     else:
         print("⚠ DEEPSEEK_API_KEY not set (using mock/fallback mode)")
     
@@ -62,7 +62,7 @@ def main():
     app = create_app()
     
     # Run server
-    print(f"\n🚀 Starting Water AI API Server")
+    print("\n🚀 Starting Water AI API Server")
     print(f"   Host: {args.host}")
     print(f"   Port: {args.port}")
     print(f"   Reload: {args.reload}")

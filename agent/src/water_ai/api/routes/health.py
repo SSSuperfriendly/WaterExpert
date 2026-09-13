@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from datetime import datetime
 import os
 
+from fastapi import APIRouter
+
 from ...agents import (
-    MSCIMAgent,
+    AquaTurbGPTAgent,
     CMFBEAgent,
     KnowledgeBaseAgent,
-    AquaTurbGPTAgent,
+    MSCIMAgent,
     RLTGRRAgent,
     SafetyAgent,
 )
 from ...data.loader import WaterQualityDataLoader
-from ..schemas import HealthStatus, SystemStatus, AgentStatus
+from ..schemas import AgentStatus, HealthStatus, SystemStatus
 
 router = APIRouter(prefix="/api", tags=["health"])
 
@@ -43,14 +43,7 @@ async def health_check() -> HealthStatus:
             status = agent.health() if hasattr(agent, "health") else {"status": "ready"}
             agents_status[agent_name] = status.get("status", "ready")
         except Exception as e:
-            agents_status[agent_name] = f"error: {str(e)}"
-    
-    # Check data loader
-    try:
-        loader = WaterQualityDataLoader()
-        data_status = "ready"
-    except Exception as e:
-        data_status = f"error: {str(e)}"
+            agents_status[agent_name] = f"error: {e!s}"
     
     # Check DeepSeek configuration
     deepseek_status = "configured" if os.getenv("DEEPSEEK_API_KEY") else "not_configured"
@@ -86,7 +79,7 @@ async def system_status() -> SystemStatus:
         ("Safety", SafetyAgent),
     ]:
         try:
-            agent = agent_class()
+            agent_class()
             agent_statuses.append(
                 AgentStatus(
                     name=agent_name,
@@ -94,7 +87,7 @@ async def system_status() -> SystemStatus:
                     status="ready",
                 )
             )
-        except Exception as e:
+        except Exception:
             agent_statuses.append(
                 AgentStatus(
                     name=agent_name,

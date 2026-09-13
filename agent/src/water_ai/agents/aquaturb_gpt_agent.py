@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .base import BaseAgent
 from ..llm.deepseek_client import DeepSeekClient
 from ..visualization.reasoning_viz import ReasoningVisualizer
+from .base import BaseAgent
 
 
 class AquaTurbGPTAgent(BaseAgent):

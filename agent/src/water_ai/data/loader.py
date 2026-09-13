@@ -10,7 +10,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 
@@ -245,7 +244,6 @@ class WaterQualityDataLoader:
             Scenario type: "s1_external_input", "s2_internal_release", "s3_algae_bloom", "s4_chronic_combo"
         """
         rainfall_3d = state.get("rainfall_3d", 0.0)
-        rainfall_7d = state.get("rainfall_7d", 0.0)
         chlorophyll = state.get("chlorophyll_a", 0.0)
         turbidity_7d_mean = state.get("turbidity_7d_mean", 0.0)
 

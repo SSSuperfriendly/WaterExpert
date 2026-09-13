@@ -84,7 +84,7 @@ class SourceIdTest(unittest.TestCase):
 class MaterialsLabelTest(unittest.TestCase):
     def test_the_source_line_names_the_graph_not_the_evidence_kind(self) -> None:
         bundle = _Bundle({"platform": "基线图谱", "inherited": "继承图谱（合作方 GraphRAG）"})
-        materials, citations, _numbers = build_materials(
+        materials, _citations, _numbers = build_materials(
             bundle, [], [_relation(source_id="inherited")], [], []
         )
         self.assertIn("来源: clean_a (4).txt（继承图谱（合作方 GraphRAG））", materials)

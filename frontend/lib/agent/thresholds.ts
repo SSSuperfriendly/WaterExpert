@@ -25,7 +25,6 @@ export type ThresholdVerdict =
 
 /** The sources CMFBE reports. `knowledge_graph` is the platform's threshold graph. */
 export const THRESHOLD_SOURCE_GRAPH = "knowledge_graph";
-export const THRESHOLD_SOURCE_NONE = "unavailable";
 
 export function thresholdVerdict(
   source: string | undefined,

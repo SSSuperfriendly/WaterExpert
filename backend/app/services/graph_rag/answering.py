@@ -17,7 +17,7 @@ import json
 import re
 from typing import Any
 
-from backend.app.services.graph_rag.index import GraphSource, Relation
+from backend.app.services.graph_rag.index import Relation
 from backend.app.services.graph_rag.local_search import PathCandidate
 
 MARKER_RE = re.compile(r"\[(关系|分块|社区)(\d+)\]")

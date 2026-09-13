@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
-import numpy as np
 import gymnasium as gym
+import numpy as np
 from gymnasium import spaces
-from stable_baselines3.sac import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.sac import SAC
 
 
 class WaterQualityControlEnv(gym.Env):
@@ -30,7 +30,7 @@ class WaterQualityControlEnv(gym.Env):
     Goal: Minimize turbidity while controlling cost and maintaining stability
     """
 
-    metadata = {"render_modes": []}
+    metadata: ClassVar[dict[str, list[str]]] = {"render_modes": []}
 
     def __init__(
         self,
@@ -210,7 +210,6 @@ class WaterQualityControlEnv(gym.Env):
 
     def render(self) -> None:
         """Not implemented."""
-        pass
 
 
 class RLTGRRTrainer:
@@ -270,7 +269,7 @@ class RLTGRRTrainer:
             data_loader=self.data_loader,
             horizon=30,  # 30-day episodes
         )
-        print(f"     ✓ Environment created")
+        print("     ✓ Environment created")
         print(f"       - Observation space: {env.observation_space}")
         print(f"       - Action space: {env.action_space}")
 
@@ -304,7 +303,7 @@ class RLTGRRTrainer:
 
         # Train
         print(f"\n[3/3] Training for {total_timesteps} timesteps...")
-        print(f"     (This may take 5-15 minutes on CPU)")
+        print("     (This may take 5-15 minutes on CPU)")
 
         try:
             model.learn(

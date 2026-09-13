@@ -91,7 +91,6 @@ class MSCIMAgent(BaseAgent):
         # Extract key features from state
         turbidity = state.get("turbidity", 0.0)
         chlorophyll = state.get("chlorophyll_a", 0.0)
-        dissolved_oxygen = state.get("dissolved_oxygen", 0.0)
         water_temp = state.get("water_temp", 0.0)
 
         # Simplified MSCIM logic (in production, this would load checkpoint and run model)
@@ -100,7 +99,6 @@ class MSCIMAgent(BaseAgent):
 
         # Driver attribution (mock)
         rainfall_3d = state.get("rainfall_3d", 0.0)
-        rainfall_7d = state.get("rainfall_7d", 0.0)
 
         drivers = []
         if rainfall_3d > 36.0:

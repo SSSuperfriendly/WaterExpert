@@ -2,28 +2,25 @@
 
 from __future__ import annotations
 
-import threading
-from typing import Optional
-
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from datetime import datetime
 
-from ..schemas import (
-    StrategyRequest,
-    StrategyResponse,
-    StrategyResult,
-    ScenarioType,
-)
-from ..job_manager import JobManager, JobStatus
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+
 from ...agents import (
-    MSCIMAgent,
+    AquaTurbGPTAgent,
     CMFBEAgent,
     KnowledgeBaseAgent,
-    AquaTurbGPTAgent,
+    MSCIMAgent,
     RLTGRRAgent,
     SafetyAgent,
 )
 from ...orchestrator.coordinator import Orchestrator
+from ..job_manager import JobManager, JobStatus
+from ..schemas import (
+    StrategyRequest,
+    StrategyResponse,
+    StrategyResult,
+)
 
 # Global job manager
 job_manager = JobManager()
@@ -37,7 +34,7 @@ def _execute_strategy(
     state: dict,
     episodes: int,
     backend: str,
-    knowledge_context: Optional[dict] = None,
+    knowledge_context: dict | None = None,
 ) -> None:
     """Background task to execute strategy generation.
 
@@ -209,8 +206,8 @@ async def get_job_stage(job_id: str) -> dict:
 
 @router.get("/jobs", response_model=list[dict])
 async def list_jobs(
-    status: Optional[str] = Query(None),
-    scenario: Optional[str] = Query(None),
+    status: str | None = Query(None),
+    scenario: str | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
 ) -> list[dict]:
     """List all jobs with optional filtering.

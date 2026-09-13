@@ -29,13 +29,14 @@ authenticated a moment ago is reloaded fresh before it is mutated.
 
 from __future__ import annotations
 
-import re
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from backend.app.domain.codes import ErrorCode
+from backend.app.http_errors import EMAIL_RE, error_response
 from backend.app.models import User
 from backend.app.schemas import (
     EmailUpdateRequest,
@@ -53,15 +54,6 @@ from backend.app.users import (
 
 router = APIRouter(tags=["users"])
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
-def _refuse(code: ErrorCode, detail: str, status_code: int) -> HTTPException:
-    """Mirror ``main.error_response`` without importing the app (no circulars)."""
-    return HTTPException(
-        status_code=status_code, detail={"code": str(code), "detail": detail}
-    )
-
 
 def _actor(request: Request) -> User:
     """The authenticated caller, stamped on the request by the global guard."""
@@ -69,7 +61,7 @@ def _actor(request: Request) -> User:
     if user is None:
         # The global auth guard runs first and rejects anonymous traffic;
         # reaching a handler without a user is a mis-wired route, fail closed.
-        raise _refuse(ErrorCode.NOT_AUTHENTICATED, "Not authenticated.", 401)
+        raise error_response(ErrorCode.NOT_AUTHENTICATED, "Not authenticated.", 401)
     return user
 
 
@@ -77,7 +69,7 @@ def _provider_names(user: User) -> list[str]:
     """Linked identity providers (``github`` etc.), never the account ids."""
     try:
         accounts = list(getattr(user, "oauth_accounts", None) or [])
-    except Exception:
+    except SQLAlchemyError:
         # A detached user whose relationship was expired: not worth re-loading
         # just for the provider list; treat as unlinked.
         return []
@@ -105,7 +97,7 @@ async def _reload(manager: UserManager, user_id: uuid.UUID) -> User:
     """Reload the caller inside the manager's session before mutating."""
     user = await manager.user_db.session.get(User, user_id)
     if user is None:
-        raise _refuse(ErrorCode.NOT_FOUND, "Account no longer exists.", 404)
+        raise error_response(ErrorCode.NOT_FOUND, "Account no longer exists.", 404)
     return user
 
 
@@ -118,14 +110,14 @@ def _verify_current_password(manager: UserManager, user: User, password: str) ->
         # OAuth-only account: there is nothing to verify against, so the caller
         # is not "wrong" — it has not set a password yet. A distinct code lets
         # the UI send them to the set-password flow instead of implying a typo.
-        raise _refuse(
+        raise error_response(
             ErrorCode.PASSWORD_NOT_SET,
             "This account has no usable password; set one first.",
             400,
         )
     verified, _ = manager.password_helper.verify_and_update(password, user.hashed_password)
     if not verified:
-        raise _refuse(
+        raise error_response(
             ErrorCode.CURRENT_PASSWORD_INCORRECT,
             "Current password is incorrect.",
             400,
@@ -167,7 +159,7 @@ async def update_username(
     if new_username == fresh.username:
         return _profile(fresh, providers)  # idempotent no-op
     if await _username_taken(manager, new_username, fresh.id):
-        raise _refuse(
+        raise error_response(
             ErrorCode.USERNAME_TAKEN, f"Username {new_username!r} is taken.", 409
         )
     updates: dict[str, object] = {"username": new_username}
@@ -190,12 +182,12 @@ async def update_email(
     providers = _provider_names(fresh)
     _verify_current_password(manager, fresh, payload.current_password)
     new_email = payload.email.strip()
-    if not _EMAIL_RE.fullmatch(new_email):
-        raise _refuse(ErrorCode.VALIDATION_FAILED, "Invalid email address.", 400)
+    if not EMAIL_RE.fullmatch(new_email):
+        raise error_response(ErrorCode.VALIDATION_FAILED, "Invalid email address.", 400)
     if new_email.lower() == fresh.email.lower():
         return _profile(fresh, providers)  # idempotent no-op
     if await _email_taken(manager, new_email, fresh.id):
-        raise _refuse(ErrorCode.EMAIL_TAKEN, "That email is already in use.", 409)
+        raise error_response(ErrorCode.EMAIL_TAKEN, "That email is already in use.", 409)
     fresh = await manager.user_db.update(fresh, {"email": new_email})
     return _profile(fresh, providers)
 
@@ -211,7 +203,7 @@ async def change_password(
     providers = _provider_names(fresh)
     _verify_current_password(manager, fresh, payload.current_password)
     if payload.new_password == payload.current_password:
-        raise _refuse(
+        raise error_response(
             ErrorCode.VALIDATION_FAILED,
             "The new password must differ from the current one.",
             400,
@@ -238,20 +230,20 @@ async def set_password(
     fresh = await _reload(manager, actor.id)
     providers = _provider_names(fresh)
     if fresh.hashed_password:
-        raise _refuse(
+        raise error_response(
             ErrorCode.PASSWORD_ALREADY_SET,
             "This account already has a password; change it instead.",
             400,
         )
     if payload.new_password != payload.confirm_password:
-        raise _refuse(ErrorCode.VALIDATION_FAILED, "Passwords do not match.", 400)
+        raise error_response(ErrorCode.VALIDATION_FAILED, "Passwords do not match.", 400)
     claims = decode_reauth_token(payload.reauth_token)
     if (
         claims is None
         or claims.get("pur") != "set_password"
         or claims.get("sub") != str(fresh.id)
     ):
-        raise _refuse(
+        raise error_response(
             ErrorCode.PASSWORD_REAUTH_REQUIRED,
             "Re-authorize with GitHub to confirm identity before setting a password.",
             400,

@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -34,6 +33,7 @@ from backend.app.config import get_settings
 from backend.app.db import Base, engine
 from backend.app.domain.codes import ErrorCode
 from backend.app.domain.roles import Permission
+from backend.app.http_errors import EMAIL_RE, error_response
 from backend.app.schemas import (
     AgentExplainRequest,
     AgentStrategyRequest,
@@ -116,9 +116,6 @@ external_agent = ExternalAgentService(
     base_url=settings.agent_api_url,
     timeout_seconds=settings.agent_api_timeout_seconds,
 )
-
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
 
 def _requires_auth(path: str) -> bool:
     """Whether ``path`` is a protected API route (auth gate applies).
@@ -260,15 +257,6 @@ def artifact_error_to_http(exc: Exception) -> HTTPException:
     if isinstance(exc, ArtifactReadError):
         return HTTPException(status_code=500, detail=str(exc))
     return HTTPException(status_code=500, detail="Unexpected application error.")
-
-
-def error_response(code: ErrorCode, detail: str, status_code: int) -> HTTPException:
-    """A refusal the frontend can localise.
-
-    ``code`` is stable and drives the UI's message catalogue; ``detail`` stays
-    English for operators and logs (review item 22).
-    """
-    return HTTPException(status_code=status_code, detail={"code": str(code), "detail": detail})
 
 
 #: HTTP status for each way a request can be refused.
@@ -584,7 +572,7 @@ async def register(
     email = payload.email.strip()
     if not username:
         raise HTTPException(status_code=400, detail="Username is required.")
-    if not _EMAIL_RE.fullmatch(email):
+    if not EMAIL_RE.fullmatch(email):
         raise HTTPException(status_code=400, detail="Invalid email address.")
     try:
         user = await user_manager.create(
@@ -643,18 +631,17 @@ if github_client_id and github_client_secret:
     from urllib.parse import urlencode
 
     import jwt as _pyjwt
-
-    from httpx_oauth.clients.github import GitHubOAuth2
-    from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallback
-    from httpx_oauth.oauth2 import OAuth2Token
     from fastapi_users.router.oauth import (
         CSRF_TOKEN_COOKIE_NAME,
         CSRF_TOKEN_KEY,
-        OAuth2AuthorizeResponse,
         STATE_TOKEN_AUDIENCE,
+        OAuth2AuthorizeResponse,
         generate_csrf_token,
         generate_state_token,
     )
+    from httpx_oauth.clients.github import GitHubOAuth2
+    from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallback
+    from httpx_oauth.oauth2 import OAuth2Token
 
     _oauth_logger = logging.getLogger("waterexpert.oauth")
 

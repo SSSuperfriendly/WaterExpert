@@ -6,10 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-
 from water_ai.tech_kb.kg_builder import KnowledgeGraphBuilder
 from water_ai.tech_kb.tensor_complete import TensorCompletion
-
 
 DEFAULT_SEED_PATH = Path("data/tech_knowledge_base/tech_quadruples.jsonl")
 DEFAULT_OUTPUT_PATH = Path("data/tech_knowledge_base/applicability_tensor.npz")

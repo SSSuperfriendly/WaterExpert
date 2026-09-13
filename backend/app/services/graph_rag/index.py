@@ -28,9 +28,10 @@ import hashlib
 import json
 import logging
 import threading
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Protocol
+from typing import Any, Protocol
 
 import networkx as nx
 
@@ -192,24 +193,6 @@ class GraphSource:
 
     def degree(self, key: str) -> int:
         return int(self.graph.degree(key)) if key in self.graph else 0
-
-    def relations_for(self, keys: Iterable[tuple[str, str, str]]) -> list[Relation]:
-        out = []
-        for key in keys:
-            position = self.relation_positions.get(key)
-            if position is not None:
-                out.append(self.relations[position])
-        return out
-
-    def edges_between(self, left: str, right: str) -> list[Relation]:
-        """All edges joining two node keys, in either direction."""
-        out: list[Relation] = []
-        for a, b in ((left, right), (right, left)):
-            if not self.graph.has_edge(a, b):
-                continue
-            for data in self.graph[a][b].values():
-                out.append(data["relation"])
-        return out
 
 
 class Retriever(Protocol):

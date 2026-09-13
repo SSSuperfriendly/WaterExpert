@@ -182,8 +182,8 @@ def build_feature_graph_priors(
         description_text = str(getattr(row, "description", ""))
         weight = float(getattr(row, "weight", 1.0) or 1.0)
 
-        source_domains = _infer_domains(" ".join([source_text, description_text]))
-        target_domains = _infer_domains(" ".join([target_text, description_text]))
+        source_domains = _infer_domains(f"{source_text} {description_text}")
+        target_domains = _infer_domains(f"{target_text} {description_text}")
         if not source_domains and not target_domains:
             continue
 
@@ -257,7 +257,7 @@ def build_feature_graph_priors(
 
     summary = {
         "relationships_path": str(relationships_path),
-        "relationship_rows": int(len(relationships_df)),
+        "relationship_rows": len(relationships_df),
         "relationship_rows_with_domain_evidence": int(evidence_counter),
         "feature_count": feature_count,
         "feature_to_domains": feature_to_domains,
@@ -368,7 +368,7 @@ def _build_pcmci_adjacency(
         "tau_max": int(tau_max),
         "pc_alpha": float(pc_alpha),
         "alpha_level": float(alpha_level),
-        "discovered_edge_count": int(len(pcmci_edges)),
+        "discovered_edge_count": len(pcmci_edges),
         "output_csv": str(pcmci_path),
         "top_turbidity_parents": top_turbidity_parents,
         "top_hydrodynamics_edges": top_hydrodynamics_edges,

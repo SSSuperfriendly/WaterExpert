@@ -8,10 +8,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.app.config import get_settings
+from backend.app.schemas import PredictionJobCreateRequest
 from backend.app.services.artifact_repository import ArtifactRepository
 from backend.app.services.runtime_jobs import RuntimeJobService
 from backend.app.services.state_store import SqliteStateStore
-from backend.app.schemas import PredictionJobCreateRequest
 
 
 class FakeProcess:
@@ -245,19 +245,22 @@ class RuntimeJobsTest(unittest.TestCase):
             service = RuntimeJobService(settings, repository, store)
             fake_process = FakeProcess()
 
-            with patch.object(service, "_spawn_process", return_value=fake_process), patch.object(
-                store,
-                "append_job",
-                side_effect=RuntimeError("database unavailable"),
+            with (
+                patch.object(service, "_spawn_process", return_value=fake_process),
+                patch.object(
+                    store,
+                    "append_job",
+                    side_effect=RuntimeError("database unavailable"),
+                ),
+                self.assertRaises(RuntimeError),
             ):
-                with self.assertRaises(RuntimeError):
-                    service.create_prediction_job(
-                        PredictionJobCreateRequest(
-                            model_name="cmfbe_stgcn",
-                            station_code="2586",
-                            use_existing_artifacts=False,
-                        )
+                service.create_prediction_job(
+                    PredictionJobCreateRequest(
+                        model_name="cmfbe_stgcn",
+                        station_code="2586",
+                        use_existing_artifacts=False,
                     )
+                )
 
             self.assertEqual(service._processes, {})
             self.assertTrue(fake_process.terminated)

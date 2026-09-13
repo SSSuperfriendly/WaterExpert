@@ -23,9 +23,9 @@ from pathlib import Path
 import pandas as pd
 
 from backend.app.services.graph_rag import subgraph as subgraph_module
-from backend.app.services.graph_rag.index import load_index, node_key
-from backend.app.services.graph_rag.global_search import attach_source_communities
 from backend.app.services.graph_rag.config import GraphRagConfig
+from backend.app.services.graph_rag.global_search import attach_source_communities
+from backend.app.services.graph_rag.index import load_index, node_key
 from backend.app.services.graph_rag.sources import (
     INHERITED_SOURCE_ID,
     PLATFORM_SOURCE_ID,

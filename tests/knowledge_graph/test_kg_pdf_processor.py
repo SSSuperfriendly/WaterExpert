@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from backend.app.services.kg_pdf_processor import (
+    ExtractionResult,
     clean_inline,
     clean_line,
     extract_sections_from_lines,
@@ -11,7 +12,6 @@ from backend.app.services.kg_pdf_processor import (
     looks_like_caption,
     looks_like_reference_start,
     normalize_for_repeat,
-    ExtractionResult,
 )
 
 

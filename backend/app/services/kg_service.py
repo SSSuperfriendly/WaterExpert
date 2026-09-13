@@ -20,12 +20,12 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 import subprocess
 import sys
 import threading
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -47,6 +47,8 @@ from backend.app.services.kg_pdf_processor import (
     write_log,
     write_outputs,
 )
+from backend.app.status_file import atomic_write_json
+from backend.app.time_utils import utc_now
 
 RUNNING_STATUS = "running"
 COMPLETED_STATUS = "completed"
@@ -78,11 +80,11 @@ KG_INDEX_FILES = {
 __all__ = [
     "ALIASES",
     "DOMAIN_TERMS",
-    "extract_keywords",
     "answer_question",
     "build_context_text",
     "build_extraction_prompt",
     "build_qa_prompt",
+    "extract_keywords",
     "extract_triples",
     "fallback_answer",
     "load_relations",
@@ -95,8 +97,6 @@ __all__ = [
 ]
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +291,7 @@ def _as_float(value: Any) -> float | None:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    return number if number == number else None  # drop NaN
+    return None if math.isnan(number) else number
 
 
 def _threshold_node_payload(node: dict[str, Any]) -> dict[str, Any]:
@@ -819,13 +819,7 @@ class KnowledgeGraphService:
             return None
 
     def _write_status_file(self, path: Path, payload: dict[str, Any]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        tmp_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        tmp_path.replace(path)
+        atomic_write_json(path, payload)
 
     def _load_jobs(self) -> list[dict]:
         path = self.jobs_dir / "jobs.json"
@@ -1048,7 +1042,8 @@ class KnowledgeGraphService:
         canvas to draw what a question just found costs no parquet read — the
         bundle is already in memory and keyed on the files' mtimes.
         """
-        from backend.app.services.graph_rag import pipeline, subgraph as subgraph_module
+        from backend.app.services.graph_rag import pipeline
+        from backend.app.services.graph_rag import subgraph as subgraph_module
         from backend.app.services.graph_rag.config import GraphRagConfig
 
         config = GraphRagConfig.from_env()

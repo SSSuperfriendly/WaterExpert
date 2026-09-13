@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -33,10 +32,10 @@ from backend.app.services.graph_rag.index import (
     IndexBundle,
     Relation,
     community_doc_id,
-    community_lexical_text,
     relation_doc_id,
 )
 from backend.app.services.graph_rag.lexicon import is_junk_entity
+from backend.app.time_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +56,6 @@ COVERAGE_BONUS = 0.5
 COVERAGE_FULL = 3.0
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def detect_communities(
@@ -263,7 +260,7 @@ def write_summaries(path: Path, communities: list[dict[str, Any]], content_hash:
         "content_hash": content_hash,
         "community_count": len(communities),
         "model": _model_name() if any(c.get("summary_mode") == "llm" for c in communities) else "",
-        "generated_at": _utc_now(),
+        "generated_at": utc_now(),
         "summaries": [
             {
                 "community_id": community.get("community_id", ""),
@@ -512,7 +509,7 @@ def write_communities(
     payload = {
         "index_version": COMMUNITIES_INDEX_VERSION,
         "content_hash": content_hash_value,
-        "generated_at": _utc_now(),
+        "generated_at": utc_now(),
         "communities": merged,
     }
     tmp = path.with_suffix(path.suffix + ".tmp")

@@ -26,22 +26,10 @@ export function translateModel(t: T, key: string | undefined | null): string {
   return localized.startsWith("enums.") ? key : localized;
 }
 
-export function translateIndicator(t: T, key: string | undefined | null, fallback?: string): string {
-  if (!key) return fallback ?? "—";
-  const localized = t(`enums.indicator.${key}`);
-  return localized.startsWith("enums.") ? fallback ?? key : localized;
-}
-
 export function translateFactor(t: T, key: string | undefined | null, fallback?: string): string {
   if (!key) return fallback ?? "—";
   const localized = t(`enums.factor.${key}`);
   return localized.startsWith("enums.") ? fallback ?? key : localized;
-}
-
-export function translateProcess(t: T, key: string | undefined | null): string {
-  if (!key) return "—";
-  const localized = t(`enums.process.${key}`);
-  return localized.startsWith("enums.") ? key : localized;
 }
 
 export function translateDomain(t: T, key: string | undefined | null, fallback?: string): string {
@@ -210,10 +198,4 @@ export function riskBadgeVariant(risk: string | undefined | null): "destructive"
   if (risk === "high") return "destructive";
   if (risk === "heightened") return "secondary";
   return "outline";
-}
-
-/** Tailwind text color class for a process contribution direction. */
-export function processDirectionClass(value: number | undefined | null): string {
-  if (value === undefined || value === null) return "text-muted-foreground";
-  return value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
 }

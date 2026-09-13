@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-import uuid
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Optional
 import threading
+import uuid
+from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
+from typing import Any
 
 
 class JobStatus(str, Enum):
@@ -42,7 +42,7 @@ class JobManager:
         state: dict[str, Any],
         episodes: int = 1,
         backend: str = "api",
-        request_id: Optional[str] = None,
+        request_id: str | None = None,
     ) -> str:
         """Create a new job.
         
@@ -67,7 +67,7 @@ class JobManager:
                 "episodes": episodes,
                 "backend": backend,
                 "status": JobStatus.QUEUED,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "started_at": None,
                 "completed_at": None,
                 "result": None,
@@ -76,7 +76,7 @@ class JobManager:
         
         return job_id
 
-    def get_job(self, job_id: str) -> Optional[dict[str, Any]]:
+    def get_job(self, job_id: str) -> dict[str, Any] | None:
         """Get job details.
         
         Args:
@@ -92,8 +92,8 @@ class JobManager:
         self,
         job_id: str,
         status: JobStatus,
-        result: Optional[dict[str, Any]] = None,
-        error: Optional[str] = None,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
     ) -> bool:
         """Update job status.
         
@@ -114,10 +114,10 @@ class JobManager:
             job["status"] = status
             
             if status == JobStatus.RUNNING and job["started_at"] is None:
-                job["started_at"] = datetime.utcnow().isoformat()
+                job["started_at"] = datetime.now(timezone.utc).isoformat()
             
             if status in (JobStatus.COMPLETED, JobStatus.FAILED):
-                job["completed_at"] = datetime.utcnow().isoformat()
+                job["completed_at"] = datetime.now(timezone.utc).isoformat()
             
             if result is not None:
                 job["result"] = result
@@ -131,8 +131,8 @@ class JobManager:
 
     def list_jobs(
         self,
-        status: Optional[JobStatus] = None,
-        scenario: Optional[str] = None,
+        status: JobStatus | None = None,
+        scenario: str | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         """List jobs with optional filtering.
@@ -170,10 +170,10 @@ class JobManager:
             job_file = self.results_dir / f"{job_id}.json"
             with open(job_file, "w", encoding="utf-8") as f:
                 json.dump(job_data, f, indent=2, ensure_ascii=False, default=str)
-        except Exception as e:
+        except (OSError, TypeError) as e:
             print(f"Warning: Failed to save job {job_id}: {e}")
 
-    def get_result(self, job_id: str) -> Optional[dict[str, Any]]:
+    def get_result(self, job_id: str) -> dict[str, Any] | None:
         """Get the final result of a completed job."""
         job = self.get_job(job_id)
         if not job:
@@ -188,7 +188,7 @@ class JobManager:
             if job_id in self.jobs:
                 self.jobs[job_id]["current_stage"] = stage
 
-    def get_stage(self, job_id: str) -> Optional[str]:
+    def get_stage(self, job_id: str) -> str | None:
         """Get the current processing stage for a job."""
         with self.lock:
             job = self.jobs.get(job_id)
@@ -207,7 +207,7 @@ class JobManager:
         """
         from datetime import timedelta
         
-        cutoff_time = datetime.utcnow() - timedelta(days=days)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(days=days)
         
         with self.lock:
             to_remove = []

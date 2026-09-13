@@ -499,14 +499,6 @@ def aggregate_visual_features(assets: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("sample_date").reset_index(drop=True)
 
 
-def _zhangjiabang_only(field_summary: pd.DataFrame) -> pd.DataFrame:
-    if field_summary.empty or "sample_location" not in field_summary:
-        return field_summary
-    mask = field_summary["sample_location"].fillna("").astype(str).str.contains("张家浜", regex=False)
-    filtered = field_summary[mask].copy()
-    return filtered if not filtered.empty else field_summary.copy()
-
-
 def _target_field_only(field_summary: pd.DataFrame) -> pd.DataFrame:
     if field_summary.empty or "sample_location" not in field_summary:
         return field_summary

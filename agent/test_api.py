@@ -117,7 +117,7 @@ def test_generate_strategy():
             status = status_response.json()
             
             if status["status"] == "completed":
-                print(f"✓ Job completed!")
+                print("✓ Job completed!")
                 print(f"  - Strategy: {status['strategy']}")
                 print(f"  - Metrics: {status['metrics']}")
                 return True
@@ -157,7 +157,7 @@ def main():
     
     # Check server connection
     try:
-        response = requests.get(f"{BASE_URL}/health", timeout=2)
+        requests.get(f"{BASE_URL}/health", timeout=2)
         print(f"✓ Connected to API server at {BASE_URL}")
     except requests.exceptions.ConnectionError:
         print(f"✗ Failed to connect to API server at {BASE_URL}")

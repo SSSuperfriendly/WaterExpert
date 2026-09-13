@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 
 class CVaREvaluator:
     def evaluate(self, returns: list[float], alpha: float = 0.05) -> float:

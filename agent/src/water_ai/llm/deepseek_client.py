@@ -14,7 +14,6 @@ class DeepSeekClient:
         self.backend_type = self.config.get("backend", "api")
         self.cache_path = Path(self.config.get("cache_path", "outputs/agents/aquaturb_gpt_traces/cache.json"))
         self.backend = self._build_backend()
-        self._load_cache()
 
     def _build_backend(self) -> Any:
         if self.backend_type == "local":
@@ -28,14 +27,6 @@ class DeepSeekClient:
                 if key not in {"backend", "local", "cache_path"}
             }
         return APIBackend(api_config)
-
-    def _load_cache(self) -> None:
-        if self.cache_path.exists():
-            try:
-                with self.cache_path.open("r", encoding="utf-8") as fh:
-                    json.load(fh)
-            except Exception:
-                pass
 
     def generate(self, prompt: str) -> dict[str, Any]:
         """Generate response with reasoning tokens.

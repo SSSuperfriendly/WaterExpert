@@ -12,12 +12,12 @@ class SafeSACTrainer:
     def train(self, env: Any, episodes: int = 1) -> dict[str, Any]:
         history: list[float] = []
         for _ in range(episodes):
-            state = env.reset()
+            env.reset()
             total_reward = 0.0
             done = False
             while not done:
                 action = {"release_rate": 0.0}
-                state, reward, done, _ = env.step(action)
+                _, reward, done, _ = env.step(action)
                 total_reward += reward
             history.append(total_reward)
         return {"episodes": episodes, "total_reward": sum(history), "history": history}

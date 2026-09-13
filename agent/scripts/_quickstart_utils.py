@@ -6,7 +6,6 @@ from typing import Any
 
 import numpy as np
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 SCENARIOS_DIR = OUTPUTS_DIR / "scenarios"

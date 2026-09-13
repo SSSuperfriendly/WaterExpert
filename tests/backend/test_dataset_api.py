@@ -24,7 +24,6 @@ from backend.app import main
 from backend.app.domain.codes import ErrorCode
 from backend.app.services.dataset_service import DatasetService
 from backend.app.services.state_store import SqliteStateStore
-
 from tests.backend._helpers import admin_auth_guard
 
 
@@ -68,7 +67,7 @@ class DatasetApiTestCase(unittest.TestCase):
         main.dataset_service = self._original_service
         self._tmp.cleanup()
 
-    def _upload(self, payload: bytes = None, filename: str = "wq.csv", **form):
+    def _upload(self, payload: bytes | None = None, filename: str = "wq.csv", **form):
         return self.client.post(
             "/api/v1/datasets",
             data={

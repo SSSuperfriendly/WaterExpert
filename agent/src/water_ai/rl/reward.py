@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 
 class MultiObjectiveReward:
     def compute(self, metrics: dict[str, float], weights: dict[str, float]) -> float:

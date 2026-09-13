@@ -10,6 +10,7 @@ than a flag day.
 
 import asyncio
 import unittest
+from typing import ClassVar
 
 from water_ai.agents import AquaTurbGPTAgent, KnowledgeBaseAgent
 from water_ai.api.routes.explain import generate_explanation
@@ -303,7 +304,7 @@ class CaseBackedParametersTest(unittest.TestCase):
 
     #: Case 003's own condition, so it is the closest match by construction and
     #: the expected parameters are the ones printed in the library.
-    DIANCHI = {"turbidity": 18.7, "flow_rate": 12.5, "rainfall_3d": 8.0}
+    DIANCHI: ClassVar[dict[str, float]] = {"turbidity": 18.7, "flow_rate": 12.5, "rainfall_3d": 8.0}
 
     def test_the_scenario_entries_are_priced_by_a_published_case(self):
         result = KnowledgeBaseAgent().act(

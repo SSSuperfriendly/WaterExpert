@@ -117,9 +117,8 @@ class GetLlmConfigTest(unittest.TestCase):
             self.assertTrue(kg_llm.is_llm_configured())
 
     def test_missing_key_raises_with_every_accepted_name(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(ValueError) as caught:
-                kg_llm.call_llm("prompt")
+        with patch.dict("os.environ", {}, clear=True), self.assertRaises(ValueError) as caught:
+            kg_llm.call_llm("prompt")
         message = str(caught.exception)
         for name in ("WATEREXPERT_KG_LLM_API_KEY", "DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY"):
             self.assertIn(name, message)

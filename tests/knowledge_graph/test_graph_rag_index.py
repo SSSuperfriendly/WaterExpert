@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from backend.app.services.graph_rag import pipeline
 from backend.app.services.graph_rag.config import GraphRagConfig
 from backend.app.services.graph_rag.index import (
     IndexBundle,
@@ -31,7 +32,6 @@ from backend.app.services.graph_rag.index import (
     read_occurrences,
     split_node_key,
 )
-from backend.app.services.graph_rag import pipeline
 from backend.app.services.graph_rag.lexicon import (
     BILINGUAL,
     JUNK_ENTITIES,

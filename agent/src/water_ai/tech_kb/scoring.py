@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-from typing import Any
-
 
 class ApplicabilityScorer:
     def score(self, features: dict[str, float], weights: dict[str, float]) -> float:

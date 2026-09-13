@@ -164,7 +164,6 @@ class CMFBEAgent(BaseAgent):
     ) -> dict[str, Any]:
         # Extract features for process decomposition
         rainfall_3d = state.get("rainfall_3d", 0.0)
-        rainfall_7d = state.get("rainfall_7d", 0.0)
         huangdu_flow = state.get("huangdu_flow_m3s", 0.0)
         turbidity_7d_mean = state.get("turbidity_7d_mean", 0.0)
         chlorophyll = state.get("chlorophyll_a", 0.0)

@@ -142,6 +142,13 @@ def _load_water_daily(
     data_root: str | Path, water_pattern: str
 ) -> tuple[pd.DataFrame, dict[str, Any], Path]:
     water_path = resolve_single_path(data_root, water_pattern)
+    return _load_water_daily_from_path(water_path)
+
+
+def _load_water_daily_from_path(
+    water_path: str | Path,
+) -> tuple[pd.DataFrame, dict[str, Any], Path]:
+    water_path = Path(water_path)
     water_df = pd.read_csv(water_path)
     water_df = water_df[water_df["\u76d1\u6d4b\u65f6\u95f4"].notna()].copy()
     water_df = water_df.rename(columns=WATER_RENAME)
@@ -194,8 +201,8 @@ def _load_water_daily(
         "station_name": station_row.get("station_name"),
         "longitude": float(station_row.get("longitude")),
         "latitude": float(station_row.get("latitude")),
-        "raw_rows": int(len(water_df)),
-        "daily_rows": int(len(water_daily)),
+        "raw_rows": len(water_df),
+        "daily_rows": len(water_daily),
         "start_date": str(water_daily["date"].min().date()),
         "end_date": str(water_daily["date"].max().date()),
     }
@@ -321,8 +328,8 @@ def _merge_optional_hydrodynamics(
     hydro_meta = {
         **hydro_meta,
         "merge_summary": {
-            "rows_before_hydrodynamics_merge": int(len(base_df)),
-            "rows_after_hydrodynamics_merge": int(len(merged_df)),
+            "rows_before_hydrodynamics_merge": len(base_df),
+            "rows_after_hydrodynamics_merge": len(merged_df),
             "natural_overlap_days": int(natural_overlap_days),
             "matched_overlap_days": int(matched_days),
             "coverage_ratio": float(round(matched_days / max(1, natural_overlap_days), 4)),
@@ -361,8 +368,8 @@ def _merge_optional_ndti(
     ndti_meta = {
         **ndti_meta,
         "merge_summary": {
-            "rows_before_ndti_merge": int(len(base_df)),
-            "rows_after_ndti_merge": int(len(merged_df)),
+            "rows_before_ndti_merge": len(base_df),
+            "rows_after_ndti_merge": len(merged_df),
             "matched_days": matched_days,
             "coverage_ratio": float(round(matched_days / max(1, len(base_df)), 4)),
             "available_years": available_years,
@@ -371,6 +378,134 @@ def _merge_optional_ndti(
         },
     }
     return merged_df, ndti_meta
+
+
+def _merge_optional_boundary_labels(
+    base_df: pd.DataFrame,
+    data_root: str | Path,
+    boundary_config: dict[str, Any] | None,
+    output_dir: str | Path,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    config = boundary_config or {}
+    enabled = bool(config.get("enabled", False))
+    if not enabled:
+        return base_df, {"enabled": False, "status": "disabled"}
+
+    source_path = config.get("source_path")
+    if not source_path:
+        return base_df, {"enabled": True, "status": "missing_source_path"}
+
+    resolved_path = Path(source_path)
+    if not resolved_path.is_absolute():
+        direct_candidate = resolved_path
+        data_root_candidate = Path(data_root) / source_path
+        resolved_path = (
+            direct_candidate
+            if direct_candidate.exists()
+            else data_root_candidate
+        )
+    if not resolved_path.exists():
+        return base_df, {
+            "enabled": True,
+            "status": "missing_file",
+            "source_path": str(resolved_path),
+        }
+
+    date_column = str(config.get("date_column", "date"))
+    label_column = str(config.get("label_column", "boundary_label"))
+    ratio_column = str(config.get("extent_ratio_column", "boundary_extent_ratio"))
+    threshold = float(config.get("extent_ratio_threshold", 0.5))
+
+    boundary_df = pd.read_csv(resolved_path).copy()
+    if date_column not in boundary_df.columns:
+        raise KeyError(
+            f"Boundary label file {resolved_path} is missing required date column {date_column!r}."
+        )
+    boundary_df["date"] = pd.to_datetime(boundary_df[date_column], errors="coerce").dt.floor("D")
+    boundary_df = boundary_df.dropna(subset=["date"])
+
+    if label_column not in boundary_df.columns and ratio_column in boundary_df.columns:
+        ratio_values = pd.to_numeric(boundary_df[ratio_column], errors="coerce")
+        boundary_df[label_column] = np.where(ratio_values >= threshold, 1.0, 0.0)
+
+    if label_column not in boundary_df.columns:
+        raise KeyError(
+            f"Boundary label file {resolved_path} must provide {label_column!r} or {ratio_column!r}."
+        )
+
+    boundary_df[label_column] = pd.to_numeric(boundary_df[label_column], errors="coerce")
+    boundary_df["boundary_label_available"] = boundary_df[label_column].notna().astype(float)
+
+    keep_columns = ["date", label_column, "boundary_label_available"]
+    for optional_column in [
+        ratio_column,
+        "label_source",
+        "label_confidence",
+        "boundary_zone_name",
+        "notes",
+    ]:
+        if optional_column in boundary_df.columns and optional_column not in keep_columns:
+            keep_columns.append(optional_column)
+
+    merged_df = base_df.merge(boundary_df[keep_columns], on="date", how="left")
+    if label_column != "boundary_label":
+        merged_df = merged_df.rename(columns={label_column: "boundary_label"})
+    if ratio_column in merged_df.columns and ratio_column != "boundary_extent_ratio":
+        merged_df = merged_df.rename(columns={ratio_column: "boundary_extent_ratio"})
+    merged_df["boundary_label_available"] = (
+        pd.to_numeric(merged_df["boundary_label_available"], errors="coerce")
+        .fillna(0.0)
+        .clip(lower=0.0, upper=1.0)
+    )
+    if "boundary_label" in merged_df.columns:
+        merged_df["boundary_label"] = pd.to_numeric(
+            merged_df["boundary_label"], errors="coerce"
+        )
+    if "boundary_extent_ratio" in merged_df.columns:
+        merged_df["boundary_extent_ratio"] = pd.to_numeric(
+            merged_df["boundary_extent_ratio"], errors="coerce"
+        )
+    if "label_confidence" in merged_df.columns:
+        merged_df["label_confidence"] = pd.to_numeric(
+            merged_df["label_confidence"], errors="coerce"
+        )
+
+    boundary_output_dir = ensure_dir(Path(output_dir) / "boundary")
+    available_mask = merged_df["boundary_label_available"].fillna(0.0) > 0.0
+    merged_df.loc[
+        available_mask,
+        [
+            "date",
+            "boundary_label",
+            "boundary_label_available",
+            *[
+                column
+                for column in [
+                    "boundary_extent_ratio",
+                    "label_source",
+                    "label_confidence",
+                    "boundary_zone_name",
+                ]
+                if column in merged_df.columns
+            ],
+        ],
+    ].to_csv(
+        boundary_output_dir / "merged_boundary_labels.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+
+    return merged_df, {
+        "enabled": True,
+        "status": "loaded",
+        "source_path": str(resolved_path),
+        "labeled_days": int(available_mask.sum()),
+        "positive_days": int(
+            merged_df.loc[available_mask, "boundary_label"].fillna(0.0).sum()
+        ),
+        "label_column": "boundary_label",
+        "extent_ratio_threshold": threshold,
+    }
 
 
 def _engineer_features(merged_df: pd.DataFrame) -> pd.DataFrame:
@@ -503,12 +638,20 @@ def build_multimodal_dataset(
     ndti_enabled: bool = False,
     ndti_dir: str | Path | None = None,
     ndti_output_dir: str | Path | None = None,
+    boundary_config: dict[str, Any] | None = None,
+    water_path: str | Path | None = None,
+    weather_path: str | Path | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     output_dir = ensure_dir(output_dir)
     intermediate_dir = ensure_dir(Path(output_dir) / "intermediate")
 
-    water_daily, station_meta, water_path = _load_water_daily(data_root, water_pattern)
-    weather_df = _load_weather_daily(Path(data_root) / weather_filename)
+    if water_path is not None:
+        water_daily, station_meta, water_path = _load_water_daily_from_path(water_path)
+    else:
+        water_daily, station_meta, water_path = _load_water_daily(data_root, water_pattern)
+    weather_df = _load_weather_daily(
+        Path(weather_path) if weather_path is not None else Path(data_root) / weather_filename
+    )
     selected_weather, weather_meta = _select_weather_station(weather_df, water_daily, station_meta)
 
     merged_df = pd.merge(water_daily, selected_weather, on="date", how="inner")
@@ -530,20 +673,52 @@ def build_multimodal_dataset(
         ndti_dir=ndti_dir,
         ndti_output_dir=ndti_output_dir,
     )
+    merged_df, boundary_meta = _merge_optional_boundary_labels(
+        base_df=merged_df,
+        data_root=data_root,
+        boundary_config=boundary_config,
+        output_dir=output_dir,
+    )
     merged_df = _engineer_features(merged_df)
 
+    boundary_metadata_columns = [
+        column
+        for column in [
+            "boundary_label",
+            "boundary_label_available",
+            "boundary_extent_ratio",
+            "label_confidence",
+        ]
+        if column in merged_df.columns
+    ]
     numeric_columns = merged_df.select_dtypes(include=[np.number]).columns.tolist()
     drop_columns = []
     for column in numeric_columns:
+        if column in boundary_metadata_columns:
+            continue
         missing_ratio = float(merged_df[column].isna().mean())
         if missing_ratio >= 0.85:
             drop_columns.append(column)
     merged_df = merged_df.drop(columns=drop_columns)
 
     numeric_columns = merged_df.select_dtypes(include=[np.number]).columns.tolist()
-    merged_df[numeric_columns] = (
-        merged_df[numeric_columns].interpolate(limit_direction="both").ffill().bfill()
-    )
+    boundary_metadata_columns = [column for column in boundary_metadata_columns if column in numeric_columns]
+    interpolated_columns = [
+        column for column in numeric_columns if column not in boundary_metadata_columns
+    ]
+    if interpolated_columns:
+        merged_df[interpolated_columns] = (
+            merged_df[interpolated_columns]
+            .interpolate(limit_direction="both")
+            .ffill()
+            .bfill()
+        )
+    if "boundary_label_available" in merged_df.columns:
+        merged_df["boundary_label_available"] = (
+            pd.to_numeric(merged_df["boundary_label_available"], errors="coerce")
+            .fillna(0.0)
+            .clip(lower=0.0, upper=1.0)
+        )
 
     feature_columns = []
     for column in BASE_FEATURE_COLUMNS:
@@ -564,14 +739,17 @@ def build_multimodal_dataset(
 
     summary = {
         "water_source_path": str(water_path),
-        "weather_source_path": str(Path(data_root) / weather_filename),
+        "weather_source_path": str(
+            Path(weather_path) if weather_path is not None else Path(data_root) / weather_filename
+        ),
         "hydrodynamics_enabled": hydrodynamics_enabled,
         "hydrodynamics": hydrodynamics_meta,
         "ndti_enabled": ndti_enabled,
         "ndti": ndti_meta,
+        "boundary_labels": boundary_meta,
         "water_station": station_meta,
         "selected_weather_station": weather_meta,
-        "rows_after_merge": int(len(merged_df)),
+        "rows_after_merge": len(merged_df),
         "date_range": {
             "start": str(merged_df["date"].min().date()),
             "end": str(merged_df["date"].max().date()),
@@ -582,10 +760,18 @@ def build_multimodal_dataset(
         },
         "feature_columns": feature_columns,
         "dropped_high_missing_columns": drop_columns,
-        "targets": ["turbidity", "clearness_proxy"],
+        "targets": (
+            ["turbidity", "clearness_proxy", "boundary_label"]
+            if boundary_meta.get("status") == "loaded"
+            else ["turbidity", "clearness_proxy"]
+        ),
         "notes": {
             "current_scope": "single-station multimodal daily prototype",
-            "boundary_detection_head": "reserved only, no raster training data available",
+            "boundary_detection_head": (
+                "supervision-ready interface implemented; boundary labels loaded for training"
+                if boundary_meta.get("status") == "loaded"
+                else "supervision-ready interface implemented, waiting for raster/UAV boundary labels"
+            ),
             "spatial_graph": (
                 "implemented as a feature factor graph because only one numeric "
                 "water-quality station is currently available"

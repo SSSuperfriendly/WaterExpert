@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .message_bus import MessageBus
-from .kpi import KPICalculator
 from .feedback_loop import FeedbackLoop
+from .kpi import KPICalculator
+from .message_bus import MessageBus
 
 
 class Orchestrator:

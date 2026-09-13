@@ -6,10 +6,10 @@ from .s3_algae_bloom import ScenarioAlgaeBloom
 from .s4_chronic_combo import ScenarioChronicCombo
 
 __all__ = [
+    "ScenarioAlgaeBloom",
     "ScenarioBase",
-    "ScenarioRouter",
+    "ScenarioChronicCombo",
     "ScenarioExternalInput",
     "ScenarioInternalRelease",
-    "ScenarioAlgaeBloom",
-    "ScenarioChronicCombo",
+    "ScenarioRouter",
 ]

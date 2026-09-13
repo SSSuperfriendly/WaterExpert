@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import sys
@@ -11,14 +12,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from water_ai.orchestrator.kpi import KPICalculator
-
 
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 SCENARIO_DIR = OUTPUT_DIR / "scenarios"
@@ -1234,7 +1233,7 @@ def stability_color(value: float) -> str:
         (0.5, (240, 195, 106)),
         (1.0, (47, 156, 149)),
     ]
-    for (left_pos, left_color), (right_pos, right_color) in zip(stops, stops[1:]):
+    for (left_pos, left_color), (right_pos, right_color) in itertools.pairwise(stops):
         if value <= right_pos:
             ratio = (value - left_pos) / (right_pos - left_pos)
             rgb = tuple(

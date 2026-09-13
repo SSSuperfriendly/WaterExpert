@@ -19,16 +19,12 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from backend.app.config import Settings
 from backend.app.services.state_store import JOBS_TABLE, SqliteStateStore
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+from backend.app.time_utils import utc_now
 
 
 def _free_disk_bytes(path: Path) -> int:

@@ -13,13 +13,13 @@ always exactly one published model per key.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
 from backend.app.domain.codes import ErrorCode, ModelStage
 from backend.app.services.state_store import MODEL_REGISTRY_TABLE, SqliteStateStore
 from backend.app.services.upload_guard import UploadRejected
+from backend.app.time_utils import utc_now
 
 ID_LENGTH = 12
 
@@ -33,8 +33,6 @@ MODEL_TRANSITIONS: dict[str, set[str]] = {
 }
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class ModelNotFound(KeyError):

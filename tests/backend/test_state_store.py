@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-import sqlite3
 
 from backend.app.services.state_store import (
     CASES_TABLE,

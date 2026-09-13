@@ -9,8 +9,8 @@ tuning it does not care about. A standalone frozen dataclass with an
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from typing import Mapping
 
 PREFIX = "WATEREXPERT_GRAPH_RAG_"
 
@@ -94,7 +94,7 @@ class GraphRagConfig:
     warmup_on_startup: bool = True
 
     @classmethod
-    def from_env(cls, environ: Mapping[str, str] | None = None) -> "GraphRagConfig":
+    def from_env(cls, environ: Mapping[str, str] | None = None) -> GraphRagConfig:
         """Build a config from the environment.
 
         ``environ`` exists so tests can pass a mapping instead of monkeypatching
@@ -196,7 +196,7 @@ class GraphRagConfig:
             warmup_on_startup=as_bool("WARMUP", True),
         )
 
-    def with_overrides(self, **changes: object) -> "GraphRagConfig":
+    def with_overrides(self, **changes: object) -> GraphRagConfig:
         """Copy with ``changes`` applied — keeps the frozen dataclass ergonomic."""
         return replace(self, **changes)
 

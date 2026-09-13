@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,10 +14,10 @@ load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .routes import health, strategy, scenarios, explain
+from .routes import explain, health, scenarios, strategy
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -77,7 +77,7 @@ def create_app() -> FastAPI:
             "name": "Water AI Multi-Agent System",
             "version": "1.0.0",
             "status": "ready",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "documentation": "/docs",
             "dashboard": "/",
             "health": "/api/health",
@@ -96,7 +96,7 @@ def create_app() -> FastAPI:
             content={
                 "error": exc.detail,
                 "status_code": exc.status_code,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
     
@@ -109,7 +109,7 @@ def create_app() -> FastAPI:
                 "error": str(exc),
                 "status_code": 500,
                 "message": "Internal server error",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
     

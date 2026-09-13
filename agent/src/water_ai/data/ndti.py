@@ -157,7 +157,7 @@ def build_ndti_annual_station_proxy(
         "longitude": float(longitude),
         "latitude": float(latitude),
         "available_years": annual_df["year"].astype(int).tolist(),
-        "year_count": int(len(annual_df)),
+        "year_count": len(annual_df),
         "window_radius": int(window_radius),
         "raster_summaries": raster_summaries,
     }
@@ -209,7 +209,7 @@ def load_or_build_ndti_daily_proxy(
     summary = {
         **summary,
         "daily_proxy_csv": str(daily_path),
-        "daily_rows": int(len(daily_df)),
+        "daily_rows": len(daily_df),
     }
     save_json(summary, Path(output_dir) / DEFAULT_NDTI_SUMMARY)
     return daily_df, summary

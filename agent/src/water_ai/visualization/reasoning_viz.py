@@ -6,7 +6,6 @@ to show the LLM's "thinking process" in an interactive format.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +13,7 @@ from typing import Any
 class ReasoningVisualizer:
     """Generate interactive visualization of DeepSeek reasoning tokens."""
 
-    def __init__(self, output_dir: Path = None) -> None:
+    def __init__(self, output_dir: Path | None = None) -> None:
         self.output_dir = Path(output_dir or "outputs/visualization")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 

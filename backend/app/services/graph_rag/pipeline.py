@@ -63,8 +63,8 @@ from backend.app.services.graph_rag.router import (
 )
 from backend.app.services.graph_rag.sources import (
     INHERITED_SOURCE_ID,
-    PLATFORM_SOURCE_ID,
     PLATFORM_RELATIONS_FILE,
+    PLATFORM_SOURCE_ID,
     resolve_sources,
 )
 

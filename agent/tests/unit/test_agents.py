@@ -2,12 +2,11 @@ import unittest
 from pathlib import Path
 
 import torch
-
 from water_ai.agents import (
-    MSCIMAgent,
+    AquaTurbGPTAgent,
     CMFBEAgent,
     KnowledgeBaseAgent,
-    AquaTurbGPTAgent,
+    MSCIMAgent,
     RLTGRRAgent,
     SafetyAgent,
 )

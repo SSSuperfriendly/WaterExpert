@@ -36,7 +36,9 @@ question.
 
 from __future__ import annotations
 
+import itertools
 import json
+import math
 import statistics
 import unittest
 from pathlib import Path
@@ -142,14 +144,14 @@ def chain_hit(chains: list[list[str]], retrieved: list[tuple[str, str, str]]) ->
     edges |= {(right, left) for left, _relation, right in retrieved}
     hits = 0
     for chain in chains:
-        pairs = list(zip(chain, chain[1:]))
+        pairs = list(itertools.pairwise(chain))
         if pairs and all(pair in edges for pair in pairs):
             hits += 1
     return hits / len(chains)
 
 
 def mean(values: list[float]) -> float:
-    usable = [value for value in values if value == value]  # drop NaN
+    usable = [value for value in values if not math.isnan(value)]
     return statistics.fmean(usable) if usable else float("nan")
 
 
@@ -540,4 +542,4 @@ def rows_ordered(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def fmt(value: float) -> str:
-    return "  —  " if value != value else f"{value:.3f}"
+    return "  —  " if math.isnan(value) else f"{value:.3f}"

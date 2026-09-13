@@ -43,7 +43,6 @@ from backend.app.services.model_service import ModelService
 from backend.app.services.report_service import ReportService
 from backend.app.services.security import AuditLogger
 from backend.app.services.state_store import SqliteStateStore
-
 from tests.backend.test_report_builder import FakeRepository
 
 

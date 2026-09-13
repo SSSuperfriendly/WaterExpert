@@ -24,9 +24,15 @@ the bug this file exists to end.
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
-from backend.app.services.graph_rag.index import GraphSource, IndexBundle, node_key, split_node_key
+from backend.app.services.graph_rag.index import (
+    GraphSource,
+    IndexBundle,
+    node_key,
+    split_node_key,
+)
 
 #: A hard ceiling on what is drawn. ``TURBIDITY`` alone has 593 edges in the
 #: inherited graph, and one hop from a hub entity would otherwise pull a

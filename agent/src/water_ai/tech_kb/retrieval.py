@@ -38,7 +38,7 @@ class TechRetrieval:
             return None
         try:
             return np.load(self.embedding_path)
-        except Exception:
+        except (OSError, ValueError):
             return None
 
     def retrieve(self, query_vector: np.ndarray, top_k: int = 3) -> list[dict[str, Any]]:

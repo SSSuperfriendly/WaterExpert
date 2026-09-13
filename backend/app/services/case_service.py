@@ -20,7 +20,6 @@ from?" always has an answer.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -30,6 +29,7 @@ from backend.app.domain.codes import CaseStatus, ErrorCode, JobStatus
 from backend.app.services.dataset_service import DatasetNotFound, DatasetService
 from backend.app.services.state_store import CASES_TABLE, SqliteStateStore
 from backend.app.services.upload_guard import UploadRejected
+from backend.app.time_utils import utc_now
 
 ID_LENGTH = 12
 #: Terminal job states that leave a case unable to serve results.
@@ -41,8 +41,6 @@ FAILED_JOB_STATUSES = {
 }
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class CaseNotFound(KeyError):

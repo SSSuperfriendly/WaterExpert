@@ -10,11 +10,10 @@ Generates markdown reports with:
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
-import json
-from datetime import datetime
 
 
 class ReportGenerator:
@@ -54,7 +53,7 @@ class ReportGenerator:
         # Build report content
         report_lines = []
         report_lines.append(f"# WaterExpert 场景分析报告：{self._scenario_title(scenario_key)}\n")
-        report_lines.append(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        report_lines.append(f"生成时间：{datetime.now(timezone.utc).astimezone().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
         # Section 1: 场景概述
         report_lines.extend(self._generate_scenario_overview(scenario_key, scenario_data))
@@ -92,7 +91,7 @@ class ReportGenerator:
         """
         report_lines = []
         report_lines.append("# WaterExpert 多场景协同治理总结报告\n")
-        report_lines.append(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        report_lines.append(f"生成时间：{datetime.now(timezone.utc).astimezone().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
         # Cross-scenario comparison
         report_lines.append("## 1. 四场景性能对比\n")

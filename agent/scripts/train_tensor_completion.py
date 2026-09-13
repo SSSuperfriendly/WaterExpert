@@ -5,7 +5,6 @@ from pathlib import Path
 
 from water_ai.tech_kb.tensor_complete import TensorCompletion
 
-
 DEFAULT_TENSOR_PATH = Path("data/tech_knowledge_base/applicability_tensor.npz")
 
 

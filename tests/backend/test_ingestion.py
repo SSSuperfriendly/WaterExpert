@@ -14,7 +14,10 @@ from backend.app.services.ingestion import (
     persist_result,
     run_ingestion,
 )
-from backend.app.services.ingestion.schema_registry import extract_unit, normalize_column
+from backend.app.services.ingestion.schema_registry import (
+    extract_unit,
+    normalize_column,
+)
 
 
 def _write_csv(root: Path, name: str, rows: list[dict[str, object]]) -> Path:

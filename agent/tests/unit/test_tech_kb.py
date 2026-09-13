@@ -3,7 +3,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
-
 from water_ai.tech_kb.kg_builder import KnowledgeGraphBuilder
 from water_ai.tech_kb.tensor_complete import TensorCompletion, low_rank_complete
 

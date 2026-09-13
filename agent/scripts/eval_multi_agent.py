@@ -1,5 +1,5 @@
-from water_ai.orchestrator.coordinator import Orchestrator
 from water_ai.agents import AquaTurbGPTAgent, RLTGRRAgent, SafetyAgent
+from water_ai.orchestrator.coordinator import Orchestrator
 
 
 def main() -> None:

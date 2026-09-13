@@ -44,9 +44,8 @@ class ArtifactIoTest(unittest.TestCase):
                 read_json(path)
 
     def test_read_json_propagates_file_not_found(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            with self.assertRaises(FileNotFoundError):
-                read_json(Path(tmp_dir) / "missing.json")
+        with tempfile.TemporaryDirectory() as tmp_dir, self.assertRaises(FileNotFoundError):
+            read_json(Path(tmp_dir) / "missing.json")
 
     def test_read_csv_handles_bom(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -57,9 +56,8 @@ class ArtifactIoTest(unittest.TestCase):
             self.assertEqual(len(frame), 1)
 
     def test_read_csv_propagates_file_not_found(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            with self.assertRaises(FileNotFoundError):
-                read_csv(Path(tmp_dir) / "missing.csv")
+        with tempfile.TemporaryDirectory() as tmp_dir, self.assertRaises(FileNotFoundError):
+            read_csv(Path(tmp_dir) / "missing.csv")
 
     def test_iter_csv_rows_normalizes_missing_to_empty_string(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

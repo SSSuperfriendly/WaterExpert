@@ -22,6 +22,7 @@ from backend.app.domain.codes import ErrorCode, ReportStatus
 from backend.app.services.report_builder import write_report
 from backend.app.services.state_store import REPORTS_TABLE, SqliteStateStore
 from backend.app.services.upload_guard import UploadRejected
+from backend.app.time_utils import utc_now
 
 ID_LENGTH = 12
 
@@ -35,8 +36,6 @@ REPORT_TRANSITIONS: dict[str, set[str]] = {
 }
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class ReportNotFound(KeyError):

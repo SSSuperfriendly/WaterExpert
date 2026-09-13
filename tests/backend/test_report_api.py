@@ -9,7 +9,6 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.app import main as main_module
-
 from tests.backend._helpers import admin_auth_guard
 from tests.backend.test_report_builder import FakeRepository
 

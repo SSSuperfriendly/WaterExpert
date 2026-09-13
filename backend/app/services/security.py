@@ -14,7 +14,6 @@ Neither imports the FastAPI app, so both are testable in isolation.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import Request
@@ -22,19 +21,7 @@ from fastapi import Request
 from backend.app.domain.codes import ErrorCode
 from backend.app.domain.roles import Permission, parse_role, role_has_permission
 from backend.app.services.state_store import AUDIT_EVENTS_TABLE, SqliteStateStore
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-class PermissionDenied(ValueError):
-    """The caller's role may not perform this action."""
-
-    def __init__(self, permission: Permission, role: str) -> None:
-        super().__init__(f"Role '{role}' lacks permission '{permission}'.")
-        self.permission = permission
-        self.role = role
+from backend.app.time_utils import utc_now
 
 
 class AuditLogger:

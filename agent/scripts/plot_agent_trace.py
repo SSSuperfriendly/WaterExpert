@@ -10,7 +10,12 @@ SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
-from _quickstart_utils import ensure_parent, first_episode, load_scenario_data, scenario_key
+from _quickstart_utils import (
+    ensure_parent,
+    first_episode,
+    load_scenario_data,
+    scenario_key,
+)
 
 
 def parse_args() -> argparse.Namespace:

@@ -251,7 +251,8 @@ class TimeSeriesCheckpointRunner:
                     day_angle = 2.0 * math.pi * float(date.dayofyear) / 366.0
                     window[offset, self.feature_index["dayofyear_sin"]] = math.sin(day_angle)
                     window[offset, self.feature_index["dayofyear_cos"]] = math.cos(day_angle)
-            except Exception:
+            except (TypeError, ValueError):
+                # A date we cannot parse leaves the day-of-year features unset.
                 pass
         return window
 

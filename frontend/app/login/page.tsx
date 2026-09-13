@@ -71,6 +71,10 @@ export default function LoginPage() {
       // sign-in). A hard replace gives one clean history entry for the app root.
       window.location.replace("/ui/");
     } else {
+      // The OAuth error is external state read once from the callback URL;
+      // there is no originating event, and a lazy initialiser would desync SSR
+      // hydration, so the one-shot read stays here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(
         error === "oauth_failed" ? t("auth.oauthFailed") : t("auth.loginFailed")
       );

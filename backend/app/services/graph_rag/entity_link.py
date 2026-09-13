@@ -585,9 +585,3 @@ class EntityLinker:
             max_seeds=self.config.max_seeds,
             min_score=self.config.seed_min_score,
         )
-
-    def seeds_by_source(self, seeds: list[SeedLink]) -> dict[str, list[SeedLink]]:
-        grouped: dict[str, list[SeedLink]] = {}
-        for seed in seeds:
-            grouped.setdefault(seed.source_id, []).append(seed)
-        return grouped

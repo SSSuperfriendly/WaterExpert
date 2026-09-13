@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 REQUIRED_COLUMNS = {
     "water": {"date", "station_code", "turbidity"},
     "weather": {"Year", "Mon", "Day"},

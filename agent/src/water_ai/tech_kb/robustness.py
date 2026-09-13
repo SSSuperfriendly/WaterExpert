@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 
 class RobustnessEvaluator:
     def evaluate(self, baseline: dict[str, float], perturbed: dict[str, float]) -> dict[str, float]:

@@ -17,7 +17,7 @@ class ResponseCache:
             try:
                 with self.path.open("r", encoding="utf-8") as fh:
                     self._cache = json.load(fh)
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 self._cache = {}
 
     def get(self, prompt: str) -> Any:

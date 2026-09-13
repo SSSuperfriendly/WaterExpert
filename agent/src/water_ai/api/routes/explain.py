@@ -89,7 +89,6 @@ def _generate_explanation(scenario: str, state: dict, best_cases: list[dict]) ->
             lines.append(f"依据：{field_name}={val}{unit}，超过阈值{threshold}{unit}，触发该场景识别。")
 
     turb = state.get("turbidity", 0)
-    flow = state.get("flow_rate", 0)
     rain = state.get("rainfall_3d", 0)
 
     if scenario == "s1_external_input":

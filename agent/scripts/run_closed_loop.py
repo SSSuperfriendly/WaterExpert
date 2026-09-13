@@ -11,17 +11,12 @@ Runs for multiple episodes and generates scenario reports.
 """
 
 import argparse
-import json
-from pathlib import Path
-from typing import Any
-
-import pandas as pd
 
 from water_ai.agents import (
-    MSCIMAgent,
+    AquaTurbGPTAgent,
     CMFBEAgent,
     KnowledgeBaseAgent,
-    AquaTurbGPTAgent,
+    MSCIMAgent,
     RLTGRRAgent,
     SafetyAgent,
 )
@@ -66,7 +61,7 @@ def main(scenario: str = "1", episodes: int = 10, backend: str = "api") -> None:
             "SafetyAgent": SafetyAgent(),
         }
         print(f"     ✓ Initialized {len(agents)} agents")
-        for name, agent in agents.items():
+        for name in agents:
             print(f"       - {name}")
     except Exception as e:
         print(f"     ✗ Failed to initialize agents: {e}")
@@ -162,7 +157,7 @@ def main(scenario: str = "1", episodes: int = 10, backend: str = "api") -> None:
         all_results[scenario_key] = scenario_results
 
     # Generate reports
-    print(f"\n[5/6] Generating reports...")
+    print("\n[5/6] Generating reports...")
     try:
         report_gen = ReportGenerator(output_base="outputs/scenarios")
 
@@ -183,7 +178,7 @@ def main(scenario: str = "1", episodes: int = 10, backend: str = "api") -> None:
         import traceback
         traceback.print_exc()
 
-    print(f"\n[6/6] Results summary:")
+    print("\n[6/6] Results summary:")
     for scenario_key, scenario_data in all_results.items():
         metrics = scenario_data.get("metrics_summary", {})
         print(f"\n  {scenario_key}:")

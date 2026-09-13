@@ -20,8 +20,8 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from water_ai.visualization.reasoning_viz import ReasoningVisualizer
 from water_ai.agents.aquaturb_gpt_agent import AquaTurbGPTAgent
+from water_ai.visualization.reasoning_viz import ReasoningVisualizer
 
 
 def demo_reasoning_visualization():
@@ -41,8 +41,8 @@ def demo_reasoning_visualization():
         backend_mode = "fallback"
 
     # Initialize visualizer
-    viz = ReasoningVisualizer(output_dir="outputs/visualization")
-    print(f"✓ Visualization output directory: outputs/visualization/")
+    ReasoningVisualizer(output_dir="outputs/visualization")
+    print("✓ Visualization output directory: outputs/visualization/")
 
     # Initialize agent with API backend
     agent_config = {
@@ -129,7 +129,7 @@ def demo_reasoning_visualization():
             print(f"  ✓ Reasoning visualization generated: {viz_path}")
             generated_files.append(viz_path)
         else:
-            print(f"  ⚠ No reasoning tokens captured (using fallback strategy)")
+            print("  ⚠ No reasoning tokens captured (using fallback strategy)")
 
         # Show strategy summary
         print(f"  - Confidence: {strategy.get('scenario_confidence', 0):.1%}")

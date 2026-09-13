@@ -269,7 +269,7 @@ INTENT_TYPE_CUES: list[tuple[tuple[str, ...], str | None]] = [
 #: seed a traversal from.
 STOPWORDS: frozenset[str] = frozenset({
     "the", "and", "for", "with", "from", "that", "this", "were", "was", "are",
-    "was", "has", "have", "been", "which", "than", "then", "also", "such",
+    "has", "have", "been", "which", "than", "then", "also", "such",
     "other", "into", "during", "between", "within", "using", "used", "use",
     "can", "may", "not", "but", "its", "their", "these", "those", "more",
     "most", "some", "any", "all", "both", "each", "only", "over", "under",

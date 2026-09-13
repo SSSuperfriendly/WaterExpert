@@ -53,14 +53,13 @@ from backend.app.services.upload_guard import (
     safe_filename,
     store_upload,
 )
+from backend.app.time_utils import utc_now
 
 ID_LENGTH = 12
 PREVIEW_DEFAULT_LIMIT = 50
 PREVIEW_MAX_LIMIT = 500
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _new_id() -> str:

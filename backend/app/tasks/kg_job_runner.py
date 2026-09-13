@@ -24,11 +24,16 @@ import argparse
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from backend.app.services.kg_service import extract_triples, save_kg, split_text_with_spans
+from backend.app.services.kg_service import (
+    extract_triples,
+    save_kg,
+    split_text_with_spans,
+)
+from backend.app.status_file import read_status, update_status, write_status
+from backend.app.time_utils import utc_now
 
 RUNNING_STATUS = "running"
 COMPLETED_STATUS = "completed"
@@ -42,8 +47,6 @@ EXTRACTION_CEILING = 90
 logger = logging.getLogger(__name__)
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 @dataclass(frozen=True)
@@ -81,36 +84,6 @@ class TextChunk:
             "char_end": self.char_end,
             "text": self.text,
         }
-
-
-def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    tmp_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    tmp_path.replace(path)
-
-
-def read_status(status_file: Path) -> dict[str, Any]:
-    if not status_file.exists():
-        return {}
-    try:
-        return json.loads(status_file.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001 — a corrupt/partial status file is treated as "no status yet"
-        return {}
-
-
-def write_status(status_file: Path, payload: dict[str, Any]) -> dict[str, Any]:
-    atomic_write_json(status_file, payload)
-    return payload
-
-
-def update_status(status_file: Path, **updates: Any) -> dict[str, Any]:
-    current = read_status(status_file)
-    current.update(updates)
-    return write_status(status_file, current)
 
 
 def parse_args() -> KgJobRunnerArgs:
@@ -193,7 +166,9 @@ def build_communities(args: KgJobRunnerArgs) -> int:
     """
     from backend.app.services import kg_llm
     from backend.app.services.graph_rag.config import GraphRagConfig
-    from backend.app.services.graph_rag.global_search import materialise_source_communities
+    from backend.app.services.graph_rag.global_search import (
+        materialise_source_communities,
+    )
     from backend.app.services.graph_rag.sources import load_platform_source
 
     config = GraphRagConfig.from_env()

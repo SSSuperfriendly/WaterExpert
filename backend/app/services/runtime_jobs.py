@@ -25,6 +25,8 @@ from backend.app.schemas import PredictionJobCreateRequest
 from backend.app.services.artifact_repository import ArtifactRepository
 from backend.app.services.state_store import JOBS_TABLE, SqliteStateStore
 from backend.app.services.task_progress import task_view
+from backend.app.status_file import atomic_write_json
+from backend.app.time_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +96,6 @@ class JobRuntimePaths:
 
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class RuntimeJobService:
@@ -937,13 +937,7 @@ class RuntimeJobService:
         return models
 
     def _write_status_file(self, path: Path, payload: dict[str, Any]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        tmp_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        tmp_path.replace(path)
+        atomic_write_json(path, payload)
 
     def _read_status_file(self, path: Path) -> dict[str, Any] | None:
         if not path.exists():

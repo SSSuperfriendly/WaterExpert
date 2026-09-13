@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+
+from backend.app.status_file import read_status, update_status, write_status
+from backend.app.time_utils import utc_now
 
 RUNNING_STATUS = "running"
 COMPLETED_STATUS = "completed"
@@ -50,18 +50,6 @@ REQUIRED_OUTPUTS: tuple[str, ...] = (
 )
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    tmp_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    tmp_path.replace(path)
 
 
 def parse_args() -> JobRunnerArgs:
@@ -77,26 +65,6 @@ def parse_args() -> JobRunnerArgs:
         status_file=Path(parsed.status_file).resolve(),
         artifact_root=Path(parsed.artifact_root).resolve(),
     )
-
-
-def read_status(status_file: Path) -> dict[str, Any]:
-    if not status_file.exists():
-        return {}
-    try:
-        return json.loads(status_file.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001 — a corrupt/partial status file is treated as "no status yet"
-        return {}
-
-
-def write_status(status_file: Path, payload: dict[str, Any]) -> dict[str, Any]:
-    atomic_write_json(status_file, payload)
-    return payload
-
-
-def update_status(status_file: Path, **updates: Any) -> dict[str, Any]:
-    current = read_status(status_file)
-    current.update(updates)
-    return write_status(status_file, current)
 
 
 def pipeline_path(runtime_root: Path) -> Path:
