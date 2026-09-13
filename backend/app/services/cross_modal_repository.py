@@ -42,15 +42,23 @@ class CrossModalRepository:
 
         preview_assets = []
         for row in assets.head(12).to_dict(orient="records"):
+            representative_frames = [
+                self._media_url(path.strip())
+                for path in str(row.get("representative_frame_paths") or "").split(";")
+                if path.strip()
+            ]
             preview_assets.append(
                 {
+                    "asset_id": row.get("asset_id", ""),
                     "sample_date": row.get("sample_date", ""),
                     "sample_site_role": row.get("sample_site_role", ""),
                     "media_type": row.get("media_type", ""),
                     "file_name": row.get("file_name", ""),
                     "file_size_bytes": row.get("file_size_bytes"),
                     "preview_url": self._media_url(row.get("preview_path")),
+                    "representative_frames": representative_frames,
                     "frame_count": row.get("frame_count"),
+                    "fps": row.get("fps"),
                     "duration_seconds": row.get("duration_seconds"),
                     "turbidity_visual_proxy": row.get("turbidity_visual_proxy"),
                     "sharpness_laplacian": row.get("sharpness_laplacian"),

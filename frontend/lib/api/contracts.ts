@@ -1095,3 +1095,70 @@ export interface EventSummary {
   by_status: Record<string, number>;
   by_severity: Record<string, number>;
 }
+
+/**
+ * The deployment's structured vocabulary (GET /api/v1/capabilities). Selectors
+ * are built from this so the frontend never hard-codes what the backend
+ * supports.
+ */
+export interface CapabilityOption {
+  key: string;
+  label?: string;
+  label_code?: string;
+  required?: boolean;
+  derived?: boolean;
+}
+
+export interface CapabilityStation {
+  station_code?: string;
+  station_name?: string;
+  [key: string]: unknown;
+}
+
+export interface Capabilities {
+  data_types: CapabilityOption[];
+  models: CapabilityOption[];
+  severities: string[];
+  report_formats: string[];
+  model_stages: string[];
+  model_transitions: Record<string, string[]>;
+  indicators: CapabilityOption[];
+  stations: CapabilityStation[];
+}
+
+/**
+ * The Zhangjiabang cross-modal satellite view: UAV assets (images and videos
+ * sliced into representative frames), the fused daily table and the model
+ * comparison. Every field comes from the processed artifacts on disk.
+ */
+export interface CrossModalAsset {
+  asset_id?: string;
+  sample_date?: string;
+  sample_site_role?: string;
+  media_type?: string;
+  file_name?: string;
+  file_size_bytes?: number;
+  preview_url?: string;
+  representative_frames?: string[];
+  frame_count?: number;
+  fps?: number;
+  duration_seconds?: number;
+  turbidity_visual_proxy?: number;
+  sharpness_laplacian?: number;
+  visual_transformer_embedding_norm?: number;
+  visual_transformer_embed_dim?: number;
+  [key: string]: unknown;
+}
+
+export interface CrossModalSummary {
+  generated_at?: string;
+  site?: string;
+  modality_status?: Record<string, string>;
+  counts?: Record<string, number>;
+  date_ranges?: Record<string, { start?: string; end?: string }>;
+  supervised_dates?: string[];
+  preview_assets?: CrossModalAsset[];
+  daily_rows?: Record<string, unknown>[];
+  model_evaluation?: Record<string, unknown> | null;
+  [key: string]: unknown;
+}

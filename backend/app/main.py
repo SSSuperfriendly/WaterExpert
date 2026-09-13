@@ -65,6 +65,7 @@ from backend.app.schemas import (
 from backend.app.self_service import router as self_service_router
 from backend.app.services.artifact_io import ArtifactReadError
 from backend.app.services.artifact_repository import ArtifactRepository
+from backend.app.services.capabilities import describe as describe_capabilities
 from backend.app.services.case_service import CaseNotFound, CaseService
 from backend.app.services.cross_modal_repository import CrossModalRepository
 from backend.app.services.data_explorer import DataExplorerService
@@ -859,6 +860,20 @@ def meta(
 @app.get("/api/v1/stations")
 def stations() -> list[dict]:
     return run_repository_call(repository.stations)
+
+
+@app.get("/api/v1/capabilities")
+def capabilities() -> dict:
+    """The deployment's structured vocabulary (data types, models, severities,
+    indicators, formats, stations).
+
+    The frontend builds its selectors from this rather than hard-coding keys, so
+    the platform describes whatever this deployment actually supports instead of
+    whatever one station's prototype happened to ship.
+    """
+    return run_service_call(
+        lambda: describe_capabilities(data_explorer.database_stations())
+    )
 
 
 # -- data asset centre -------------------------------------------------------

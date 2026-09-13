@@ -7,6 +7,7 @@ import { useArtifactScope } from "@/lib/hooks/use-artifact-scope";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState } from "@/components/waterexpert/ui-states";
 import { BoundarySummaryView } from "@/components/waterexpert/boundary-summary";
+import { ResultRunBar } from "@/components/waterexpert/result-run-bar";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function BoundaryPage() {
@@ -16,6 +17,8 @@ export default function BoundaryPage() {
 
   return (
     <AppShell title={t("nav.boundary")}>
+
+      <ResultRunBar onComputed={reload} />
 
       {loading ? (
         <LoadingState />

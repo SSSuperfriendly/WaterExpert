@@ -4,8 +4,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ReportExportMenu } from "@/components/waterexpert/report-export-menu";
 import { useT } from "@/lib/i18n/use-t";
-import { useApi } from "@/lib/hooks/use-api";
-import { endpoints } from "@/lib/api/endpoints";
+import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { useAppStore } from "@/lib/stores/app-store";
 import {
   Select,
@@ -22,13 +21,11 @@ export function AppHeader({ title }: { title?: string }) {
   const activeJobId = useAppStore((s) => s.activeJobId);
   const stationCode = useAppStore((s) => s.stationCode);
   const setStationCode = useAppStore((s) => s.setStationCode);
-  const stations = useApi(() => endpoints.databaseStations());
+  const capabilities = useCapabilities();
 
   // The station context every query/visualization/prediction reads. The current
-  // code is kept selectable even if the database listing does not mention it.
-  const options = (
-    (stations.data ?? []) as unknown as Array<Record<string, string>>
-  )
+  // code is kept selectable even if the deployment listing does not mention it.
+  const options = (capabilities.data?.stations ?? [])
     .map((station) => ({
       code: String(station.station_code ?? ""),
       name: String(station.station_name ?? station.station_code ?? ""),

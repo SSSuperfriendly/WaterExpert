@@ -23,6 +23,7 @@ EXPECTED_ROUTES = (
     "sensitivity/index.html",
     "knowledge-graph/index.html",
     "knowledge-graph/qa/index.html",
+    "cross-modal/index.html",
 )
 
 

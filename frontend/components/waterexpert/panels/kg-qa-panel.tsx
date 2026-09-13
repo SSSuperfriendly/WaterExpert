@@ -28,14 +28,6 @@ import {
  */
 const CITATION_RE = /\[(关系|分块|社区)(\d+)\]/g;
 
-/** Example questions drawn from real edges in the two graphs. */
-const SAMPLES = [
-  "风如何影响水体浊度？",
-  "监测透明度有哪些方法？",
-  "悬浮物如何影响清澈度？",
-  "农业活动如何影响沉积物？",
-];
-
 /**
  * What one click asks the canvas for, on top of the answer's own entities.
  *
@@ -106,6 +98,15 @@ function occurrenceIndexes(citations: KgQaCitation[]): Map<string, number> {
 export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}) {
   const { t } = useT();
   const shared = useKgHighlight();
+
+  // Example questions drawn from real edges in the two graphs; localised so the
+  // English build does not show Chinese samples.
+  const samples = [
+    t("kg.sampleQ1"),
+    t("kg.sampleQ2"),
+    t("kg.sampleQ3"),
+    t("kg.sampleQ4"),
+  ];
 
   const [question, setQuestion] = React.useState("");
   const [result, setResult] = React.useState<KgQaResult | null>(null);
@@ -304,7 +305,7 @@ export function KgQaPanel({ onJumpToGraph }: { onJumpToGraph?: () => void } = {}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground text-xs">{t("kg.sampleQuestions")}</span>
-            {SAMPLES.map((sample) => (
+            {samples.map((sample) => (
               <button
                 key={sample}
                 type="button"

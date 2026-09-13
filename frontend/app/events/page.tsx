@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
+import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { endpoints } from "@/lib/api/endpoints";
 import { translateEventStatus, translateSeverity, describeApiError } from "@/lib/domain";
 import { formatDateTime } from "@/lib/format";
@@ -25,8 +26,6 @@ import {
 } from "@/components/ui/table";
 import type { EventRecord, EventSummary } from "@/lib/api/contracts";
 
-const SEVERITIES = ["info", "low", "medium", "high", "critical"] as const;
-
 function severityVariant(sev: string): "default" | "secondary" | "destructive" | "outline" {
   if (sev === "critical" || sev === "high") return "destructive";
   if (sev === "medium") return "secondary";
@@ -44,10 +43,13 @@ export default function EventsPage() {
   const { t } = useT();
   const events = useApi<EventRecord[]>(() => endpoints.events());
   const summary = useApi<EventSummary>(() => endpoints.eventSummary());
+  const capabilities = useCapabilities();
+  const severities = capabilities.data?.severities ?? [];
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [severity, setSeverity] = React.useState("medium");
+  const [severity, setSeverity] = React.useState("");
+  const effectiveSeverity = severity || severities[0] || "";
   const [targetDate, setTargetDate] = React.useState("");
   const [caseId, setCaseId] = React.useState("");
   const [creating, setCreating] = React.useState(false);
@@ -64,7 +66,7 @@ export default function EventsPage() {
       await endpoints.createEvent({
         title: title.trim(),
         description: description.trim(),
-        severity,
+        severity: effectiveSeverity,
         target_date: targetDate || undefined,
         case_id: caseId.trim() || undefined,
       });
@@ -135,10 +137,10 @@ export default function EventsPage() {
               <Label>{t("events.severity")}</Label>
               <select
                 className="bg-background border-input ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2"
-                value={severity}
+                value={effectiveSeverity}
                 onChange={(e) => setSeverity(e.target.value)}
               >
-                {SEVERITIES.map((s) => (
+                {severities.map((s) => (
                   <option key={s} value={s}>
                     {translateSeverity(t, s)}
                   </option>

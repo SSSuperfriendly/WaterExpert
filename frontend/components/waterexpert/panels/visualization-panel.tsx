@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
+import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { endpoints } from "@/lib/api/endpoints";
 import { useAppStore } from "@/lib/stores/app-store";
 import { formatNumber, formatDelta } from "@/lib/format";
@@ -22,6 +23,7 @@ import { Label } from "@/components/ui/label";
 export function VisualizationPanel() {
   const { t } = useT();
   const stationCode = useAppStore((s) => s.stationCode);
+  const capabilities = useCapabilities();
   const [indicator, setIndicator] = React.useState("turbidity");
   const [limit, setLimit] = React.useState(180);
 
@@ -33,6 +35,13 @@ export function VisualizationPanel() {
   const series = (data?.series ?? []) as { date: string; value: number }[];
   const stats = data?.stats ?? {};
   const available = data?.available_indicators ?? [];
+  const indicatorOptions =
+    available.length > 0
+      ? available
+      : (capabilities.data?.indicators ?? []).map((item) => ({
+          key: item.key,
+          label: item.label,
+        }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,19 +53,11 @@ export function VisualizationPanel() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {available.length > 0
-                ? available.map((ind) => (
-                    <SelectItem key={ind.key} value={ind.key}>
-                      {ind.label ?? ind.key}
-                    </SelectItem>
-                  ))
-                : ["turbidity", "secchi_depth_sd_m", "dissolved_oxygen", "water_temp", "ph"].map(
-                    (k) => (
-                      <SelectItem key={k} value={k}>
-                        {k}
-                      </SelectItem>
-                    )
-                  )}
+              {indicatorOptions.map((ind) => (
+                <SelectItem key={ind.key} value={ind.key}>
+                  {ind.label ?? ind.key}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

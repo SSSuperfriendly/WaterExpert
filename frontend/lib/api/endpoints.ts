@@ -12,6 +12,8 @@ import type {
   BoundarySummary,
   Case,
   CaseSummary,
+  Capabilities,
+  CrossModalSummary,
   CredentialHint,
   DashboardPayload,
   DatabaseSummary,
@@ -110,6 +112,7 @@ export const endpoints = {
 
   // Meta & overview
   meta: () => apiClient.get<Record<string, unknown>>("/api/v1/meta"),
+  capabilities: () => apiClient.get<Capabilities>("/api/v1/capabilities"),
   dashboard: (scope: ArtifactScope = {}) =>
     apiClient.get<DashboardPayload & { provenance?: Provenance }>("/api/v1/dashboard", scope),
   stations: () => apiClient.get<Record<string, unknown>>("/api/v1/stations"),
@@ -252,6 +255,10 @@ export const endpoints = {
   // Realtime validation
   realtimeValidation: () =>
     apiClient.get<RealtimeValidation>("/api/v1/realtime-validation"),
+
+  // Cross-modal satellite view (Zhangjiabang UAV imagery + sliced video frames)
+  crossModal: () =>
+    apiClient.get<CrossModalSummary>("/api/v1/cross-modal/zhangjiabang"),
 
   // Report export
   exportReport: (format: ReportFormat, scope: ArtifactScope = {}) =>

@@ -10,6 +10,7 @@ import { formatNumber } from "@/lib/format";
 import { AppShell } from "@/components/waterexpert/app-shell";
 import { LoadingState, ErrorState, EmptyState } from "@/components/waterexpert/ui-states";
 import { DataTable, type ColumnDef } from "@/components/waterexpert/data-table";
+import { ResultRunBar } from "@/components/waterexpert/result-run-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Shared empty-array fallback so the row arrays below are referentially stable
@@ -67,6 +68,8 @@ export default function SensitivityPage() {
 
   return (
     <AppShell title={t("nav.sensitivity")}>
+
+      <ResultRunBar onComputed={reload} />
 
       {loading ? (
         <LoadingState />

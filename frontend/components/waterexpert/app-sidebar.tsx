@@ -33,6 +33,7 @@ import {
   Globe02Icon,
   Book01Icon,
   AiNetworkIcon,
+  DroneIcon,
   Task01Icon,
   Folder02Icon,
   AiBrain01Icon,
@@ -86,6 +87,7 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
       { href: "/sensitivity", labelKey: "nav.sensitivity", icon: Atom01Icon },
       { href: "/knowledge-graph", labelKey: "nav.knowledgeGraph", icon: Book01Icon },
       { href: "/knowledge-graph/qa", labelKey: "nav.waterExpert", icon: AiNetworkIcon },
+      { href: "/cross-modal", labelKey: "nav.crossModal", icon: DroneIcon },
     ],
   },
 ];

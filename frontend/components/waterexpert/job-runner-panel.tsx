@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useAppStore } from "@/lib/stores/app-store";
+import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { endpoints } from "@/lib/api/endpoints";
 import { translateModel } from "@/lib/domain";
 import { formatDateTime } from "@/lib/format";
@@ -31,7 +32,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Activity01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
 import type { PredictionJob } from "@/lib/api/contracts";
 
-const MODELS = ["cmfbe_stgcn", "mscim", "mscim_no_kg"] as const;
 const POLL_INTERVAL_MS = 5000;
 
 /**
@@ -72,6 +72,11 @@ export function JobRunnerPanel({
   const setActiveJobId = useAppStore((s) => s.setActiveJobId);
   const activeCaseId = useAppStore((s) => s.activeCaseId);
   const stationCode = useAppStore((s) => s.stationCode);
+  const capabilities = useCapabilities();
+
+  // Models come from the deployment's catalogue; before it loads the select is
+  // simply empty rather than defaulting to a hard-coded key.
+  const models = (capabilities.data?.models ?? []).map((entry) => entry.key);
 
   const [jobs, setJobs] = React.useState<PredictionJob[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -79,10 +84,11 @@ export function JobRunnerPanel({
   const [error, setError] = React.useState<string | null>(null);
 
   // Form state
-  const [model, setModel] = React.useState<string>("cmfbe_stgcn");
+  const [model, setModel] = React.useState<string>("");
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [useExisting, setUseExisting] = React.useState(true);
+  const effectiveModel = model || models[0] || "";
 
   const loadJobs = React.useCallback(async () => {
     try {
@@ -97,7 +103,7 @@ export function JobRunnerPanel({
   }, [t]);
 
   React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time job list load; state only after the fetch settles
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time job list load; state is written only after the fetch settles
     loadJobs();
   }, [loadJobs]);
 
@@ -114,7 +120,7 @@ export function JobRunnerPanel({
     setError(null);
     try {
       await endpoints.createJob({
-        model_name: model,
+        model_name: effectiveModel,
         station_code: stationCode,
         start_date: startDate || undefined,
         end_date: endDate || undefined,
@@ -144,12 +150,12 @@ export function JobRunnerPanel({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label>{t("prediction.modelName")}</Label>
-            <Select value={model} onValueChange={(v) => setModel(v as string)}>
+            <Select value={effectiveModel} onValueChange={(v) => setModel(v as string)}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MODELS.map((m) => (
+                {models.map((m) => (
                   <SelectItem key={m} value={m}>
                     {translateModel(t, m)}
                   </SelectItem>

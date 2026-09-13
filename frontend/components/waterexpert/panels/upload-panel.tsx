@@ -3,8 +3,15 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
+import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { endpoints } from "@/lib/api/endpoints";
-import { describeApiError, translateBlockingReason, translateStage } from "@/lib/domain";
+import { useAppStore } from "@/lib/stores/app-store";
+import {
+  describeApiError,
+  translateBlockingReason,
+  translateDataType,
+  translateStage,
+} from "@/lib/domain";
 import { DatasetAssetTable } from "@/components/waterexpert/dataset-asset-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,21 +28,19 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Upload01Icon, FileImportIcon } from "@hugeicons/core-free-icons";
 import type { DatasetVersion } from "@/lib/api/contracts";
 
-const DATA_TYPES = [
-  { value: "water_quality", labelKey: "upload.waterQuality" },
-  { value: "weather", labelKey: "upload.weather" },
-  { value: "hydrodynamics", labelKey: "upload.hydrodynamics" },
-  { value: "water_control", labelKey: "upload.waterControl" },
-  { value: "boundary_labels", labelKey: "upload.boundaryLabels" },
-  { value: "spatial", labelKey: "upload.spatial" },
-];
-
 export function UploadPanel() {
   const { t } = useT();
   const datasets = useApi(() => endpoints.datasets());
+  const capabilities = useCapabilities();
+  const globalStation = useAppStore((s) => s.stationCode);
 
-  const [dataType, setDataType] = React.useState("water_quality");
-  const [stationCode, setStationCode] = React.useState("2586");
+  // Raw inputs only: the derived data types are registered by services, not
+  // uploaded through this form.
+  const dataTypes = (capabilities.data?.data_types ?? []).filter((dt) => !dt.derived);
+
+  const [dataType, setDataType] = React.useState("");
+  const [stationCode, setStationCode] = React.useState(globalStation);
+  const effectiveDataType = dataType || dataTypes[0]?.key || "";
   const [relativePath, setRelativePath] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -75,7 +80,7 @@ export function UploadPanel() {
   const handleUpload = () => {
     if (!file) return;
     const formData = new FormData();
-    formData.set("data_type", dataType);
+    formData.set("data_type", effectiveDataType);
     formData.set("station_code", stationCode);
     formData.set("file", file);
     return submit(() => endpoints.uploadDataset(formData));
@@ -84,7 +89,7 @@ export function UploadPanel() {
   const handleImport = () =>
     submit(() =>
       endpoints.importDataset({
-        data_type: dataType,
+        data_type: effectiveDataType,
         relative_path: relativePath,
         station_code: stationCode,
       })
@@ -106,14 +111,14 @@ export function UploadPanel() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>{t("upload.dataType")}</Label>
-                <Select value={dataType} onValueChange={(v) => setDataType(v as string)}>
+                <Select value={effectiveDataType} onValueChange={(v) => setDataType(v as string)}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DATA_TYPES.map((dt) => (
-                      <SelectItem key={dt.value} value={dt.value}>
-                        {t(dt.labelKey)}
+                    {dataTypes.map((dt) => (
+                      <SelectItem key={dt.key} value={dt.key}>
+                        {translateDataType(t, dt.key)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useT } from "@/lib/i18n/use-t";
 import { useApi } from "@/lib/hooks/use-api";
+import { useCapabilities } from "@/lib/hooks/use-capabilities";
 import { endpoints } from "@/lib/api/endpoints";
 import { translateModelStage, describeApiError } from "@/lib/domain";
 import { formatDateTime } from "@/lib/format";
@@ -24,15 +25,6 @@ import {
 } from "@/components/ui/table";
 import type { ModelVersion, ModelSummary } from "@/lib/api/contracts";
 
-//: Mirrors MODEL_TRANSITIONS in backend/app/services/model_service.py.
-const NEXT_STAGES: Record<string, string[]> = {
-  experiment: ["candidate", "retired"],
-  candidate: ["in_review", "retired"],
-  in_review: ["published", "candidate", "retired"],
-  published: ["retired"],
-  retired: [],
-};
-
 function stageVariant(stage: string): "default" | "secondary" | "destructive" | "outline" {
   if (stage === "published") return "default";
   if (stage === "retired") return "outline";
@@ -45,6 +37,8 @@ export default function ModelsPage() {
   const models = useApi<ModelVersion[]>(() => endpoints.models());
   const summary = useApi<ModelSummary>(() => endpoints.modelSummary());
   const current = useApi<ModelVersion | null>(() => endpoints.currentModel());
+  const capabilities = useCapabilities();
+  const nextStages = capabilities.data?.model_transitions ?? {};
 
   const [modelKey, setModelKey] = React.useState("");
   const [version, setVersion] = React.useState("");
@@ -206,7 +200,7 @@ export default function ModelsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-1">
-                          {(NEXT_STAGES[m.stage] ?? []).map((next) => (
+                          {(nextStages[m.stage] ?? []).map((next) => (
                             <Button
                               key={next}
                               variant="outline"
