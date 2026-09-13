@@ -144,6 +144,10 @@ class KnowledgeBaseAgent(BaseAgent):
             "case_id": None,
             "case_similarity": None,
             "reference": "",
+            # Empty for a technique that rests on a case rather than on a graph;
+            # graph-only keys such as ``evidence`` stay graph-only, because
+            # there the meaning differs by origin and a reader has to branch.
+            "source_label": "",
         }
 
     def _from_scenario(
@@ -237,6 +241,10 @@ class KnowledgeBaseAgent(BaseAgent):
                 relation=str(entry.get("relation") or ""),
                 evidence=str(entry.get("evidence") or ""),
                 source_id=str(entry.get("source_id") or ""),
+                # The graph's own name for itself, so a plan can say 基线图谱
+                # rather than leaving the reader to decode "platform". Absent
+                # from a platform that predates the field, and then empty.
+                source_label=str(entry.get("source_label") or ""),
                 citation=next(
                     (
                         str(citation.get("marker", ""))

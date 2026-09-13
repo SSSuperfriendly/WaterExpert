@@ -1045,6 +1045,26 @@ class KnowledgeGraphService:
                 "chunk_id": relation.get("chunk_id"),
             }
 
+        def recommendation_payload(relation: dict[str, Any]) -> dict[str, Any]:
+            """The same edge, as a candidate the agent's knowledge base can use.
+
+            ``source_label`` travels with the candidate and not only with the
+            relation because the agent reports the two apart: it sends the graph
+            candidates as a list of their own, and a candidate that named
+            ``platform`` where its sibling named 基线图谱 would make the reader
+            look the code up.
+            """
+            source_id = origin_of.get(
+                (relation.get("source"), relation.get("relation"), relation.get("target")), ""
+            )
+            return {
+                "technique": str(relation.get("target", "")),
+                "relation": str(relation.get("relation") or ""),
+                "evidence": str(relation.get("evidence") or ""),
+                "source_id": source_id,
+                "source_label": labels.get(source_id, ""),
+            }
+
         context.update(
             {
                 "mode": result.get("mode", "none"),
@@ -1068,15 +1088,7 @@ class KnowledgeGraphService:
                     for path in paths[:3]
                 ],
                 "recommendations": [
-                    {
-                        "technique": str(relation.get("target", "")),
-                        "relation": str(relation.get("relation") or ""),
-                        "evidence": str(relation.get("evidence") or ""),
-                        "source_id": origin_of.get(
-                            (relation.get("source"), relation.get("relation"), relation.get("target")), ""
-                        ),
-                    }
-                    for relation in relations[:5]
+                    recommendation_payload(relation) for relation in relations[:5]
                 ],
                 "citations": list(result.get("citations") or []),
                 "capabilities": dict(result.get("capabilities") or {}),

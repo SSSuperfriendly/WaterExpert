@@ -30,6 +30,7 @@ PARAMETER_KEYS = (
     "case_id",
     "case_similarity",
     "reference",
+    "source_label",
 )
 
 
@@ -77,12 +78,14 @@ def _context(**overrides):
                 "relation": "导致",
                 "evidence": "Wind-induced disturbances",
                 "source_id": "platform",
+                "source_label": "基线图谱",
             },
             {
                 "technique": "SEDIMENT",
                 "relation": "",
                 "evidence": "农业活动是土壤侵蚀和沉积物负荷增加的主要原因",
                 "source_id": "inherited",
+                "source_label": "继承图谱（合作方 GraphRAG）",
             },
         ],
         "citations": [
@@ -222,6 +225,9 @@ class KnowledgeBaseAgentTest(unittest.TestCase):
         self.assertEqual(first["technique"], "沉积物再悬浮")
         self.assertEqual(first["evidence"], "Wind-induced disturbances")
         self.assertEqual(first["source_id"], "platform")
+        # The graph under its own name: "platform" is an id, 基线图谱 is what the
+        # platform calls that graph when it shows it to a reader.
+        self.assertEqual(first["source_label"], "基线图谱")
         self.assertEqual(first["citation"], "[关系1]")
 
     def test_an_empty_context_falls_back_to_the_curated_dictionary(self):
