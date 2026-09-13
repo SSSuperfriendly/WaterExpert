@@ -776,6 +776,147 @@ export interface AgentStrategyJob {
   [key: string]: unknown;
 }
 
+/** One factor MSCIM attributed the predicted turbidity to. */
+export interface AgentMscimDriver {
+  factor?: string;
+  importance?: number;
+  /** Absent on the rule-based path, which scores factors without reading them. */
+  value?: number;
+  threshold_exceeded?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * MSCIM's diagnosis, or the reason there isn't one.
+ *
+ * ``inference_source`` is the field that decides how the rest may be read.
+ * ``"checkpoint"`` means the trained model produced these numbers;
+ * ``"fallback_rules"`` means it did not load and a rule of thumb did — with
+ * ``checkpoint_error`` saying why. The two render identically otherwise, which
+ * is how a degraded run passed for a prediction.
+ */
+export interface AgentMscimTrace {
+  model?: string;
+  checkpoint_path?: string;
+  inference_source?: "checkpoint" | "fallback_rules" | string;
+  checkpoint_error?: string;
+  /** Present when the model threw; the trace then carries no prediction. */
+  error?: string;
+  prediction?: {
+    turbidity?: number;
+    turbidity_confidence?: number;
+    clearness_proxy?: number;
+    log_turbidity?: number;
+    [key: string]: unknown;
+  };
+  diagnosis?: {
+    primary_drivers?: AgentMscimDriver[];
+    dominant_driver?: AgentMscimDriver | null;
+    uncertainty?: { epistemic?: number; aleatoric?: number; [key: string]: unknown };
+    model_signals?: Record<string, number>;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/** Which physical processes CMFBE credited, and which it debited. */
+export interface AgentCmfbeTrace {
+  model?: string;
+  checkpoint_path?: string;
+  inference_source?: "checkpoint" | "fallback_rules" | string;
+  checkpoint_error?: string;
+  error?: string;
+  process_decomposition?: Record<string, number>;
+  net_change?: number;
+  thresholds?: Record<string, number>;
+  threshold_breaches?: { factor?: string; value?: number; threshold?: number; [key: string]: unknown }[];
+  predictions?: {
+    next_day_turbidity?: number;
+    physics_turbidity?: number;
+    clearness_proxy?: number;
+    next_day_turbidity_trend?: string;
+    confidence?: number;
+    [key: string]: unknown;
+  };
+  physics?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+/**
+ * A candidate technique, and what its number rests on.
+ *
+ * ``origin`` is what a reader has to branch on. ``"scenario"`` means the
+ * platform's own technique vocabulary, priced off the case named by ``case_id``
+ * — which is where ``intensity``, ``intensity_unit`` and ``reference`` come
+ * from. ``"graph"`` means a retrieved edge: a real influence recorded in one of
+ * the graphs, with no dose attached to it, which is why every parameter is
+ * ``null`` there. ``"seed"`` is the curated technology table, used only for a
+ * scenario the vocabulary does not cover.
+ */
+export interface AgentKbRecommendation {
+  technique?: string;
+  origin?: "graph" | "scenario" | "seed" | string;
+  intensity?: number | null;
+  intensity_unit?: string | null;
+  intensity_field?: string | null;
+  cost_per_day?: number | null;
+  case_id?: string | null;
+  case_similarity?: number | null;
+  reference?: string;
+  /** Which graph, under the name the platform shows for it. Graphs only. */
+  source_label?: string;
+  source_id?: string;
+  relation?: string;
+  evidence?: string;
+  citation?: string;
+  environment?: string;
+  effect?: string;
+  [key: string]: unknown;
+}
+
+/** A published case, with the intervention and the outcome it reported. */
+export interface AgentCaseEvidence {
+  id?: string;
+  title?: string;
+  location?: string;
+  year?: number;
+  scenario?: string;
+  similarity?: number;
+  summary?: string;
+  reference?: string;
+  intervention?: Record<string, number>;
+  outcome?: {
+    turbidity_reduction_ratio?: number;
+    cost_saving_ratio?: number;
+    recovery_days?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/** What each of the six agents was given and what it did with it. */
+export interface AgentTraces {
+  mscim?: AgentMscimTrace;
+  cmfbe?: AgentCmfbeTrace;
+  kb?: {
+    input?: Record<string, unknown>;
+    output?: {
+      source?: string;
+      grounded?: boolean;
+      graph_mode?: string;
+      graph_query?: string;
+      recommendations?: AgentKbRecommendation[];
+      case_evidence?: AgentCaseEvidence[];
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  gpt?: { input?: Record<string, unknown>; output?: Record<string, unknown>; [key: string]: unknown };
+  rl?: { input?: Record<string, unknown>; output?: Record<string, unknown>; [key: string]: unknown };
+  safety?: { input?: Record<string, unknown>; output?: Record<string, unknown>; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
 export interface AgentStrategyResult {
   job_id: string;
   status: string;
@@ -795,6 +936,8 @@ export interface AgentStrategyResult {
     response_time_hours: number;
     [key: string]: unknown;
   };
+  /** The per-agent reasoning behind the strategy above. */
+  agent_traces?: AgentTraces;
   completed_at?: string;
   error?: string;
   [key: string]: unknown;

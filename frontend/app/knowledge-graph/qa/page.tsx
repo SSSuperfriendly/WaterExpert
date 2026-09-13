@@ -19,6 +19,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingState } from "@/components/waterexpert/ui-states";
+import {
+  CmfbeDiagnosis,
+  KnowledgeEvidence,
+  MscimDiagnosis,
+} from "@/components/waterexpert/panels/agent-diagnosis-panel";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiNetworkIcon } from "@hugeicons/core-free-icons";
 import type {
@@ -496,6 +501,37 @@ export default function WaterExpertAgentPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Diagnosis — where each number above actually came from. */}
+        {job?.status === "completed" && job.agent_traces && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("agent.diagnosisTitle")}</CardTitle>
+              <CardTitle className="text-muted-foreground text-xs font-normal">
+                {t("agent.diagnosisSubtitle")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {job.agent_traces.mscim && (
+                <MscimDiagnosis trace={job.agent_traces.mscim} />
+              )}
+              {job.agent_traces.cmfbe && (
+                <div className="border-t pt-5">
+                  <CmfbeDiagnosis trace={job.agent_traces.cmfbe} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Knowledge — the graph evidence the retrieval handed the agent. */}
+        {job?.status === "completed" && job.agent_traces?.kb?.output && (
+          <KnowledgeEvidence
+            grounded={Boolean(job.agent_traces.kb.output.grounded)}
+            recommendations={job.agent_traces.kb.output.recommendations ?? []}
+            caseEvidence={job.agent_traces.kb.output.case_evidence ?? []}
+          />
+        )}
 
         {/* Explanation & evidence — the narrative "answer" behind the strategy. */}
         {job?.status === "completed" && explainRequest && (
