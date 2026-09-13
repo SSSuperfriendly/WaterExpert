@@ -72,7 +72,11 @@ class CrossModalRepository:
                     "file_size_bytes": row.get("file_size_bytes"),
                     "preview_url": self._media_url(row.get("preview_path")),
                     "video_url": (
-                        self._source_video_url(row.get("source_path"))
+                        self._source_video_url(
+                            row.get("source_path"),
+                            sample_date=str(row.get("sample_date", "")),
+                            sequence=sequences.get(asset_id, 1),
+                        )
                         if media_type == "video"
                         else None
                     ),
@@ -90,17 +94,33 @@ class CrossModalRepository:
             "preview_assets": preview_assets,
         }
 
-    def _source_video_url(self, source_path: Any) -> str | None:
+    def _source_video_url(
+        self,
+        source_path: Any,
+        *,
+        sample_date: str = "",
+        sequence: int = 1,
+    ) -> str | None:
         """The playable URL for a source video, when it is actually on disk.
 
-        Tried at its recorded ``source_path`` first, then by basename under the
-        persistent media drop. The raw UAV tree is gitignored and overwritten by
-        releases, so the media drop is the durable place to put a video; when
-        neither exists this is ``None`` and the UI shows the sliced frames.
+        Tried at its recorded ``source_path``, by basename under the persistent
+        media drop, then by the canonical ``<date>_<ordinal>.<ext>`` name that
+        matches the label the UI shows. The raw UAV tree is gitignored and
+        overwritten by releases, so the media drop is the durable place to put a
+        video; when none exists this is ``None`` and the UI shows the frames.
         """
         if not source_path:
             return None
-        candidates = [str(source_path), str(MEDIA_UAV_ROOT / Path(str(source_path)).name)]
+        suffix = Path(str(source_path)).suffix or ".mp4"
+        candidates = [
+            str(source_path),
+            str(MEDIA_UAV_ROOT / Path(str(source_path)).name),
+        ]
+        if sample_date:
+            for variant in {suffix, suffix.lower(), ".mp4", ".mov"}:
+                candidates.append(
+                    str(MEDIA_UAV_ROOT / f"{sample_date}_{int(sequence):02d}{variant}")
+                )
         for candidate in candidates:
             try:
                 self.resolve_media_path(candidate)

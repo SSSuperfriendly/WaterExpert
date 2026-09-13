@@ -87,6 +87,21 @@ class CrossModalVideoSourceTest(unittest.TestCase):
             )
             self.assertIsNone(url)
 
+    def test_the_canonical_name_matches_the_ui_label(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            media = root / "var" / "media" / "zhangjiabang_uav"
+            media.mkdir(parents=True)
+            (media / "2026-07-13_02.mp4").write_bytes(b"fake-video")
+
+            url = self._repository(root)._source_video_url(
+                "data/raw/zhangjiabang_uav/7.13-没拍好.MP4",
+                sample_date="2026-07-13",
+                sequence=2,
+            )
+
+            self.assertIsNotNone(url)
+
 
 if __name__ == "__main__":
     unittest.main()
