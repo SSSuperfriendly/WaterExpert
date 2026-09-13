@@ -21,6 +21,10 @@ scikit-learn==1.7.1
 matplotlib==3.10.0
 torch==2.5.1
 tigramite==5.2.10.1
+# Pinned, not `>=3`: today this is only satisfied transitively by tigramite, and
+# GraphRAG depends on it directly. An unpinned floor would let pip resolve a
+# version tigramite was never tested against.
+networkx==3.6.1
 xlrd==2.0.1
 Pillow==11.1.0
 opencv-python==4.10.0.84

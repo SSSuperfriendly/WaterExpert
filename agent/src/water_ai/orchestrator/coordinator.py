@@ -27,6 +27,7 @@ class Orchestrator:
         state: dict[str, Any],
         scenario_key: str = "unknown",
         on_stage: Any = None,
+        knowledge_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Run one episode of multi-agent decision-making.
@@ -36,6 +37,12 @@ class Orchestrator:
             state: Current environmental state (from DataLoader)
             scenario_key: Scenario identifier for routing
             on_stage: Optional callback(stage_name) for progress tracking
+            knowledge_context: Graph evidence the platform retrieved for this
+                request, or ``None``. Kept as a *separate parameter* rather than
+                merged into ``state`` on purpose: ``state`` is handed to MSCIM
+                and CMFBE, whose checkpoint runners index it by feature name, and
+                an unexpected key there is a much worse failure than an extra
+                argument here.
         """
         self.episode_count += 1
 
@@ -45,11 +52,15 @@ class Orchestrator:
 
         # Stage 1: Diagnosis (parallel)
         _notify("mscim")
-        diagnosis_reports = self._run_diagnosis_stage(agents, state, scenario_key, _notify)
+        diagnosis_reports = self._run_diagnosis_stage(
+            agents, state, scenario_key, _notify, knowledge_context
+        )
 
         # Stage 2: Planning (sequential with diagnosis results)
         _notify("gpt")
-        planning_report = self._run_planning_stage(agents, diagnosis_reports, state, scenario_key)
+        planning_report = self._run_planning_stage(
+            agents, diagnosis_reports, state, scenario_key, knowledge_context
+        )
 
         # Stage 3: Execution
         _notify("rl")
@@ -81,11 +92,19 @@ class Orchestrator:
                 "output": diagnosis_reports.get("cmfbe", {}),
             },
             "kb": {
-                "input": {"scenario": scenario_key},
+                "input": {
+                    "scenario": scenario_key,
+                    # Surfaced in the trace so the lab page can show whether
+                    # this round's recommendation rested on graph evidence or on
+                    # the curated dictionary — the difference is invisible in
+                    # the output alone.
+                    "knowledge_context_available": bool(knowledge_context),
+                    "knowledge_context_query": (knowledge_context or {}).get("query", ""),
+                },
                 "output": diagnosis_reports.get("knowledge_base", {}),
             },
             "gpt": {
-                "input": {"scenario": scenario_key, "diagnosis_summary": {
+                "input": {"scenario": scenario_key, "knowledge_context_available": bool(knowledge_context), "diagnosis_summary": {
                     "mscim_prediction": diagnosis_reports.get("mscim", {}).get("prediction", {}),
                     "cmfbe_net_change": diagnosis_reports.get("cmfbe", {}).get("net_change"),
                     "kb_recommendations": diagnosis_reports.get("knowledge_base", {}).get("recommendations", []),
@@ -124,7 +143,14 @@ class Orchestrator:
 
         return episode_result
 
-    def _run_diagnosis_stage(self, agents: dict[str, Any], state: dict[str, Any], scenario_key: str = "unknown", _notify=None) -> dict[str, Any]:
+    def _run_diagnosis_stage(
+        self,
+        agents: dict[str, Any],
+        state: dict[str, Any],
+        scenario_key: str = "unknown",
+        _notify=None,
+        knowledge_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Stage 1: Diagnosis experts analyze current conditions."""
         diagnosis = {}
 
@@ -154,6 +180,8 @@ class Orchestrator:
                 _notify("kb")
             try:
                 kb_input = {**state, "scenario_type": scenario_key}
+                if knowledge_context is not None:
+                    kb_input["knowledge_context"] = knowledge_context
                 kb_result = agents["KnowledgeBaseAgent"].act(kb_input)
                 diagnosis["knowledge_base"] = kb_result
             except Exception as e:
@@ -167,11 +195,12 @@ class Orchestrator:
         diagnosis_reports: dict[str, Any],
         state: dict[str, Any],
         scenario_key: str,
+        knowledge_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Stage 2: High-level planner (AquaTurb-GPT) synthesizes diagnosis
         and generates strategy.
-        
+
         Invokes:
         - AquaTurbGPTAgent: DeepSeek inference for scenario classification
           and constraint interpretation
@@ -185,6 +214,7 @@ class Orchestrator:
                 "state": state,
                 "diagnosis": diagnosis_reports,
                 "scenario": scenario_key,
+                "knowledge_context": knowledge_context,
             }
 
             planning_result = agents["AquaTurbGPTAgent"].act(planning_input)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -26,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi_users import exceptions as user_exceptions
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.app.config import get_settings
@@ -147,11 +149,30 @@ async def auth_guard(request: Request) -> None:
     request.state.actor_user = user
 
 
+#: Strong reference to the GraphRAG warmup task. Without it the task is
+#: collectable the moment ``lifespan`` drops its local, and the warmup becomes a
+#: race the index usually loses.
+_warmup_tasks: set[asyncio.Task] = set()
+
+
+def _schedule_graph_rag_warmup() -> None:
+    """Prime the retrieval index off the startup path.
+
+    Deliberately not awaited: the service must answer ``/healthz`` immediately,
+    and a knowledge graph that is slow — or broken — to index must not hold the
+    door shut.
+    """
+    task = asyncio.create_task(run_in_threadpool(kg_service.warm_graph_rag))
+    _warmup_tasks.add(task)
+    task.add_done_callback(_warmup_tasks.discard)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
     await seed_demo_user()
+    _schedule_graph_rag_warmup()
     yield
 
 
@@ -1990,15 +2011,44 @@ async def agent_scenarios() -> list[dict]:
     return await _agent_call(external_agent.scenarios)
 
 
+async def _agent_knowledge_context(scenario: str, state: dict) -> dict | None:
+    """Retrieve the graph evidence to attach to one agent request.
+
+    ``None`` means "send the request without it", and that is the only thing a
+    caller has to handle. Everything that can go wrong — a missing graph, an
+    unreadable parquet, an index that will not build — resolves to ``None``, so
+    a knowledge-graph problem degrades the answer instead of failing the call.
+
+    The retrieval is synchronous CPU work (parquet read, graph build, TF-IDF)
+    and the handler is ``async def``, so it runs in a worker thread: on a 2 vCPU
+    box, doing it inline would stall every other request for the duration.
+    """
+    try:
+        return await run_in_threadpool(kg_service.build_agent_knowledge_context, scenario, state)
+    except Exception as exc:  # noqa: BLE001 — KG must never be a new failure mode for the agent routes
+        logger.warning("Knowledge context skipped for %s: %s", scenario, exc)
+        return None
+
+
 @app.post("/api/v1/agent/strategy")
 async def agent_strategy_create(payload: AgentStrategyRequest) -> dict:
-    """Queue a strategy-generation job on the deployed model and return its id."""
+    """Queue a strategy-generation job on the deployed model and return its id.
+
+    ``with_knowledge`` is opt-in here rather than on by default: a strategy run
+    is the expensive, agentic path, and a caller that did not ask for graph
+    evidence should not silently pay the retrieval cost for it.
+    """
+    state = payload.state.model_dump(exclude_none=True)
     body = {
         "scenario": payload.scenario,
-        "state": payload.state.model_dump(exclude_none=True),
+        "state": state,
         "episodes": payload.episodes,
         "backend": payload.backend,
     }
+    if payload.with_knowledge:
+        context = await _agent_knowledge_context(payload.scenario, state)
+        if context is not None:
+            body["knowledge_context"] = context
     return await _agent_call(lambda: external_agent.create_strategy(body))
 
 
@@ -2014,9 +2064,15 @@ async def agent_explain(payload: AgentExplainRequest) -> dict:
 
     Returns the narrative diagnosis + matched historical cases that make the lab
     page an answer rather than just a strategy number (``POST /api/explain``).
+
+    ``with_knowledge`` defaults to on here, unlike strategy: this is the endpoint
+    the lab page renders, the evidence is what makes the narrative checkable, and
+    the graph lookup costs no model call — it is retrieval, not generation.
     """
-    body = {
-        "scenario": payload.scenario,
-        "state": payload.state.model_dump(exclude_none=True),
-    }
+    state = payload.state.model_dump(exclude_none=True)
+    body = {"scenario": payload.scenario, "state": state}
+    if payload.with_knowledge:
+        context = await _agent_knowledge_context(payload.scenario, state)
+        if context is not None:
+            body["knowledge_context"] = context
     return await _agent_call(lambda: external_agent.explain(body))

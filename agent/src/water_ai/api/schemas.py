@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScenarioType(str, Enum):
@@ -32,14 +32,74 @@ class WaterQualityState(BaseModel):
     rainfall_7d: Optional[float] = Field(None, ge=0, description="7-day cumulative rainfall (mm)")
 
 
+class KnowledgeRelation(BaseModel):
+    """One retrieved knowledge-graph edge, with its own provenance.
+
+    ``source_label`` and ``source_id`` say which graph it came from — the
+    platform's own literature graph or the inherited GraphRAG export — because
+    the two have very different standing and a reader is entitled to know which
+    one a claim rests on.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    source: str = ""
+    relation: str = ""
+    target: str = ""
+    evidence: str = ""
+    source_id: str = ""
+    source_label: str = ""
+    source_file: str = ""
+    chunk_id: Optional[str] = None
+
+
+class KnowledgeContext(BaseModel):
+    """Graph evidence retrieved by the platform for one request.
+
+    The platform retrieves and the agent consumes; the agent never calls back
+    into the platform. That keeps this service free of pandas, scikit-learn and
+    networkx, and keeps the two deployments independently restartable.
+
+    ``extra="ignore"`` is the documented contract rather than an accident:
+    pydantic v2 already ignores unknown fields, so an agent running this version
+    accepts a payload from a newer platform, and an older agent accepts one that
+    has grown fields. Writing it down is what makes that a promise.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    version: str = "1"
+    query: str = ""
+    scenario: str = ""
+    mode: str = "none"
+    source: str = "none"
+    summary_text: str = ""
+    relations: list[KnowledgeRelation] = Field(default_factory=list)
+    paths: list[dict[str, Any]] = Field(default_factory=list)
+    recommendations: list[dict[str, Any]] = Field(default_factory=list)
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    seeds: list[dict[str, Any]] = Field(default_factory=list)
+    capabilities: dict[str, Any] = Field(default_factory=dict)
+    degraded: bool = False
+    notes: list[str] = Field(default_factory=list)
+
+
 class StrategyRequest(BaseModel):
     """Request body for strategy generation."""
+
+    model_config = ConfigDict(extra="ignore")
 
     scenario: ScenarioType = Field(..., description="Water quality scenario type")
     state: WaterQualityState = Field(..., description="Current water quality state")
     episodes: int = Field(1, ge=1, le=10, description="Number of episodes to run")
     backend: str = Field("api", description="DeepSeek backend: 'api' or 'local'")
     request_id: Optional[str] = Field(None, description="Optional request tracking ID")
+    #: Graph evidence the platform retrieved for this request. Absent means the
+    #: knowledge base falls back to its curated scenario dictionary, exactly as
+    #: it did before the graph was wired in.
+    knowledge_context: Optional[KnowledgeContext] = Field(
+        None, description="Retrieved knowledge-graph evidence (platform-supplied)"
+    )
 
 
 class StrategyResponse(BaseModel):

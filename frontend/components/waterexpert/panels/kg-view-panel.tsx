@@ -12,76 +12,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiNetworkIcon, NodeMoveUpIcon } from "@hugeicons/core-free-icons";
-
-const VIS_SCRIPT = "/ui/lib/vis-network/vis-network.min.js";
-const VIS_CSS = "/ui/lib/vis-network/vis-network.css";
-
-const TYPE_COLORS: Record<string, string> = {
-  水体对象: "#0ea5e9",
-  清澈度指标: "#10b981",
-  水质因子: "#f59e0b",
-  环境因子: "#8b5cf6",
-  监测方法: "#ec4899",
-  水质过程: "#14b8a6",
-  水质生物组分: "#ef4444",
-};
-const DEFAULT_COLOR = "#64748b";
-
-type VisNetworkInstance = {
-  destroy: () => void;
-  fit: (options?: Record<string, unknown>) => void;
-  once: (event: string, handler: () => void) => void;
-};
-type VisNetworkLib = {
-  Network: new (
-    container: HTMLElement,
-    data: {
-      nodes: Array<{ id: string; label: string; color: string; value: number }>;
-      edges: Array<{ from: string; to: string; label?: string; title?: string }>;
-    },
-    options: Record<string, unknown>
-  ) => VisNetworkInstance;
-};
-
-function getVis(): VisNetworkLib | undefined {
-  return (window as unknown as { vis?: VisNetworkLib }).vis;
-}
-
-// Lazily inject the self-hosted vis-network stylesheet + script once, shared
-// across every instance of this panel. Resolves when the library is on the
-// window; the promise is cleared on failure so a later mount can retry.
-let visInjectPromise: Promise<void> | null = null;
-
-function ensureVisLoaded(): Promise<void> {
-  if (getVis()) return Promise.resolve();
-  if (!visInjectPromise) {
-    visInjectPromise = new Promise<void>((resolve, reject) => {
-      if (!document.querySelector(`link[href="${VIS_CSS}"]`)) {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = VIS_CSS;
-        document.head.appendChild(link);
-      }
-      const script = document.createElement("script");
-      script.src = VIS_SCRIPT;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`failed to load ${VIS_SCRIPT}`));
-      document.head.appendChild(script);
-    });
-    visInjectPromise.catch(() => {
-      visInjectPromise = null;
-    });
-  }
-  return visInjectPromise;
-}
+import {
+  applyHighlight,
+  clearHighlight,
+  edgeId,
+  ensureVisLoaded,
+  getVis,
+  NETWORK_OPTIONS,
+  nodeVisuals,
+  type VisDataSet,
+  type VisEdge,
+  type VisNetworkInstance,
+  type VisNode,
+} from "@/lib/kg/vis-network";
+import { useKgHighlight } from "@/lib/kg/highlight-context";
 
 export function KgViewPanel() {
   const { t } = useT();
   const { data, loading, error, reload } = useApi(() => endpoints.knowledgeGraph.graph());
+  const shared = useKgHighlight();
 
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const networkRef = React.useRef<VisNetworkInstance | null>(null);
+  const nodesRef = React.useRef<VisDataSet<VisNode> | null>(null);
+  const edgesRef = React.useRef<VisDataSet<VisEdge> | null>(null);
+  // Bumped when the canvas is (re)built, so the highlight effect re-runs after
+  // a rebuild: a highlight set while the QA tab was open must survive being
+  // carried back to a panel that was unmounted the whole time.
+  const [networkReady, setNetworkReady] = React.useState(false);
   const [visError, setVisError] = React.useState(false);
 
   // Build the network once the payload and the lazily injected vis-network
@@ -103,48 +61,33 @@ export function KgViewPanel() {
         degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
       });
 
-      const nodes = data.nodes.map((n) => ({
-        id: n.id,
-        label: n.label ?? n.id,
-        color: TYPE_COLORS[n.type ?? ""] ?? DEFAULT_COLOR,
-        value: 1 + (degree.get(n.id) ?? 0) * 2,
-      }));
-      const edges = data.edges.map((e) => ({
+      const nodes: VisNode[] = data.nodes.map((n) => {
+        const { color, value } = nodeVisuals(n.type, degree.get(n.id) ?? 0);
+        return { id: n.id, label: n.label ?? n.id, color, value, baseColor: color, baseValue: value };
+      });
+      const edges: VisEdge[] = data.edges.map((e) => ({
+        id: edgeId(e.source, e.target),
         from: e.source,
         to: e.target,
         label: e.relation,
         title: e.evidence,
+        color: { color: "#e2e8f0", highlight: "#0ea5e9" },
+        width: 1,
+        baseColor: "#e2e8f0",
+        baseWidth: 1,
       }));
 
-      const network = new vis.Network(
-        container,
-        { nodes, edges },
-        {
-          autoResize: true,
-          nodes: {
-            shape: "dot",
-            font: { size: 14, face: "sans-serif", color: "#334155" },
-          },
-          edges: {
-            arrows: { to: { enabled: true, scaleFactor: 0.6 } },
-            color: { color: "#cbd5e1", highlight: "#0ea5e9" },
-            font: { size: 10, color: "#64748b", align: "middle" },
-            smooth: { type: "continuous" },
-          },
-          physics: {
-            stabilization: { iterations: 200 },
-            barnesHut: {
-              gravitationalConstant: -8000,
-              springLength: 140,
-              springConstant: 0.04,
-              damping: 0.09,
-            },
-          },
-          interaction: { hover: true, tooltipDelay: 120 },
-        }
-      );
+      // Our own DataSets, passed in, so a highlight can update items in place.
+      // Letting vis build its own would leave nothing to address afterwards
+      // short of rebuilding the graph and losing the layout.
+      const nodesDs = new vis.DataSet<VisNode>(nodes);
+      const edgesDs = new vis.DataSet<VisEdge>(edges);
+      const network = new vis.Network(container, { nodes: nodesDs, edges: edgesDs }, NETWORK_OPTIONS);
 
       networkRef.current = network;
+      nodesRef.current = nodesDs;
+      edgesRef.current = edgesDs;
+      setNetworkReady(true);
       network.once("stabilizationIterationsDone", () => {
         network.fit({ animation: { duration: 300, easingFunction: "easeInOutQuad" } });
       });
@@ -160,8 +103,20 @@ export function KgViewPanel() {
       disposed = true;
       networkRef.current?.destroy();
       networkRef.current = null;
+      nodesRef.current = null;
+      edgesRef.current = null;
+      setNetworkReady(false);
     };
   }, [data]);
+
+  React.useEffect(() => {
+    if (!networkReady) return;
+    if (shared?.highlight) {
+      applyHighlight(networkRef.current, nodesRef.current, edgesRef.current, shared.highlight);
+    } else {
+      clearHighlight(networkRef.current, nodesRef.current, edgesRef.current);
+    }
+  }, [networkReady, shared?.highlight]);
 
   const downloads = [
     { name: "entities.csv", labelKey: "kg.downloadEntities" },
@@ -196,10 +151,24 @@ export function KgViewPanel() {
               ) : visError ? (
                 <p className="text-muted-foreground text-sm">{t("kg.graphLoadFailed")}</p>
               ) : (
-                <div
-                  ref={containerRef}
-                  className="relative h-[520px] w-full overflow-hidden rounded-md border bg-white"
-                />
+                <>
+                  {shared?.highlight ? (
+                    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm">
+                      <span className="text-sky-900">{shared.highlight.title}</span>
+                      <button
+                        type="button"
+                        onClick={() => shared.setHighlight(null)}
+                        className="text-sky-700 underline underline-offset-2 hover:text-sky-900"
+                      >
+                        {t("kg.clearHighlight")}
+                      </button>
+                    </div>
+                  ) : null}
+                  <div
+                    ref={containerRef}
+                    className="relative h-[520px] w-full overflow-hidden rounded-md border bg-white"
+                  />
+                </>
               )}
             </CardContent>
           </Card>

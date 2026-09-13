@@ -37,8 +37,16 @@ def _execute_strategy(
     state: dict,
     episodes: int,
     backend: str,
+    knowledge_context: Optional[dict] = None,
 ) -> None:
-    """Background task to execute strategy generation."""
+    """Background task to execute strategy generation.
+
+    ``knowledge_context`` is the graph evidence the platform retrieved for this
+    request. It is threaded through to the orchestrator rather than merged into
+    ``state`` because ``state`` is indexed by feature name downstream. Absent
+    (the default, and what every caller sends unless it opted in) means the
+    knowledge base answers from its curated dictionary exactly as before.
+    """
     try:
         # Update status to running
         job_manager.update_job_status(job_id, JobStatus.RUNNING)
@@ -62,7 +70,13 @@ def _execute_strategy(
         def on_stage(stage_name: str):
             job_manager.set_stage(job_id, stage_name)
 
-        result = orchestrator.run(agents, state, scenario_key=scenario, on_stage=on_stage)
+        result = orchestrator.run(
+            agents,
+            state,
+            scenario_key=scenario,
+            on_stage=on_stage,
+            knowledge_context=knowledge_context,
+        )
 
         # Prepare result
         strategy_result = {
@@ -128,6 +142,11 @@ async def generate_strategy(
         state=request.state.model_dump(),
         episodes=request.episodes,
         backend=request.backend,
+        knowledge_context=(
+            request.knowledge_context.model_dump()
+            if request.knowledge_context is not None
+            else None
+        ),
     )
     
     return StrategyResponse(

@@ -34,6 +34,12 @@ import pandas as pd
 from fastapi import UploadFile
 
 from backend.app.config import Settings
+from backend.app.services.graph_rag.index import GRAPH_RAG_VERSION, content_hash
+from backend.app.services.graph_rag.lexicon import (
+    ALIASES,
+    DOMAIN_TERMS,
+    extract_keywords,
+)
 from backend.app.services.kg_llm import call_llm, is_llm_configured
 from backend.app.services.kg_pdf_processor import (
     ExtractionResult,
@@ -48,48 +54,45 @@ FAILED_STATUS = "failed"
 ORPHANED_STATUS = "orphaned"
 TERMINAL_STATUSES = {COMPLETED_STATUS, FAILED_STATUS, ORPHANED_STATUS}
 
+#: Exposed over HTTP by ``file_download_path``. This is an *allow-list*, not a
+#: description of what lives in the KG directory: ``chunks.jsonl`` and
+#: ``occurrences.jsonl`` hold full source text and provenance and must never
+#: become newly downloadable.
 DOWNLOADABLE_FILES = {"entities.csv", "relations.csv", "graph.json"}
 
-DOMAIN_TERMS = [
-    "透明度", "清澈度", "水体透明度", "浊度", "悬浮物", "悬浮颗粒物",
-    "悬浮物浓度", "总悬浮物", "总悬浮物浓度", "TSS", "SSC",
-    "监测", "测量", "测定", "检测", "观测", "采样", "方法", "仪器",
-    "传感器", "浊度计", "光学后向散射", "光学后向散射传感器",
-    "OBS", "OBS-3A", "膜过滤法", "实验室分析", "透明度盘", "塞氏盘",
-    "风速", "水深", "水动力", "波浪", "总氮", "总磷", "有机质",
-]
+#: Keys the runner attaches to a triple so ``occurrences.jsonl`` can point back
+#: at the chunk it came from. ``save_kg`` strips them before writing
+#: ``relations.csv`` so that file keeps exactly the columns it has always had.
+PROVENANCE_ONLY_KEYS = ("chunk_id", "ordinal")
 
-ALIASES = {
-    "透明度": [
-        "透明度", "水体透明度", "清澈度", "浊度", "悬浮物",
-        "悬浮物浓度", "总悬浮物浓度", "TSS", "SSC",
-        "光学后向散射", "OBS", "OBS-3A", "浊度计",
-        "透明度盘", "塞氏盘",
-    ],
-    "清澈度": [
-        "清澈度", "透明度", "水体透明度", "浊度", "悬浮物",
-        "悬浮物浓度", "TSS", "SSC",
-    ],
-    "浊度": [
-        "浊度", "浊度计", "光学后向散射", "OBS", "OBS-3A",
-        "悬浮物", "悬浮物浓度", "TSS", "SSC",
-    ],
-    "悬浮物": [
-        "悬浮物", "悬浮颗粒物", "悬浮物浓度", "总悬浮物",
-        "总悬浮物浓度", "TSS", "SSC", "膜过滤法",
-    ],
-    "监测": [
-        "监测", "测量", "测定", "检测", "观测", "采样",
-        "方法", "仪器", "传感器", "浊度计",
-        "光学后向散射传感器", "OBS", "OBS-3A", "膜过滤法",
-        "实验室分析", "透明度盘", "塞氏盘",
-    ],
-    "方法": [
-        "方法", "监测", "测量", "测定", "检测", "采样",
-        "仪器", "传感器", "浊度计", "OBS", "OBS-3A",
-        "膜过滤法", "实验室分析", "透明度盘", "塞氏盘",
-    ],
+#: Derived index artifacts the pipeline writes and ``clear_kg`` removes.
+KG_INDEX_FILES = {
+    "chunks.jsonl",
+    "occurrences.jsonl",
+    "kg_index.json",
+    "communities.json",
+    "summaries.json",
 }
+
+# Re-exported for the legacy scorer and its tests; defined in graph_rag.lexicon.
+__all__ = [
+    "ALIASES",
+    "DOMAIN_TERMS",
+    "extract_keywords",
+    "answer_question",
+    "build_context_text",
+    "build_extraction_prompt",
+    "build_qa_prompt",
+    "extract_triples",
+    "fallback_answer",
+    "load_relations",
+    "parse_json",
+    "retrieve_graph_context",
+    "save_kg",
+    "score_relation",
+    "split_text",
+    "split_text_with_spans",
+]
 
 
 def utc_now() -> str:
@@ -100,23 +103,72 @@ def utc_now() -> str:
 # KG construction (ported from Pages/3_BuildKG.py)
 # ---------------------------------------------------------------------------
 def split_text(text: str, max_chars: int = 1200) -> list[str]:
-    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
+    """Paragraph-greedy chunking. Signature and output unchanged.
 
-    chunks = []
-    current = ""
+    Thin wrapper over :func:`split_text_with_spans`. Callers that need char
+    offsets (the build runner, so chunks can be cited) use that instead.
+    """
+    return [chunk for _start, _end, chunk in split_text_with_spans(text, max_chars)]
 
-    for paragraph in paragraphs:
-        if len(current) + len(paragraph) > max_chars:
-            if current:
-                chunks.append(current)
-            current = paragraph
+
+def split_text_with_spans(
+    text: str,
+    max_chars: int = 1200,
+    overlap_chars: int = 0,
+) -> list[tuple[int, int, str]]:
+    """Chunk ``text`` and return ``(char_start, char_end, chunk)`` triples.
+
+    Each returned ``chunk`` is exactly ``text[char_start:char_end]``, so the
+    offsets are honest and a citation can point back into the source.
+
+    Paragraph-greedy, as before — but a paragraph longer than ``max_chars`` is
+    now hard-split into ``max_chars`` windows with ``overlap_chars`` of overlap.
+    Previously such a paragraph became a single oversized chunk that was sent to
+    the extractor whole and would have been cited whole; ``overlap_chars``
+    defaults to 0 so the default output is unchanged.
+    """
+    if max_chars <= 0:
+        max_chars = 1200
+    overlap = max(0, min(int(overlap_chars), max_chars - 1))
+
+    primitives: list[tuple[int, int]] = []
+    for start, end in _paragraph_spans(text):
+        if end - start <= max_chars:
+            primitives.append((start, end))
+            continue
+        stride = max(1, max_chars - overlap)
+        position = start
+        while position < end:
+            primitives.append((position, min(position + max_chars, end)))
+            if position + max_chars >= end:
+                break
+            position += stride
+
+    packed: list[list[int]] = []
+    for start, end in primitives:
+        if not packed:
+            packed.append([start, end])
+            continue
+        if end - packed[-1][0] > max_chars:
+            packed.append([start, end])
         else:
-            current = current + "\n" + paragraph
+            packed[-1][1] = end
 
-    if current:
-        chunks.append(current)
+    return [(start, end, text[start:end]) for start, end in packed]
 
-    return chunks
+
+def _paragraph_spans(text: str) -> list[tuple[int, int]]:
+    """Spans of the non-empty, stripped paragraphs of ``text``."""
+    spans: list[tuple[int, int]] = []
+    for match in re.finditer(r"[^\n]+", text):
+        raw = match.group()
+        lead = len(raw) - len(raw.lstrip())
+        trail = len(raw) - len(raw.rstrip())
+        start = match.start() + lead
+        end = match.end() - trail
+        if end > start:
+            spans.append((start, end))
+    return spans
 
 
 def build_extraction_prompt(text: str) -> str:
@@ -160,6 +212,54 @@ JSON 格式如下：
 
 
 logger = logging.getLogger(__name__)
+
+
+#: What each agent scenario asks the graph. The scenario key alone retrieves
+#: badly — "s2_internal_release" shares no surface form with anything in either
+#: graph — so it is translated into the vocabulary the edges actually use, and
+#: the state's own numbers are appended as context for the ranking.
+AGENT_SCENARIO_QUERIES: dict[str, str] = {
+    "s1_external_input": "降雨径流带来的外源输入如何影响悬浮物浓度与浊度？",
+    "s2_internal_release": "底泥再悬浮如何影响营养盐释放与水体浊度？",
+    "s3_algae_bloom": "藻华与叶绿素a升高受哪些因素影响？",
+    "s4_chronic_combo": "长期复合因素如何导致水体浊度持续升高？",
+}
+
+#: State fields worth putting in front of the retriever, as the phrasing a
+#: document would use. The agent's numbers are the question's specifics; without
+#: them every strategy request for a scenario retrieves the same edges.
+AGENT_STATE_PHRASES: tuple[tuple[str, str, float], ...] = (
+    ("turbidity", "浊度", 20.0),
+    ("chlorophyll_a", "叶绿素a", 20.0),
+    ("rainfall_3d", "降雨", 10.0),
+    ("flow_rate", "流速", 5.0),
+    ("temperature", "水温", 25.0),
+)
+
+
+def agent_query(scenario: str, state: dict[str, Any] | None = None) -> str:
+    """The retrieval question for one agent scenario, in graph vocabulary.
+
+    ``state`` is used as ranking context, not as a filter: an out-of-range or
+    missing value is skipped rather than clamped, because the retriever's job
+    here is to find the most relevant edges, and a wrong magnitude stated
+    confidently is worse than a magnitude left out.
+    """
+    base = AGENT_SCENARIO_QUERIES.get(scenario, "")
+    parts: list[str] = []
+    for field, phrase, reference in AGENT_STATE_PHRASES:
+        value = (state or {}).get(field)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        if value <= 0 or value > reference * 10:
+            continue
+        parts.append(f"{phrase}约{round(float(value), 2)}")
+
+    if not base:
+        base = "水体浊度升高受哪些因素影响？"
+    if parts:
+        return base + "（当前状况：" + "、".join(parts) + "）"
+    return base
 
 
 def parse_json(text: str) -> dict:
@@ -211,7 +311,28 @@ def extract_triples(chunk: str) -> list[dict]:
     return clean_triples
 
 
-def save_kg(triples: list[dict], kg_dir: str | Path) -> int:
+def save_kg(
+    triples: list[dict],
+    kg_dir: str | Path,
+    *,
+    chunks: list[dict] | None = None,
+) -> int:
+    """Write the graph artifacts and return the deduped relation count.
+
+    ``entities.csv`` / ``relations.csv`` / ``graph.json`` are written exactly as
+    before, dedupe semantics included, so every existing reader is unaffected.
+    What is new is the provenance the dedupe used to destroy:
+
+    * ``occurrences.jsonl`` — one line per **pre-dedupe** triple that carries a
+      ``chunk_id``, i.e. which chunk(s) each surviving relation came from.
+    * ``chunks.jsonl`` — the chunk text itself, which the runner used to throw
+      away after extraction. Written only when ``chunks`` is passed.
+    * ``kg_index.json`` — counts plus a ``content_hash`` that derived caches
+      (community summaries) key off.
+
+    ``chunks`` is keyword-only with a ``None`` default so the existing
+    two-argument call sites keep working unchanged.
+    """
     if not triples:
         return 0
 
@@ -219,6 +340,13 @@ def save_kg(triples: list[dict], kg_dir: str | Path) -> int:
     kg_dir.mkdir(parents=True, exist_ok=True)
 
     relations_df = pd.DataFrame(triples)
+
+    # Chunk provenance rides along on the triple dicts so ``occurrences.jsonl``
+    # can record it, but it must not become a column of ``relations.csv`` — that
+    # file's shape is a contract every reader and the download route depend on.
+    relations_df = relations_df.drop(
+        columns=[key for key in PROVENANCE_ONLY_KEYS if key in relations_df.columns]
+    )
 
     relations_df = relations_df.drop_duplicates(
         subset=["source", "relation", "target"]
@@ -273,11 +401,60 @@ def save_kg(triples: list[dict], kg_dir: str | Path) -> int:
         encoding="utf-8",
     )
 
+    occurrence_count = 0
+    occurrences_path = kg_dir / "occurrences.jsonl"
+    provenance_rows = [row for row in triples if row.get("chunk_id")]
+    if provenance_rows:
+        occurrence_count = len(provenance_rows)
+        _write_jsonl(occurrences_path, provenance_rows)
+
+    chunks_path = kg_dir / "chunks.jsonl"
+    if chunks is not None:
+        _write_jsonl(chunks_path, chunks)
+
+    content_hash_value = content_hash(relations_path, occurrences_path)
+    _write_json_atomic(
+        kg_dir / "kg_index.json",
+        {
+            "index_version": 1,
+            "built_at": utc_now(),
+            "n_chunks": len(chunks) if chunks is not None else 0,
+            "n_occurrences": occurrence_count,
+            "n_relations": len(relations_df),
+            "n_entities": len(entities_df),
+            "files": sorted({str(row.get("source_file") or "") for row in triples if row.get("source_file")}),
+            "content_hash": content_hash_value,
+        },
+    )
+
     return len(relations_df)
+
+
+def _write_jsonl(path: Path, rows: list[dict]) -> None:
+    """Atomic JSONL write — temp file then ``replace``, like the status files."""
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    tmp_path.replace(path)
+
+
+def _write_json_atomic(path: Path, payload: dict) -> None:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tmp_path.replace(path)
 
 
 # ---------------------------------------------------------------------------
 # KG QA (ported from Pages/4_QA.py)
+#
+# Everything from here to ``answer_question`` is the LEGACY lexical scorer. It
+# is deliberately kept, unmodified, for two reasons: the existing test suite
+# covers it, and the GraphRAG eval harness runs it as the baseline it has to
+# beat. New retrieval work belongs in ``graph_rag``, not here.
 # ---------------------------------------------------------------------------
 def load_relations(relations_path: str | Path | None) -> list[dict]:
     if not relations_path:
@@ -299,26 +476,6 @@ def load_relations(relations_path: str | Path | None) -> list[dict]:
 
     df = df.fillna("")
     return df.to_dict("records")
-
-
-def extract_keywords(question: str) -> list:
-    keywords = set()
-    question = question.strip()
-
-    for term in DOMAIN_TERMS:
-        if term.lower() in question.lower():
-            keywords.add(term)
-
-    for key, values in ALIASES.items():
-        if key in question:
-            keywords.update(values)
-
-    english_terms = re.findall(r"[A-Za-z0-9\-]+", question)
-    for term in english_terms:
-        if len(term) >= 2:
-            keywords.add(term)
-
-    return list(keywords)
 
 
 def score_relation(row: dict, question: str, keywords: list) -> int:
@@ -711,7 +868,7 @@ class KnowledgeGraphService:
 
     def clear_kg(self) -> int:
         count = 0
-        for name in DOWNLOADABLE_FILES:
+        for name in DOWNLOADABLE_FILES | KG_INDEX_FILES:
             path = self.kg_dir / name
             if path.exists():
                 path.unlink()
@@ -735,20 +892,200 @@ class KnowledgeGraphService:
         }
 
     def qa(self, question: str) -> dict[str, Any]:
+        """GraphRAG question answering over every configured source.
+
+        The first four keys of the response are the contract this endpoint has
+        always had, unchanged; everything else is additive. See
+        :func:`graph_rag.pipeline.search`.
+
+        The legacy scorer below (``retrieve_graph_context`` / ``score_relation``)
+        is deliberately still here rather than deleted: the evaluation harness
+        runs it over the same fixture as the baseline GraphRAG has to beat, and
+        that comparison is only meaningful while both implementations exist.
+        """
         question = (question or "").strip()
         if not question:
             raise ValueError("请输入问题。")
 
-        path, source = self._resolve_kg_file("relations.csv")
-        answer = answer_question(question, path)
-        matched = retrieve_graph_context(question, path, top_k=8)
+        from backend.app.services.graph_rag import pipeline
 
-        return {
-            "question": question,
-            "answer": answer,
-            "matched_relations": matched,
-            "source": source,
+        return pipeline.search(
+            question,
+            runtime_dir=self.kg_dir,
+            baseline_dir=self.baseline_root,
+            project_root=self.settings.project_root,
+        )
+
+    def build_agent_knowledge_context(
+        self,
+        scenario: str,
+        state: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """The graph evidence the agent is handed for one strategy request.
+
+        The platform retrieves; the agent never calls back. That direction is
+        deliberate: the agent's virtualenv stays free of pandas, scikit-learn
+        and networkx, and there is no cycle to reason about when the two
+        services are restarted independently.
+
+        Two promises this keeps, both of them about not being a new failure
+        mode for ``/api/v1/agent/*``:
+
+        * **It always returns a dict, never ``None``.** A caller can put it in a
+          request body without a guard. A graph that is missing, empty or
+          unreadable yields an object saying so, not an exception.
+        * **It never calls an LLM.** ``use_llm=False`` forces the deterministic
+          renderer, so a strategy request still costs exactly one model call —
+          the agent's own. ``WATEREXPERT_GRAPH_RAG_AGENT_SUMMARY=llm`` is the
+          documented way to opt into a second one.
+        """
+        from backend.app.services.graph_rag import pipeline
+        from backend.app.services.graph_rag.config import GraphRagConfig
+
+        config = GraphRagConfig.from_env()
+        state = state or {}
+        query = agent_query(scenario, state)
+
+        context: dict[str, Any] = {
+            "version": GRAPH_RAG_VERSION,
+            "query": query,
+            "scenario": scenario,
+            "mode": "none",
+            "source": "none",
+            "summary_text": "",
+            "relations": [],
+            "paths": [],
+            "recommendations": [],
+            "citations": [],
+            "capabilities": {"chunk_level": False, "communities": False, "citations": False},
+            "degraded": True,
+            "notes": [],
         }
+
+        try:
+            result = pipeline.search(
+                query,
+                config=config,
+                runtime_dir=self.kg_dir,
+                baseline_dir=self.baseline_root,
+                project_root=self.settings.project_root,
+                mode="local",
+                use_llm=False,
+                top_k=config.agent_top_k,
+                max_relations=config.agent_top_k + 3,
+            )
+        except Exception as exc:  # noqa: BLE001 — the graph must not be able to fail an agent request
+            logger.warning("Agent knowledge context unavailable: %s", exc)
+            context["notes"].append(f"知识图谱检索不可用：{type(exc).__name__}")
+            return context
+
+        relations = result.get("matched_relations") or []
+        paths = result.get("paths") or []
+        seeds = result.get("seed_entities") or []
+        labels = {entry.get("source_id"): entry.get("label", "") for entry in result.get("sources") or []}
+        # ``matched_relations`` keeps the legacy shape, which has no source id —
+        # the field lives on the citation instead. Reading it from there rather
+        # than widening the legacy dict keeps that contract exactly as it was.
+        origin_of = {
+            (entry.get("source"), entry.get("relation"), entry.get("target")): entry.get("source_id", "")
+            for entry in result.get("citations") or []
+            if entry.get("kind") == "relation"
+        }
+
+        def relation_payload(relation: dict[str, Any]) -> dict[str, Any]:
+            source_id = origin_of.get(
+                (relation.get("source"), relation.get("relation"), relation.get("target")), ""
+            )
+            return {
+                "source": str(relation.get("source", "")),
+                "relation": str(relation.get("relation") or ""),
+                "target": str(relation.get("target", "")),
+                "evidence": str(relation.get("evidence") or ""),
+                "source_id": source_id,
+                "source_label": labels.get(source_id, ""),
+                "source_file": str(relation.get("source_file") or ""),
+                "chunk_id": relation.get("chunk_id"),
+            }
+
+        context.update(
+            {
+                "mode": result.get("mode", "none"),
+                "source": result.get("source", "none"),
+                # Edges are sent as data just below, so the summary leaves them
+                # out rather than stating each one twice.
+                "summary_text": pipeline.deterministic_summary(
+                    result, config.agent_context_max_chars, include_relations=False
+                ),
+                "relations": [
+                    relation_payload(relation)
+                    for relation in relations[: config.agent_top_k + 3]
+                ],
+                "paths": [
+                    {
+                        "source_id": path.get("source_id", ""),
+                        "nodes": list(path.get("nodes") or []),
+                        "hops": int(path.get("hops") or 0),
+                        "score": path.get("score", 0.0),
+                    }
+                    for path in paths[:3]
+                ],
+                "recommendations": [
+                    {
+                        "technique": str(relation.get("target", "")),
+                        "relation": str(relation.get("relation") or ""),
+                        "evidence": str(relation.get("evidence") or ""),
+                        "source_id": origin_of.get(
+                            (relation.get("source"), relation.get("relation"), relation.get("target")), ""
+                        ),
+                    }
+                    for relation in relations[:5]
+                ],
+                "citations": list(result.get("citations") or []),
+                "capabilities": dict(result.get("capabilities") or {}),
+                "degraded": bool((result.get("stats") or {}).get("degraded")),
+                "notes": list(result.get("stats", {}).get("notes") or []),
+            }
+        )
+        context["seeds"] = [
+            {
+                "name": seed.get("name", ""),
+                "score": seed.get("score", 0.0),
+                "matched_via": seed.get("matched_via", ""),
+                "source_id": seed.get("source_id", ""),
+            }
+            for seed in seeds
+        ]
+
+        # Chunk text is full source material and the agent has no use for it;
+        # the citation's ``chunk_id`` is the part that makes an answer checkable.
+        for citation in context["citations"]:
+            citation.pop("excerpt", None)
+
+        return context
+
+    def warm_graph_rag(self) -> bool:
+        """Build the retrieval index once, so the first question does not pay for it.
+
+        Cold build is ~2 s on a development machine and several times that on
+        the 2 vCPU production box — parquet read, graph construction, char
+        n-gram TF-IDF. Warm it is tens of milliseconds. The work happens in a
+        worker thread either way, so this only decides whether it lands on a
+        startup nobody is waiting for or on somebody's first request.
+
+        Returns whether a warmup was attempted; failures are logged and
+        swallowed, because a knowledge graph that will not index is a reason for
+        the agent routes to fall back to the curated dictionary, not a reason
+        for the service to refuse to start.
+        """
+        from backend.app.services.graph_rag.config import GraphRagConfig
+
+        if not GraphRagConfig.from_env().warmup_on_startup:
+            return False
+        try:
+            self.build_agent_knowledge_context("s2_internal_release", {})
+        except Exception as exc:  # noqa: BLE001 — warmup is an optimisation, never a gate
+            logger.warning("GraphRAG warmup skipped: %s", exc)
+        return True
 
     def file_download_path(self, name: str) -> Path:
         if name not in DOWNLOADABLE_FILES:

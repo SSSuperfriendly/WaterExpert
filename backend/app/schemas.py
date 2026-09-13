@@ -229,6 +229,10 @@ class AgentStrategyRequest(BaseModel):
     state: AgentStateRequest
     episodes: int = Field(default=1, ge=1, le=10)
     backend: Literal["api", "local"] = "api"
+    #: Attach retrieved knowledge-graph evidence to the request body. Off by
+    #: default: a strategy run is the expensive path, and a caller that did not
+    #: ask for graph evidence should not silently pay for the retrieval.
+    with_knowledge: bool = False
 
 
 class AgentExplainRequest(BaseModel):
@@ -241,6 +245,10 @@ class AgentExplainRequest(BaseModel):
 
     scenario: str = Field(min_length=1, max_length=64)
     state: AgentStateRequest
+    #: On by default, unlike strategy: this endpoint renders the lab page's
+    #: narrative, the evidence is what makes it checkable, and retrieval costs
+    #: no model call.
+    with_knowledge: bool = True
 
 
 # ---------------------------------------------------------------------------

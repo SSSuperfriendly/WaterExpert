@@ -49,9 +49,15 @@ class AquaTurbGPTAgent(BaseAgent):
         """
         scenario = planning_input.get("scenario", "s2_internal_release")
         diagnosis = planning_input.get("diagnosis", {})
-        
+        state = planning_input.get("state") or {}
+
         # Build prompt for DeepSeek
-        prompt = self._build_strategy_prompt(scenario, diagnosis)
+        prompt = self._build_strategy_prompt(
+            scenario,
+            diagnosis,
+            state=state,
+            knowledge_context=planning_input.get("knowledge_context"),
+        )
         
         # Get fallback strategy
         fallback = self.fallback_strategies.get(scenario, self.fallback_strategies["s2_internal_release"])
@@ -79,15 +85,64 @@ class AquaTurbGPTAgent(BaseAgent):
             "model": response.get("model"),
         }
 
-    def _build_strategy_prompt(self, scenario: str, diagnosis: dict[str, Any]) -> str:
+    def _summarize_diagnosis(self, state: dict[str, Any], diagnosis: dict[str, Any]) -> dict[str, Any]:
+        """Flatten the nested stage-1 reports into the fields the prompt asks for.
+
+        This is what makes ``primary_drivers`` real. The prompt below has always
+        asked for it, and it has always printed ``Unknown`` — not because a key
+        was misspelled, but because the coordinator hands over
+        ``{"mscim": …, "cmfbe": …, "knowledge_base": …}`` and the prompt read it
+        as if it were already flat. The drivers, the confidence and the flow
+        condition are all present in that structure; nothing was reading them.
+        """
+        mscim = diagnosis.get("mscim") or {}
+        cmfbe = diagnosis.get("cmfbe") or {}
+
+        drivers = (mscim.get("diagnosis") or {}).get("primary_drivers") or []
+        rendered = ", ".join(
+            f"{item.get('factor')}({float(item.get('importance', 0.0)):.2f})"
+            for item in drivers
+            if isinstance(item, dict) and item.get("factor")
+        )
+
+        prediction = mscim.get("prediction") or {}
+        confidence = prediction.get("turbidity_confidence")
+        if confidence is None:
+            confidence = (cmfbe.get("predictions") or {}).get("confidence")
+
+        flow_rate = state.get("flow_rate")
+        if isinstance(flow_rate, (int, float)):
+            if flow_rate < 5:
+                flow_condition = f"低（{flow_rate} m³/s）"
+            elif flow_rate <= 20:
+                flow_condition = f"中（{flow_rate} m³/s）"
+            else:
+                flow_condition = f"高（{flow_rate} m³/s）"
+        else:
+            flow_condition = "Unknown"
+
+        net_change = cmfbe.get("net_change")
+        return {
+            "primary_drivers": rendered or "Unknown",
+            "confidence": f"{float(confidence):.2f}" if isinstance(confidence, (int, float)) else "Unknown",
+            "flow_condition": flow_condition,
+            "turbidity": state.get("turbidity", "Unknown"),
+            "net_change": f"{float(net_change):+.3f}" if isinstance(net_change, (int, float)) else "Unknown",
+        }
+
+    def _build_strategy_prompt(
+        self,
+        scenario: str,
+        diagnosis: dict[str, Any],
+        state: dict[str, Any] | None = None,
+        knowledge_context: dict[str, Any] | None = None,
+    ) -> str:
         """Build prompt for DeepSeek strategy generation.
-        
-        Args:
-            scenario: Scenario key
-            diagnosis: Diagnosis results from agents
-            
-        Returns:
-            Formatted prompt string
+
+        ``diagnosis`` is accepted in either shape: the coordinator's nested
+        ``{"mscim": …, "cmfbe": …}`` reports, which are summarised here, or an
+        already-flat summary, which is used as given. Both call conventions work
+        rather than one being right and the other silently producing ``Unknown``.
         """
         scenario_descriptions = {
             "s1_external_input": "场景1: 外源输入型 - 降水增加导致通过支流输入大量悬浮物和营养盐",
@@ -95,17 +150,24 @@ class AquaTurbGPTAgent(BaseAgent):
             "s3_algae_bloom": "场景3: 藻华主导型 - 叶绿素-a高且光照充足导致蓝绿藻大量繁殖",
             "s4_chronic_combo": "场景4: 慢性复合型 - 多个因素长期叠加导致基础浊度持续升高",
         }
-        
+
+        summary = (
+            self._summarize_diagnosis(state or {}, diagnosis)
+            if any(key in diagnosis for key in ("mscim", "cmfbe", "knowledge_base"))
+            else diagnosis
+        )
+
         prompt = f"""你是一个水体治理专家，基于诊断结果制定应对策略。
 
 {scenario_descriptions.get(scenario, scenario)}
 
 诊断信息:
-- 主要驱动因素: {diagnosis.get('primary_drivers', 'Unknown')}
-- 诊断置信度: {diagnosis.get('confidence', 'Unknown')}
-- 流量条件: {diagnosis.get('flow_condition', 'Normal')}
-- 浊度: {diagnosis.get('turbidity', 'Unknown')} NTU
-
+- 主要驱动因素: {summary.get('primary_drivers', 'Unknown')}
+- 诊断置信度: {summary.get('confidence', 'Unknown')}
+- 流量条件: {summary.get('flow_condition', 'Normal')}
+- 浊度: {summary.get('turbidity', 'Unknown')} NTU
+- 过程净变化: {summary.get('net_change', 'Unknown')}
+{self._render_knowledge_section(knowledge_context)}
 请生成一个JSON格式的策略，包含以下字段:
 {{
     "scenario_confidence": 0-1之间的置信度,
@@ -124,8 +186,54 @@ class AquaTurbGPTAgent(BaseAgent):
 }}
 
 仅返回JSON，不要其他文本。"""
-        
+
         return prompt
+
+    def _render_knowledge_section(self, knowledge_context: dict[str, Any] | None) -> str:
+        """The literature the platform retrieved, as prompt material.
+
+        This is the step that makes retrieval reach the model at all. Without it
+        the graph would be retrieved, cited in the trace, and then ignored by
+        the one component whose output anyone reads.
+
+        Edge sources are named because the two graphs are not equals: the
+        platform graph is the user's own literature, the inherited one is a
+        partner export covering a much wider domain.
+        """
+        if not isinstance(knowledge_context, dict):
+            return ""
+        relations = knowledge_context.get("relations") or []
+        summary = str(knowledge_context.get("summary_text") or "").strip()
+        if not relations and not summary:
+            return ""
+
+        lines = ["", "图谱依据（来自知识库检索，引用时请以这些关系为准）:"]
+        for relation in relations[:8]:
+            if not isinstance(relation, dict):
+                continue
+            label = relation.get("relation") or relation.get("evidence") or ""
+            origin = relation.get("source_label") or relation.get("source_id") or ""
+            lines.append(
+                f"- {relation.get('source', '')} --{label}--> {relation.get('target', '')}"
+                f"（{origin}）"
+            )
+        if summary:
+            lines.append("检索摘要：" + summary.replace("\n", " "))
+
+        # Named "相关概念" rather than "候选方向" deliberately. These are the
+        # targets of the top-ranked edges, which on the real graphs are factors
+        # and processes — "SEDIMENT RESUSPENSION", "营养盐释放" — not techniques.
+        # Offering them as candidate measures would invite the model to
+        # recommend resuspending sediment.
+        concepts = [
+            str(item.get("technique"))
+            for item in (knowledge_context.get("recommendations") or [])
+            if isinstance(item, dict) and item.get("technique")
+        ]
+        if concepts:
+            lines.append("图谱中最相关的概念：" + "、".join(concepts[:5]))
+        lines.append("若图谱依据与诊断结论冲突，请以诊断结论为主并在 reasoning 中说明。")
+        return "\n".join(lines) + "\n"
 
     def _parse_strategy_response(
         self, response: dict[str, Any], fallback: dict[str, Any]

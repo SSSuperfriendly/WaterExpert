@@ -566,11 +566,90 @@ export interface KgMatchedRelation {
   [key: string]: unknown;
 }
 
+/** One retrieval path: a chain of nodes and the edges that connect them. */
+export interface KgQaPath {
+  path_id?: string;
+  source_id?: string;
+  nodes: string[];
+  edges?: Array<{ source: string; relation?: string; target: string; evidence?: string }>;
+  hops?: number;
+  score?: number;
+  score_parts?: Record<string, number>;
+}
+
+export interface KgQaCitation {
+  marker: string;
+  kind: "relation" | "chunk" | "community" | string;
+  source_id?: string;
+  source?: string;
+  relation?: string;
+  target?: string;
+  evidence?: string;
+  source_file?: string;
+  chunk_id?: string | null;
+  community_id?: string;
+}
+
+export interface KgQaCommunity {
+  community_id: string;
+  source_id?: string;
+  size?: number;
+  summary?: string;
+  summary_mode?: string;
+  top_nodes?: string[];
+  score?: number;
+}
+
+export interface KgQaSeed {
+  name: string;
+  score?: number;
+  matched_via?: string;
+  surface?: string;
+  entity_type?: string;
+}
+
+export interface KgQaSourceInfo {
+  source_id: string;
+  label: string;
+  relation_count?: number;
+  chunk_level?: boolean;
+}
+
+/**
+ * The GraphRAG QA response.
+ *
+ * The first four keys are the pre-GraphRAG contract, unchanged in name, type
+ * and meaning — every consumer written before the graph search existed still
+ * works. Everything below them is additive, so an older platform that does not
+ * send them renders the same page it always did.
+ */
 export interface KgQaResult {
   question: string;
   answer: string;
   matched_relations: KgMatchedRelation[];
   source: string;
+
+  mode?: "local" | "global" | "hybrid" | "none";
+  graph_rag_version?: string;
+  capabilities?: { chunk_level?: boolean; communities?: boolean; citations?: boolean };
+  sources?: KgQaSourceInfo[];
+  paths?: KgQaPath[];
+  chunks?: Array<{ chunk_id: string; excerpt: string; used_by_relations?: string[][] }>;
+  communities?: KgQaCommunity[];
+  citations?: KgQaCitation[];
+  seed_entities?: KgQaSeed[];
+  stats?: {
+    relation_count?: number;
+    path_count?: number;
+    seed_count?: number;
+    elapsed_ms?: number;
+    llm_called?: boolean;
+    degraded?: boolean;
+    citation_validity?: number;
+    groundedness?: number;
+    hallucinated_markers?: string[];
+    notes?: string[];
+  };
 }
 
 /** Externally deployed WaterExpert agent API (docs/internal/INTEGRATION_GUIDE.md). */

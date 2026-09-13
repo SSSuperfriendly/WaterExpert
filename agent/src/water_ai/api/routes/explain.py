@@ -9,6 +9,8 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from ..schemas import KnowledgeContext
+
 router = APIRouter(prefix="/api", tags=["explain"])
 
 CASE_LIBRARY_PATH = Path(__file__).resolve().parents[4] / "data" / "case_library" / "cases.json"
@@ -46,6 +48,44 @@ def _find_best_cases(scenario: str, state: dict, top_k: int = 2) -> list[dict[st
     scored = [(c, _similarity(c.get("condition", {}), state)) for c in matched]
     scored.sort(key=lambda x: x[1], reverse=True)
     return [{"case": c, "similarity": round(s, 3)} for c, s in scored[:top_k]]
+
+
+def _knowledge_section(context: KnowledgeContext | None) -> list[str]:
+    """Render the platform's retrieved edges as an explanation section.
+
+    This route never ran the orchestrator, so before now there was nowhere for
+    retrieved evidence to go: the platform would have sent it, the payload
+    reader would have dropped it, and the page would have looked identical.
+    Rendering it here is what makes the injection observable rather than
+    merely transmitted.
+
+    Each edge names the graph it came from. The two graphs are not equals —
+    one is the user's own literature, the other a partner export — and a
+    recommendation that hides which one it rests on is not reviewable.
+    """
+    if context is None:
+        return []
+    relations = context.relations[:8]
+    if not relations and not context.summary_text:
+        return []
+
+    lines = ["", "【图谱依据】"]
+    for relation in relations:
+        label = relation.relation or relation.evidence
+        origin = relation.source_label or relation.source_id
+        lines.append(f"· {relation.source} --{label}--> {relation.target}（{origin}）")
+    if context.summary_text:
+        lines.append("检索摘要：" + context.summary_text.replace("\n", " "))
+
+    # "相关概念", not "候选方向": these are the targets of the top-ranked edges,
+    # which the graphs make out of factors and processes rather than techniques.
+    concepts = [
+        str(item.get("technique")) for item in context.recommendations if item.get("technique")
+    ]
+    if concepts:
+        lines.append("图谱中最相关的概念：" + "、".join(concepts[:5]))
+    lines.append("以上关系来自知识图谱检索，供与案例经验相互印证。")
+    return lines
 
 
 def _generate_explanation(scenario: str, state: dict, best_cases: list[dict]) -> str:
@@ -133,20 +173,36 @@ async def generate_explanation(payload: dict[str, Any]) -> dict[str, Any]:
     Request body:
         scenario: str - scenario key
         state: dict - water quality state (turbidity, flow_rate, rainfall_3d, etc.)
+        knowledge_context: dict - optional graph evidence retrieved by the platform
 
     Returns:
         explanation: str - textual explanation
         matched_cases: list - top matched cases with similarity scores
+        knowledge_context_available: bool - whether graph evidence was used
     """
     scenario = payload.get("scenario", "s1_external_input")
     state = payload.get("state", {})
 
+    # Validated rather than read straight through: this payload is untyped on
+    # purpose (the lab page posts it ad hoc), so a malformed context has to be
+    # discarded here instead of raising inside the explanation renderer.
+    context: KnowledgeContext | None = None
+    raw_context = payload.get("knowledge_context")
+    if isinstance(raw_context, dict):
+        try:
+            context = KnowledgeContext.model_validate(raw_context)
+        except Exception:  # noqa: BLE001 — a bad context degrades to no context
+            context = None
+
     best_cases = _find_best_cases(scenario, state, top_k=2)
-    explanation = _generate_explanation(scenario, state, best_cases)
+    lines = [_generate_explanation(scenario, state, best_cases)]
+    lines.extend(_knowledge_section(context))
+    explanation = "\n".join(lines)
 
     return {
         "scenario": scenario,
         "explanation": explanation,
+        "knowledge_context_available": context is not None,
         "matched_cases": [
             {
                 "id": item["case"]["id"],
